@@ -87,8 +87,6 @@ export function usePerimeterTracker(): UsePerimeterTracker {
     setStatus('idle');
   }, []);
 
-  // Garante que a subscription do GPS seja removida ao desmontar (bateria!),
-  // mesmo que o usuário saia da tela sem pausar.
   useEffect(() => {
     return () => {
       subRef.current?.remove();

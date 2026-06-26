@@ -1,10 +1,10 @@
 import { NavigationProvider } from './src/app/navigation';
-import { Router } from './src/app/Router';
+import { AppShell } from './src/app/AppShell';
 
 export default function App() {
   return (
     <NavigationProvider>
-      <Router />
+      <AppShell />
     </NavigationProvider>
   );
 }

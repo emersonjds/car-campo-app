@@ -33,6 +33,16 @@ export interface ImovelGeometry {
 
 export type ImovelStatus = 'rascunho' | 'enviado';
 
+export type ValidacaoStatus = 'pendente' | 'aprovado' | 'reprovado';
+
+/** Resultado da análise do analista de campo sobre o imóvel. */
+export interface Validacao {
+  status: ValidacaoStatus;
+  nota?: string;
+  analista?: string;
+  updatedAt: number;
+}
+
 export interface Produtor {
   nome: string;
   /** CPF ou CNPJ — PII (LGPD) */
@@ -55,6 +65,8 @@ export interface Imovel {
   geometry: ImovelGeometry;
   documentos: Documento[];
   status: ImovelStatus;
+  /** Análise do analista de campo (opcional — só preenchida no fluxo do analista). */
+  validacao?: Validacao;
   createdAt: number;
   updatedAt: number;
 }

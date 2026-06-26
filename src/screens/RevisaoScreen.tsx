@@ -68,7 +68,7 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 // ---------------------------------------------------------------------------
 
 export function RevisaoScreen({ imovelId }: { imovelId: string }) {
-  const { navigate, goBack } = useNav();
+  const { navigate, goBack, switchTab } = useNav();
   const [imovel, setImovel] = useState<Imovel | null>(null);
   const [loadingImovel, setLoadingImovel] = useState(true);
   const [activeAction, setActiveAction] = useState<ActiveAction>(null);
@@ -146,7 +146,7 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
         Alert.alert(
           'Imóvel enviado!',
           `${result.message}\n\nRegistro confirmado na CAR Geo API.`,
-          [{ text: 'Ok', onPress: () => navigate({ name: 'home' }) }],
+          [{ text: 'Ok', onPress: () => switchTab({ name: 'home' }) }],
         );
       } else if (result.status === 0) {
         // Sem rede — offline-first: dados salvos localmente, fluxo concluído
@@ -154,14 +154,14 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
           'Salvo localmente',
           'Sem conexão com a CAR Geo API no momento.\n\n' +
             'O imóvel está salvo no dispositivo e será reenviado assim que houver rede.',
-          [{ text: 'Ok', onPress: () => navigate({ name: 'home' }) }],
+          [{ text: 'Ok', onPress: () => switchTab({ name: 'home' }) }],
         );
       } else {
         // Endpoint retornou erro HTTP (ex.: 404/405 em API somente-leitura)
         Alert.alert(
           'Atenção',
           `${result.message}\n\nOs dados ficaram salvos localmente com segurança.`,
-          [{ text: 'Ok', onPress: () => navigate({ name: 'home' }) }],
+          [{ text: 'Ok', onPress: () => switchTab({ name: 'home' }) }],
         );
       }
     });

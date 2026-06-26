@@ -9,6 +9,9 @@ import { CadastroScreen } from '../screens/CadastroScreen';
 import { DemarcacaoScreen } from '../screens/DemarcacaoScreen';
 import { DocumentosScreen } from '../screens/DocumentosScreen';
 import { RevisaoScreen } from '../screens/RevisaoScreen';
+import { ValidacaoScreen } from '../screens/ValidacaoScreen';
+import { PainelScreen } from '../screens/PainelScreen';
+import { ConfigScreen } from '../screens/ConfigScreen';
 
 export function Router() {
   const { route, ready } = useNav();
@@ -26,6 +29,12 @@ export function Router() {
       return <PerfilScreen />;
     case 'home':
       return <HomeScreen />;
+    case 'validacao':
+      return <ValidacaoScreen />;
+    case 'painel':
+      return <PainelScreen />;
+    case 'config':
+      return <ConfigScreen />;
     case 'cadastro':
       return <CadastroScreen imovelId={route.imovelId} />;
     case 'demarcacao':

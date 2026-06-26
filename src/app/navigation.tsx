@@ -7,6 +7,9 @@ import { getPerfil, setPerfil as persistPerfil } from '../lib/store';
 export type Route =
   | { name: 'perfil' }
   | { name: 'home' }
+  | { name: 'validacao' }
+  | { name: 'painel' }
+  | { name: 'config' }
   | { name: 'cadastro'; imovelId?: string }
   | { name: 'demarcacao'; imovelId: string }
   | { name: 'documentos'; imovelId: string }
@@ -14,12 +17,21 @@ export type Route =
 
 export type RouteName = Route['name'];
 
+/** Rotas que são "abas" de topo (mostram a barra inferior, sem botão voltar). */
+export const TAB_ROOTS: RouteName[] = ['home', 'validacao', 'painel', 'config'];
+
+export function isTabRoot(name: RouteName): boolean {
+  return TAB_ROOTS.includes(name);
+}
+
 interface NavContext {
   route: Route;
   perfil: Perfil | null;
   ready: boolean;
   navigate: (route: Route) => void;
   replace: (route: Route) => void;
+  /** Troca de aba: zera a pilha para a raiz indicada (sem voltar). */
+  switchTab: (route: Route) => void;
   goBack: () => void;
   canGoBack: boolean;
   chooseProfile: (p: Perfil) => Promise<void>;
@@ -55,6 +67,10 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     setStack((s) => [...s.slice(0, -1), route]);
   }, []);
 
+  const switchTab = useCallback((route: Route) => {
+    setStack([route]);
+  }, []);
+
   const goBack = useCallback(() => {
     setStack((s) => (s.length > 1 ? s.slice(0, -1) : s));
   }, []);
@@ -72,11 +88,12 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       ready,
       navigate,
       replace,
+      switchTab,
       goBack,
       canGoBack: stack.length > 1,
       chooseProfile,
     }),
-    [stack, perfil, ready, navigate, replace, goBack, chooseProfile],
+    [stack, perfil, ready, navigate, replace, switchTab, goBack, chooseProfile],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

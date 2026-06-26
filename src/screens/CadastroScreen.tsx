@@ -12,7 +12,7 @@ import type { Imovel } from '../types';
 const UFS = 'AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO';
 
 export function CadastroScreen({ imovelId }: { imovelId?: string }) {
-  const { perfil, navigate, replace } = useNav();
+  const { perfil, navigate, replace, switchTab } = useNav();
   const analista = perfil === 'analista';
 
   const [loaded, setLoaded] = useState(false);
@@ -126,7 +126,7 @@ export function CadastroScreen({ imovelId }: { imovelId?: string }) {
           </Card>
 
           <View style={s.actions}>
-            <SecondaryButton label="Cancelar" onPress={() => navigate({ name: 'home' })} />
+            <SecondaryButton label="Cancelar" onPress={() => switchTab({ name: 'home' })} />
             <PrimaryButton label="Avançar" onPress={handleNext} loading={saving} />
           </View>
         </ScrollView>
