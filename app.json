@@ -1,13 +1,18 @@
 {
   "expo": {
-    "name": "car-campo-app",
+    "name": "CAR Campo",
     "slug": "car-campo-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Usamos sua localização (GPS) para desenhar o perímetro do imóvel rural enquanto você caminha.",
+        "NSCameraUsageDescription": "Usamos a câmera para fotografar documentos e pontos da divisa do imóvel.",
+        "NSPhotoLibraryUsageDescription": "Permite anexar fotos e documentos do imóvel a partir da sua galeria."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -16,10 +21,34 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "CAMERA"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Usamos sua localização (GPS) para desenhar o perímetro do imóvel rural enquanto você caminha."
+        }
+      ],
+      "expo-sharing",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Permite anexar fotos e documentos do imóvel a partir da sua galeria.",
+          "cameraPermission": "Usamos a câmera para fotografar documentos e pontos da divisa do imóvel."
+        }
+      ]
+    ],
+    "extra": {
+      "apiBaseUrl": "http://localhost:3000"
     }
   }
 }
