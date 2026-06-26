@@ -60,7 +60,7 @@ function validatePerimeterLocal(points: LngLat[]): Array<{ msg: string; tone: 'a
 // ---------- constantes de layout ----------
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
-const MAP_HEIGHT = Math.max(240, Math.floor(SCREEN_HEIGHT * 0.4));
+const MAP_HEIGHT = Math.max(200, Math.floor(SCREEN_HEIGHT * 0.32));
 
 const DEFAULT_REGION = {
   latitude: DEMO_ROUTES[0]!.vertices[0]!.latitude,
@@ -325,24 +325,21 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
 
       {/* Barra de progresso */}
       {sim.status !== 'idle' && (
-        <View style={s.progressBar}>
-          <View style={[s.progressFill, { flex: sim.progress }]} />
-          <View style={{ flex: 1 - sim.progress }} />
-        </View>
+        <>
+          <View style={s.progressBar}>
+            <View style={[s.progressFill, { flex: sim.progress }]} />
+            <View style={{ flex: 1 - sim.progress }} />
+          </View>
+          <Text style={s.progressText}>
+            {sim.status === 'walking'
+              ? `Caminhando… ${Math.round(sim.progress * 100)}%`
+              : sim.status === 'paused'
+                ? `Pausado em ${Math.round(sim.progress * 100)}%`
+                : 'Caminhada concluída'}
+          </Text>
+        </>
       )}
-
-      {/* Botões de controle */}
-      <View style={s.btnRow}>
-        {sim.status === 'idle' || sim.status === 'done' ? (
-          <PrimaryButton label="Iniciar simulacao" onPress={handleSimStart} />
-        ) : sim.status === 'walking' ? (
-          <PrimaryButton label="Pausar" onPress={sim.pause} />
-        ) : (
-          <PrimaryButton label="Retomar" onPress={sim.resume} />
-        )}
-        <View style={s.btnGap} />
-        <SecondaryButton label="Recomecar" onPress={handleSimStart} disabled={sim.status === 'idle'} />
-      </View>
+      {/* O botão de iniciar/pausar/avançar fica no rodapé fixo (sempre visível). */}
     </View>
   );
 
@@ -351,23 +348,69 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
       {tracker.status === 'denied' && (
         <Badge tone="aviso">Permissao de localizacao negada. Verifique as configuracoes.</Badge>
       )}
-      <View style={s.btnRow}>
-        {tracker.status === 'idle' || tracker.status === 'denied' ? (
-          <PrimaryButton label="Iniciar caminhada" onPress={handleGpsStart} />
-        ) : tracker.status === 'requesting' ? (
-          <PrimaryButton label="Aguardando GPS..." onPress={() => {}} disabled />
-        ) : tracker.status === 'tracking' ? (
-          <>
-            <PrimaryButton label="Marcar canto" onPress={tracker.addManualPoint} />
-            <View style={s.btnGap} />
-            <SecondaryButton label="Pausar" onPress={tracker.pause} />
-          </>
-        ) : (
-          <PrimaryButton label="Retomar GPS" onPress={tracker.start} />
-        )}
-      </View>
+      <Text style={s.gpsHint}>
+        {tracker.status === 'tracking'
+          ? 'Caminhe rente à divisa. Use “Marcar canto” nas quinas.'
+          : 'Toque em “Iniciar caminhada” no rodapé e ande pelo perímetro do imóvel.'}
+      </Text>
     </View>
   );
+
+  // ---------- ação principal do rodapé (sempre visível, depende do modo/estado) ----------
+
+  type FooterAction = {
+    label: string;
+    onPress: () => void;
+    disabled?: boolean;
+    loading?: boolean;
+  };
+
+  let footerPrimary: FooterAction;
+  let footerSecondary: FooterAction;
+
+  const canSave = activePoints.length >= 3;
+  const saveAction: FooterAction = {
+    label: 'Salvar e avancar →',
+    onPress: handleSave,
+    loading: saving,
+  };
+  const limparAction: FooterAction = {
+    label: 'Limpar',
+    onPress: handleClear,
+    disabled: activePoints.length === 0 && sim.status === 'idle' && tracker.status === 'idle',
+  };
+
+  if (mode === 'sim') {
+    if (sim.status === 'idle') {
+      footerPrimary = { label: '▶  Iniciar simulacao', onPress: handleSimStart };
+      footerSecondary = limparAction;
+    } else if (sim.status === 'walking') {
+      footerPrimary = { label: '⏸  Pausar', onPress: sim.pause };
+      footerSecondary = { label: '↺ Recomecar', onPress: handleSimStart };
+    } else if (sim.status === 'paused') {
+      footerPrimary = canSave ? saveAction : { label: '▶  Retomar', onPress: sim.resume };
+      footerSecondary = { label: '↺ Recomecar', onPress: handleSimStart };
+    } else {
+      // done
+      footerPrimary = canSave ? saveAction : { label: '↺ Recomecar', onPress: handleSimStart };
+      footerSecondary = { label: '↺ Recomecar', onPress: handleSimStart };
+    }
+  } else {
+    // GPS real
+    if (tracker.status === 'tracking') {
+      footerPrimary = { label: '＋ Marcar canto', onPress: tracker.addManualPoint };
+      footerSecondary = { label: '⏸ Pausar', onPress: tracker.pause };
+    } else if (tracker.status === 'requesting') {
+      footerPrimary = { label: 'Aguardando GPS…', onPress: () => {}, disabled: true };
+      footerSecondary = limparAction;
+    } else if (canSave) {
+      footerPrimary = saveAction;
+      footerSecondary = { label: 'Retomar GPS', onPress: tracker.start };
+    } else {
+      footerPrimary = { label: 'Iniciar caminhada', onPress: handleGpsStart };
+      footerSecondary = limparAction;
+    }
+  }
 
   // ---------- JSX principal ----------
 
@@ -483,20 +526,20 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
         )}
       </ScrollView>
 
-      {/* Rodape fixo: a acao de avancar fica SEMPRE visivel */}
+      {/* Rodape fixo: a acao principal fica SEMPRE visivel, conforme o modo/estado */}
       <View style={s.footer}>
         <View style={s.actionRow}>
           <SecondaryButton
-            label="Limpar"
-            onPress={handleClear}
-            disabled={activePoints.length === 0 && sim.status === 'idle'}
+            label={footerSecondary.label}
+            onPress={footerSecondary.onPress}
+            disabled={footerSecondary.disabled}
           />
           <View style={s.btnGap} />
           <PrimaryButton
-            label={activePoints.length < 3 ? 'Marque 3+ vertices' : 'Salvar e avancar →'}
-            onPress={handleSave}
-            disabled={activePoints.length < 3}
-            loading={saving}
+            label={footerPrimary.label}
+            onPress={footerPrimary.onPress}
+            disabled={footerPrimary.disabled}
+            loading={footerPrimary.loading}
           />
         </View>
       </View>
@@ -620,6 +663,17 @@ const s = StyleSheet.create({
   },
   progressFill: {
     backgroundColor: colors.verdeClaro,
+  },
+  progressText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.verde,
+    marginBottom: 4,
+  },
+  gpsHint: {
+    fontSize: 13,
+    color: colors.muted,
+    lineHeight: 18,
   },
 
   // Painel inferior
