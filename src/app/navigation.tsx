@@ -1,11 +1,10 @@
 // Navegação leve baseada em estado (sem react-navigation nativo) + contexto de perfil.
 // Offline-first, dev-build leve. Uma pilha simples cobre o fluxo do wizard.
-import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, ReactNode, useCallback, useContext, useMemo, useState } from 'react';
 import type { Perfil } from '../types';
-import { getPerfil, setPerfil as persistPerfil } from '../lib/store';
+import { useAuth } from '../auth/AuthContext';
 
 export type Route =
-  | { name: 'perfil' }
   | { name: 'home' }
   | { name: 'validacao' }
   | { name: 'painel' }
@@ -34,30 +33,16 @@ interface NavContext {
   switchTab: (route: Route) => void;
   goBack: () => void;
   canGoBack: boolean;
-  chooseProfile: (p: Perfil) => Promise<void>;
 }
 
 const Ctx = createContext<NavContext | null>(null);
 
 export function NavigationProvider({ children }: { children: ReactNode }) {
   const [stack, setStack] = useState<Route[]>([{ name: 'home' }]);
-  const [perfil, setPerfilState] = useState<Perfil | null>(null);
-  const [ready, setReady] = useState(false);
 
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      const p = await getPerfil();
-      if (!alive) return;
-      setPerfilState(p);
-      // Sem perfil definido → começa pela tela de escolha de perfil.
-      setStack(p ? [{ name: 'home' }] : [{ name: 'perfil' }]);
-      setReady(true);
-    })();
-    return () => {
-      alive = false;
-    };
-  }, []);
+  const { sessao, loading } = useAuth();
+  const perfil = sessao?.perfil ?? null;
+  const ready = !loading;
 
   const navigate = useCallback((route: Route) => {
     setStack((s) => [...s, route]);
@@ -75,12 +60,6 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     setStack((s) => (s.length > 1 ? s.slice(0, -1) : s));
   }, []);
 
-  const chooseProfile = useCallback(async (p: Perfil) => {
-    await persistPerfil(p);
-    setPerfilState(p);
-    setStack([{ name: 'home' }]);
-  }, []);
-
   const value = useMemo<NavContext>(
     () => ({
       route: stack[stack.length - 1]!,
@@ -91,9 +70,8 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       switchTab,
       goBack,
       canGoBack: stack.length > 1,
-      chooseProfile,
     }),
-    [stack, perfil, ready, navigate, replace, switchTab, goBack, chooseProfile],
+    [stack, perfil, ready, navigate, replace, switchTab, goBack],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

@@ -3,7 +3,8 @@
 import { ActivityIndicator, View } from 'react-native';
 import { colors } from '../theme/colors';
 import { useNav } from './navigation';
-import { PerfilScreen } from '../screens/PerfilScreen';
+import { useAuth } from '../auth/AuthContext';
+import { LoginScreen } from '../screens/LoginScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { CadastroScreen } from '../screens/CadastroScreen';
 import { DemarcacaoScreen } from '../screens/DemarcacaoScreen';
@@ -15,6 +16,7 @@ import { ConfigScreen } from '../screens/ConfigScreen';
 
 export function Router() {
   const { route, ready } = useNav();
+  const { sessao } = useAuth();
 
   if (!ready) {
     return (
@@ -24,9 +26,11 @@ export function Router() {
     );
   }
 
+  if (!sessao) {
+    return <LoginScreen />;
+  }
+
   switch (route.name) {
-    case 'perfil':
-      return <PerfilScreen />;
     case 'home':
       return <HomeScreen />;
     case 'validacao':
