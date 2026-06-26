@@ -8,12 +8,14 @@ import { Card, Field, PrimaryButton, SecondaryButton } from '../ui';
 import { colors } from '../theme/colors';
 import { getImovel, upsertImovel } from '../lib/store';
 import type { Imovel } from '../types';
+import { useAuth } from '../auth/AuthContext';
 
 const UFS = 'AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO';
 
 export function CadastroScreen({ imovelId }: { imovelId?: string }) {
   const { perfil, navigate, replace, switchTab } = useNav();
   const analista = perfil === 'analista';
+  const { sessao } = useAuth();
 
   const [loaded, setLoaded] = useState(false);
   const [existing, setExisting] = useState<Imovel | null>(null);
@@ -25,6 +27,13 @@ export function CadastroScreen({ imovelId }: { imovelId?: string }) {
   const [produtorNome, setProdutorNome] = useState('');
   const [cpfCnpj, setCpfCnpj] = useState('');
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!imovelId && sessao?.method === 'govbr') {
+      setProdutorNome((v) => v || sessao.nome);
+      setCpfCnpj((v) => v || (sessao.cpf ?? ''));
+    }
+  }, [imovelId, sessao]);
 
   useEffect(() => {
     if (!imovelId) {
