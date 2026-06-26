@@ -1,6 +1,6 @@
 // Navegação leve baseada em estado (sem react-navigation nativo) + contexto de perfil.
 // Offline-first, dev-build leve. Uma pilha simples cobre o fluxo do wizard.
-import { createContext, ReactNode, useCallback, useContext, useMemo, useState } from 'react';
+import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { Perfil } from '../types';
 import { useAuth } from '../auth/AuthContext';
 
@@ -43,6 +43,17 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const { sessao, loading } = useAuth();
   const perfil = sessao?.perfil ?? null;
   const ready = !loading;
+
+  // A cada novo login (token muda), volta para a aba inicial (Imóveis) — evita
+  // cair na aba Perfil depois de sair e entrar de novo.
+  const prevToken = useRef<string | null>(null);
+  useEffect(() => {
+    const token = sessao?.token ?? null;
+    if (token && token !== prevToken.current) {
+      setStack([{ name: 'home' }]);
+    }
+    prevToken.current = token;
+  }, [sessao]);
 
   const navigate = useCallback((route: Route) => {
     setStack((s) => [...s, route]);
