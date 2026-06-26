@@ -20,9 +20,9 @@ export function AuthProviderComponent({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let alive = true;
-    provider.restore().then((s) => {
-      if (alive) { setSessao(s); setLoading(false); }
-    });
+    provider.restore()
+      .then((s) => { if (alive) { setSessao(s); setLoading(false); } })
+      .catch(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
   }, []);
 
@@ -31,7 +31,7 @@ export function AuthProviderComponent({ children }: { children: ReactNode }) {
     loading,
     loginGovBr: async () => { setSessao(await provider.loginGovBr()); },
     loginMatricula: async (m, s) => { setSessao(await provider.loginMatricula(m, s)); },
-    logout: async () => { await provider.logout(); setSessao(null); },
+    logout: async () => { try { await provider.logout(); } finally { setSessao(null); } },
   }), [sessao, loading]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

@@ -17,7 +17,9 @@ export function LoginScreen() {
 
   async function autorizarGovBr() {
     setBusy(true);
-    try { await loginGovBr(); } finally { setBusy(false); setConsent(false); }
+    try { await loginGovBr(); }
+    catch (e) { Alert.alert('gov.br', e instanceof Error ? e.message : 'Falha ao autenticar.'); }
+    finally { setBusy(false); setConsent(false); }
   }
 
   async function entrarMatricula() {
@@ -42,9 +44,9 @@ export function LoginScreen() {
         ) : (
           <Card>
             <Field label="Matrícula" value={matricula} onChangeText={setMatricula} placeholder="Ex: 12345" keyboardType="numeric" />
-            <Field label="Senha" value={senha} onChangeText={setSenha} placeholder="Sua senha" />
+            <Field label="Senha" value={senha} onChangeText={setSenha} placeholder="Sua senha" secureTextEntry />
             <PrimaryButton label="Entrar" onPress={entrarMatricula} loading={busy} />
-            <Text style={s.demo}>Demo: matrícula 12345 · senha car2026</Text>
+            {__DEV__ && <Text style={s.demo}>Demo: matrícula 12345 · senha car2026</Text>}
           </Card>
         )}
 

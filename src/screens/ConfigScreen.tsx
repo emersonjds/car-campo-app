@@ -50,10 +50,10 @@ export function ConfigScreen() {
             <View style={s.identity}>
               <Text style={s.nome}>{sessao.nome}</Text>
               {sessao.matricula ? (
-                <Text style={s.detalhe}>Matricula: {sessao.matricula}</Text>
+                <Text style={s.detalhe}>Matrícula: {sessao.matricula}</Text>
               ) : null}
               {sessao.orgao ? (
-                <Text style={s.detalhe}>Orgao: {sessao.orgao}</Text>
+                <Text style={s.detalhe}>Órgão: {sessao.orgao}</Text>
               ) : null}
             </View>
           ) : null}

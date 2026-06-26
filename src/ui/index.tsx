@@ -80,6 +80,7 @@ export function Field({
   placeholder,
   keyboardType,
   autoCapitalize,
+  secureTextEntry,
 }: {
   label: string;
   value: string;
@@ -87,6 +88,7 @@ export function Field({
   placeholder?: string;
   keyboardType?: KeyboardTypeOptions;
   autoCapitalize?: 'none' | 'words' | 'characters';
+  secureTextEntry?: boolean;
 }) {
   return (
     <View style={ui.fieldWrap}>
@@ -99,6 +101,8 @@ export function Field({
         placeholderTextColor={colors.muted}
         keyboardType={keyboardType}
         autoCapitalize={autoCapitalize}
+        secureTextEntry={secureTextEntry}
+        autoComplete={secureTextEntry ? 'password' : 'off'}
       />
     </View>
   );
