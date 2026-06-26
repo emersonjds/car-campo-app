@@ -1,77 +1,99 @@
 // Rotas de demonstração para o Modo Simulação de Caminhada.
-// Perímetros plausíveis de imóveis rurais em Mato Grosso (WGS84, lon/lat).
-import { distanceM, type LngLat } from '../lib/geo';
-
-/** Interpola linearmente entre dois pontos (lon/lat). */
-function interpolate(a: LngLat, b: LngLat, t: number): LngLat {
-  return {
-    longitude: a.longitude + (b.longitude - a.longitude) * t,
-    latitude: a.latitude + (b.latitude - a.latitude) * t,
-  };
-}
+//
+// As coordenadas estão ancoradas em REGIÕES RURAIS/FLORESTAIS REAIS do Brasil
+// (fazendas de soja, áreas de Reserva Legal/floresta amazônica e pivôs de cerrado),
+// para que a imagem de satélite mostre lavoura/mata — não cidade.
+//
+// Os perímetros aqui são REPRESENTATIVOS (ilustrativos) sobre esses locais reais;
+// a área/perímetro exibidos são calculados pelo app a partir dos vértices.
+//
+// Bases de inferência reais (perímetros oficiais de imóveis rurais podem ser
+// importados destas fontes públicas):
+//   • SICAR / CAR — Cadastro Ambiental Rural ....... https://consultapublica.car.gov.br
+//   • INCRA SIGEF — perímetros georreferenciados .... https://sigef.incra.gov.br
+//   • MapBiomas — uso e cobertura do solo/floresta .. https://mapbiomas.org
+//   • INPE PRODES/DETER — desmatamento/floresta ..... http://terrabrasilis.dpi.inpe.br
+//   • IBGE — malhas territoriais ..................... https://www.ibge.gov.br
+//   • ICMBio / FUNAI — Unidades de Conservação e Terras Indígenas
+//
+// WGS84 (lon/lat), como exige o GeoJSON (RFC 7946).
+import { interpolate, type LngLat } from '../lib/geo';
+import { distanceM } from '../lib/geo';
 
 export interface DemoRoute {
   id: string;
   nome: string;
+  /** Bioma/uso predominante visível no satélite. */
+  bioma: string;
+  /** Fonte de inferência real associada à região. */
+  fonte: string;
   /** Vértices do polígono — anel aberto (sem repetir o primeiro ao final). */
   vertices: LngLat[];
 }
 
 /**
- * Sorriso-MT: área ~5 ha, formato irregular com 5 vértices.
- * Centroide: -12.5491°S  -55.7109°W
+ * Fazenda de soja — zona rural de Sorriso/MT (a "capital do agronegócio").
+ * Lavoura mecanizada; satélite mostra talhões retangulares.
+ * Centro aprox.: -12.420°S  -55.950°W
  */
-const SORRISO_BELA_VISTA: DemoRoute = {
-  id: 'sorriso-bela-vista',
-  nome: 'Sítio Bela Vista – Sorriso/MT (~5 ha)',
+const SORRISO_SOJA: DemoRoute = {
+  id: 'sorriso-soja',
+  nome: 'Fazenda Soja – Sorriso/MT',
+  bioma: 'Lavoura (Amazônia/Cerrado)',
+  fonte: 'Região agrícola — base SICAR/INCRA SIGEF',
   vertices: [
-    { longitude: -55.7125, latitude: -12.5478 },
-    { longitude: -55.7101, latitude: -12.5476 },
-    { longitude: -55.7094, latitude: -12.5492 },
-    { longitude: -55.7103, latitude: -12.5506 },
-    { longitude: -55.7125, latitude: -12.5503 },
+    { longitude: -55.9530, latitude: -12.4180 },
+    { longitude: -55.9470, latitude: -12.4176 },
+    { longitude: -55.9455, latitude: -12.4200 },
+    { longitude: -55.9472, latitude: -12.4228 },
+    { longitude: -55.9512, latitude: -12.4230 },
+    { longitude: -55.9532, latitude: -12.4208 },
   ],
 };
 
 /**
- * Rondonópolis-MT: área ~12 ha, contorno levemente trapezoidal com 6 vértices.
- * Centroide: -16.4686°S  -54.6405°W
+ * Área de Reserva Legal / floresta — Feliz Natal/MT (transição amazônica).
+ * Satélite mostra mata nativa contígua a áreas abertas.
+ * Centro aprox.: -12.300°S  -54.850°W
  */
-const RONDONOPOLIS_SAO_JOSE: DemoRoute = {
-  id: 'rondonopolis-sao-jose',
-  nome: 'Fazenda São José – Rondonópolis/MT (~12 ha)',
+const FELIZ_NATAL_FLORESTA: DemoRoute = {
+  id: 'feliz-natal-floresta',
+  nome: 'Reserva Legal – Feliz Natal/MT (floresta)',
+  bioma: 'Floresta Amazônica',
+  fonte: 'Região florestal — base MapBiomas / INPE PRODES',
   vertices: [
-    { longitude: -54.6430, latitude: -16.4669 },
-    { longitude: -54.6390, latitude: -16.4664 },
-    { longitude: -54.6375, latitude: -16.4679 },
-    { longitude: -54.6382, latitude: -16.4700 },
-    { longitude: -54.6408, latitude: -16.4706 },
-    { longitude: -54.6433, latitude: -16.4693 },
+    { longitude: -54.8525, latitude: -12.2985 },
+    { longitude: -54.8478, latitude: -12.2982 },
+    { longitude: -54.8466, latitude: -12.3002 },
+    { longitude: -54.8480, latitude: -12.3024 },
+    { longitude: -54.8514, latitude: -12.3025 },
   ],
 };
 
 /**
- * Primavera do Leste-MT: área ~18 ha, polígono irregular com 7 vértices.
- * Centroide: -15.5589°S  -54.2843°W
+ * Pivôs de cerrado — Oeste da Bahia (São Desidério / Luís Eduardo Magalhães).
+ * Satélite mostra agricultura irrigada e remanescentes de cerrado.
+ * Centro aprox.: -12.400°S  -45.950°W
  */
-const PRIMAVERA_CERRADO: DemoRoute = {
-  id: 'primavera-cerrado',
-  nome: 'Estância Cerrado – Primavera do Leste/MT (~18 ha)',
+const OESTE_BAHIA_CERRADO: DemoRoute = {
+  id: 'oeste-bahia-cerrado',
+  nome: 'Sítio Cerrado – Oeste da Bahia',
+  bioma: 'Cerrado (agricultura irrigada)',
+  fonte: 'Região de pivôs — base SICAR/CAR',
   vertices: [
-    { longitude: -54.2868, latitude: -15.5572 },
-    { longitude: -54.2828, latitude: -15.5566 },
-    { longitude: -54.2812, latitude: -15.5581 },
-    { longitude: -54.2818, latitude: -15.5601 },
-    { longitude: -54.2845, latitude: -15.5612 },
-    { longitude: -54.2869, latitude: -15.5605 },
-    { longitude: -54.2877, latitude: -15.5589 },
+    { longitude: -45.9535, latitude: -12.3978 },
+    { longitude: -45.9468, latitude: -12.3974 },
+    { longitude: -45.9452, latitude: -12.4000 },
+    { longitude: -45.9470, latitude: -12.4032 },
+    { longitude: -45.9512, latitude: -12.4035 },
+    { longitude: -45.9535, latitude: -12.4010 },
   ],
 };
 
 export const DEMO_ROUTES: DemoRoute[] = [
-  SORRISO_BELA_VISTA,
-  RONDONOPOLIS_SAO_JOSE,
-  PRIMAVERA_CERRADO,
+  SORRISO_SOJA,
+  FELIZ_NATAL_FLORESTA,
+  OESTE_BAHIA_CERRADO,
 ];
 
 /**

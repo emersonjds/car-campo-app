@@ -65,8 +65,8 @@ const MAP_HEIGHT = Math.max(240, Math.floor(SCREEN_HEIGHT * 0.4));
 const DEFAULT_REGION = {
   latitude: DEMO_ROUTES[0]!.vertices[0]!.latitude,
   longitude: DEMO_ROUTES[0]!.vertices[0]!.longitude,
-  latitudeDelta: 0.008,
-  longitudeDelta: 0.008,
+  latitudeDelta: 0.012,
+  longitudeDelta: 0.012,
 };
 
 // ---------- sub-componentes ----------
@@ -288,24 +288,37 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
   const simPanel = (
     <View>
       {/* Seletor de rota */}
-      <Text style={s.panelLabel}>Rota de demonstração</Text>
+      <Text style={s.panelLabel}>Rota de demonstração (área real)</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.routeScroll}>
-        {DEMO_ROUTES.map((route) => (
-          <TouchableOpacity
-            key={route.id}
-            style={[s.routeChip, selectedRouteId === route.id && s.routeChipActive]}
-            onPress={() => setSelectedRouteId(route.id)}
-            disabled={sim.status === 'walking'}
-          >
-            <Text
-              style={[s.routeChipText, selectedRouteId === route.id && s.routeChipTextActive]}
-              numberOfLines={2}
+        {DEMO_ROUTES.map((route) => {
+          const active = selectedRouteId === route.id;
+          return (
+            <TouchableOpacity
+              key={route.id}
+              style={[s.routeChip, active && s.routeChipActive]}
+              onPress={() => setSelectedRouteId(route.id)}
+              disabled={sim.status === 'walking'}
             >
-              {route.nome}
-            </Text>
-          </TouchableOpacity>
-        ))}
+              <Text
+                style={[s.routeChipText, active && s.routeChipTextActive]}
+                numberOfLines={2}
+              >
+                {route.nome}
+              </Text>
+              <Text
+                style={[s.routeChipBioma, active && s.routeChipTextActive]}
+                numberOfLines={1}
+              >
+                🌿 {route.bioma}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </ScrollView>
+      <Text style={s.routeFonte}>
+        {DEMO_ROUTES.find((r) => r.id === selectedRouteId)?.fonte ??
+          'Bases: SICAR/CAR · INCRA SIGEF · MapBiomas · INPE'}
+      </Text>
 
       {/* Controle de velocidade */}
       <SpeedSelector speed={sim.speed as 1 | 2 | 4} onSelect={sim.setSpeed} />
@@ -459,22 +472,34 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
           </View>
         )}
 
-        {/* Botoes de acao */}
+        {/* Aviso de conclusao da caminhada simulada */}
+        {mode === 'sim' && sim.status === 'done' && activePoints.length >= 3 && (
+          <View style={s.doneCue}>
+            <Text style={s.doneCueText}>
+              ✓ Caminhada concluida — {activePoints.length} vertices, {area.toFixed(2)} ha.
+              Toque em "Salvar e avancar" abaixo para ir aos documentos.
+            </Text>
+          </View>
+        )}
+      </ScrollView>
+
+      {/* Rodape fixo: a acao de avancar fica SEMPRE visivel */}
+      <View style={s.footer}>
         <View style={s.actionRow}>
-          <PrimaryButton
-            label="Salvar e avancar"
-            onPress={handleSave}
-            disabled={activePoints.length < 3}
-            loading={saving}
-          />
-          <View style={s.btnGap} />
           <SecondaryButton
             label="Limpar"
             onPress={handleClear}
             disabled={activePoints.length === 0 && sim.status === 'idle'}
           />
+          <View style={s.btnGap} />
+          <PrimaryButton
+            label={activePoints.length < 3 ? 'Marque 3+ vertices' : 'Salvar e avancar →'}
+            onPress={handleSave}
+            disabled={activePoints.length < 3}
+            loading={saving}
+          />
         </View>
-      </ScrollView>
+      </View>
     </Screen>
   );
 }
@@ -547,7 +572,7 @@ const s = StyleSheet.create({
 
   // Seletor de rota
   routeScroll: {
-    marginBottom: 10,
+    marginBottom: 4,
   },
   routeChip: {
     paddingHorizontal: 14,
@@ -557,7 +582,19 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.line,
     marginRight: 8,
-    maxWidth: 200,
+    maxWidth: 220,
+  },
+  routeChipBioma: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.verde,
+    marginTop: 3,
+  },
+  routeFonte: {
+    fontSize: 11,
+    color: colors.muted,
+    marginBottom: 10,
+    fontStyle: 'italic',
   },
   routeChipActive: {
     backgroundColor: colors.verdeClaro,
@@ -616,7 +653,25 @@ const s = StyleSheet.create({
   },
   actionRow: {
     flexDirection: 'row',
-    marginTop: 12,
+  },
+  footer: {
+    padding: 14,
+    paddingBottom: 20,
+    backgroundColor: colors.branco,
+    borderTopWidth: 1,
+    borderTopColor: colors.line,
+  },
+  doneCue: {
+    backgroundColor: '#e2f3e8',
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 8,
+  },
+  doneCueText: {
+    color: colors.verde,
+    fontWeight: '700',
+    fontSize: 13,
+    lineHeight: 18,
   },
 
   // Stats
