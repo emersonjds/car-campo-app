@@ -1,111 +1,82 @@
-// Aba "Perfil" — mostra o perfil atual e permite alternar entre Produtor e
-// Analista (assim dá para explorar as duas experiências no mesmo aparelho).
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+// Aba "Perfil" — mostra a identidade logada (produtor ou analista) e permite sair.
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Screen } from '../app/Screen';
-import { useNav } from '../app/navigation';
-import { Card, SectionTitle } from '../ui';
+import { useAuth } from '../auth/AuthContext';
+import { Badge, Card, SecondaryButton, SectionTitle } from '../ui';
 import { colors } from '../theme/colors';
-import type { Perfil } from '../types';
+import type { Selo } from '../auth/types';
+
+function maskCpf(v: string): string {
+  const d = v.replace(/\D/g, '');
+  return d.length === 11 ? `***.${d.slice(3, 6)}.${d.slice(6, 9)}-**` : '***';
+}
+
+function seloTone(selo: Selo): 'ok' | 'aviso' | 'neutro' {
+  if (selo === 'ouro' || selo === 'prata') return 'ok';
+  if (selo === 'bronze') return 'aviso';
+  return 'neutro';
+}
 
 export function ConfigScreen() {
-  const { perfil, chooseProfile } = useNav();
+  const { sessao, logout } = useAuth();
+
+  function confirmarSaida() {
+    Alert.alert('Sair', 'Encerrar a sessão neste aparelho?', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Sair', style: 'destructive', onPress: () => logout() },
+    ]);
+  }
 
   return (
-    <Screen title="Perfil" subtitle="Como você está usando o app" showBack={false}>
+    <Screen title="Perfil" subtitle="Sua identidade no app" showBack={false}>
       <ScrollView contentContainerStyle={s.content}>
         <Card>
-          <SectionTitle>Perfil atual</SectionTitle>
-          <View style={s.current}>
-            <Text style={s.currentEmoji}>{perfil === 'analista' ? '📋' : '🌾'}</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={s.currentName}>
-                {perfil === 'analista' ? 'Analista de campo' : 'Produtor rural'}
-              </Text>
-              <Text style={s.currentDesc}>
-                {perfil === 'analista'
-                  ? 'Cadastra vários imóveis, valida geometria e cuida das pendências.'
-                  : 'Demarca o próprio imóvel caminhando (ou simulando) a divisa.'}
-              </Text>
+          <SectionTitle>Identidade</SectionTitle>
+          {sessao?.perfil === 'produtor' ? (
+            <View style={s.identity}>
+              <Text style={s.nome}>{sessao.nome}</Text>
+              {sessao.cpf ? (
+                <Text style={s.detalhe}>CPF: {maskCpf(sessao.cpf)}</Text>
+              ) : null}
+              {sessao.selo ? (
+                <View style={s.badgeWrap}>
+                  <Badge tone={seloTone(sessao.selo)}>
+                    gov.br {sessao.selo}
+                  </Badge>
+                </View>
+              ) : null}
             </View>
-          </View>
+          ) : sessao?.perfil === 'analista' ? (
+            <View style={s.identity}>
+              <Text style={s.nome}>{sessao.nome}</Text>
+              {sessao.matricula ? (
+                <Text style={s.detalhe}>Matricula: {sessao.matricula}</Text>
+              ) : null}
+              {sessao.orgao ? (
+                <Text style={s.detalhe}>Orgao: {sessao.orgao}</Text>
+              ) : null}
+            </View>
+          ) : null}
         </Card>
 
         <Card style={{ marginTop: 14 }}>
-          <SectionTitle>Trocar de perfil</SectionTitle>
-          <Text style={s.hint}>
-            Use para alternar a experiência. O produtor entra com gov.br; o analista, com matrícula.
-          </Text>
-          <ProfileOption
-            emoji="🌾"
-            titulo="Produtor rural"
-            ativo={perfil === 'produtor'}
-            onPress={() => chooseProfile('produtor')}
-          />
-          <ProfileOption
-            emoji="📋"
-            titulo="Analista de campo"
-            ativo={perfil === 'analista'}
-            onPress={() => chooseProfile('analista')}
-          />
+          <SectionTitle>Conta</SectionTitle>
+          <SecondaryButton label="Sair" onPress={confirmarSaida} />
         </Card>
 
         <Text style={s.lgpd}>
-          🔒 Seus dados ficam neste aparelho (offline-first). Dados pessoais são protegidos pela LGPD.
+          Seus dados ficam neste aparelho (offline-first). Dados pessoais sao protegidos pela LGPD.
         </Text>
       </ScrollView>
     </Screen>
   );
 }
 
-function ProfileOption({
-  emoji,
-  titulo,
-  ativo,
-  onPress,
-}: {
-  emoji: string;
-  titulo: string;
-  ativo: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <TouchableOpacity
-      style={[s.option, ativo && s.optionAtivo]}
-      onPress={onPress}
-      activeOpacity={0.85}
-      disabled={ativo}
-    >
-      <Text style={s.optionEmoji}>{emoji}</Text>
-      <Text style={[s.optionTitulo, ativo && s.optionTituloAtivo]}>{titulo}</Text>
-      <Text style={[s.optionTag, ativo && s.optionTagAtivo]}>{ativo ? 'Atual' : 'Trocar'}</Text>
-    </TouchableOpacity>
-  );
-}
-
 const s = StyleSheet.create({
   content: { padding: 16 },
-  current: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  currentEmoji: { fontSize: 36 },
-  currentName: { fontSize: 18, fontWeight: '800', color: colors.ink },
-  currentDesc: { fontSize: 13, color: colors.muted, marginTop: 3, lineHeight: 18 },
-  hint: { fontSize: 13, color: colors.muted, marginBottom: 12, lineHeight: 18 },
-  option: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.line,
-    marginBottom: 10,
-    backgroundColor: colors.branco,
-  },
-  optionAtivo: { borderColor: colors.verde, backgroundColor: colors.verdeBg },
-  optionEmoji: { fontSize: 24 },
-  optionTitulo: { flex: 1, fontSize: 16, fontWeight: '700', color: colors.ink },
-  optionTituloAtivo: { color: colors.verde },
-  optionTag: { fontSize: 12, fontWeight: '800', color: colors.muted },
-  optionTagAtivo: { color: colors.verde },
+  identity: { gap: 6 },
+  nome: { fontSize: 18, fontWeight: '800', color: colors.ink },
+  detalhe: { fontSize: 14, color: colors.muted, lineHeight: 20 },
+  badgeWrap: { marginTop: 4 },
   lgpd: { fontSize: 12, color: colors.muted, marginTop: 18, lineHeight: 18, textAlign: 'center' },
 });
