@@ -2,9 +2,15 @@
 // com a CAR Geo API é separada (lib/api.ts). Nunca bloquear por falta de rede.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Imovel, NovoImovel, Perfil } from '../types';
+import { DEMO_IMOVEIS_SEED } from './seed.demo';
 
 const IMOVEIS_KEY = '@car-campo/imoveis';
 const PERFIL_KEY = '@car-campo/perfil';
+// Versão do seed de demo. Bumpar SEED_VERSION re-semeia no próximo load (desde
+// que o usuário não tenha criado imóveis próprios) — usado quando os dados de
+// demo mudam (ex.: novo campo alertaDivergencia).
+const SEED_KEY = '@car-campo/seed-version';
+const SEED_VERSION = '2';
 
 /** id simples, sem dependências nativas (evita uuid). */
 function genId(): string {
@@ -26,12 +32,42 @@ async function writeAll(list: Imovel[]): Promise<void> {
   await AsyncStorage.setItem(IMOVEIS_KEY, JSON.stringify(list));
 }
 
+// Semeia os imóveis de demo na PRIMEIRA execução (store vazio). Roda uma única
+// vez por instalação — se o usuário apagar tudo depois, não re-semeia. Memoizado
+// para evitar corrida quando várias telas chamam listImoveis() ao montar.
+let seedPromise: Promise<void> | null = null;
+async function ensureSeeded(): Promise<void> {
+  if (seedPromise) return seedPromise;
+  seedPromise = (async () => {
+    const ver = await AsyncStorage.getItem(SEED_KEY);
+    if (ver === SEED_VERSION) return;
+    const current = await readAll();
+    // (Re)semeia só quando não há imóveis criados pelo usuário (todos são de seed).
+    const apenasSeed = current.every((i) => i.id.startsWith('seed_'));
+    if (apenasSeed) {
+      const base = Date.now();
+      const seeded: Imovel[] = DEMO_IMOVEIS_SEED.map((novo, i) => ({
+        ...novo,
+        id: `seed_${i}`,
+        status: novo.status ?? 'rascunho',
+        createdAt: base - i * 1000,
+        updatedAt: base - i * 1000,
+      }));
+      await writeAll(seeded);
+    }
+    await AsyncStorage.setItem(SEED_KEY, SEED_VERSION);
+  })();
+  return seedPromise;
+}
+
 export async function listImoveis(): Promise<Imovel[]> {
+  await ensureSeeded();
   const list = await readAll();
   return list.sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
 export async function getImovel(id: string): Promise<Imovel | null> {
+  await ensureSeeded();
   const list = await readAll();
   return list.find((i) => i.id === id) ?? null;
 }
@@ -58,7 +94,35 @@ export async function updateImovel(
   const list = await readAll();
   const idx = list.findIndex((i) => i.id === id);
   if (idx < 0) return null;
-  const updated: Imovel = { ...list[idx]!, ...patch, id, updatedAt: Date.now() };
+
+  const existing = list[idx]!;
+
+  // Snapshot automático: quando o patch inclui uma geometry diferente da atual,
+  // preserva a geometry corrente em geometryAnterior antes de sobrescrever.
+  // Condição: geometry existente com >= 3 pontos e diferente da nova.
+  let geometryAnteriorPatch: Partial<Imovel> = {};
+  if (
+    patch.geometry &&
+    existing.geometry &&
+    existing.geometry.points.length >= 3
+  ) {
+    const samePoints =
+      existing.geometry.points.length === patch.geometry.points.length &&
+      JSON.stringify(existing.geometry.points) === JSON.stringify(patch.geometry.points);
+    if (!samePoints) {
+      geometryAnteriorPatch = { geometryAnterior: existing.geometry };
+    }
+  }
+
+  // geometryAnteriorPatch aplicado APÓS patch para que o snapshot sempre prevaleça
+  // sobre qualquer geometryAnterior passado manualmente no patch.
+  const updated: Imovel = {
+    ...existing,
+    ...patch,
+    ...geometryAnteriorPatch,
+    id,
+    updatedAt: Date.now(),
+  };
   list[idx] = updated;
   await writeAll(list);
   return updated;

@@ -90,10 +90,33 @@ const OESTE_BAHIA_CERRADO: DemoRoute = {
   ],
 };
 
+/**
+ * Perímetro DECLARADO pelo fazendeiro em Sorriso/MT — versão menor da SORRISO_SOJA
+ * (borda sul ~111 m mais ao norte). Usado na Conferência do analista para a
+ * caminhada do avatar do FAZENDEIRO divergir visivelmente da do ANALISTA.
+ * Espelha DEMO_PERIMETRO_ANTERIOR (refLayers.demo) — duplicado aqui para evitar
+ * dependência cruzada lib→sim.
+ */
+const SORRISO_FAZENDEIRO: DemoRoute = {
+  id: 'sorriso-fazendeiro',
+  nome: 'Fazenda Soja – Declarado pelo fazendeiro',
+  bioma: 'Lavoura (Amazônia/Cerrado)',
+  fonte: 'Perímetro declarado — base SICAR',
+  vertices: [
+    { longitude: -55.9530, latitude: -12.4180 },
+    { longitude: -55.9470, latitude: -12.4176 },
+    { longitude: -55.9455, latitude: -12.4200 },
+    { longitude: -55.9472, latitude: -12.4218 },
+    { longitude: -55.9512, latitude: -12.4220 },
+    { longitude: -55.9532, latitude: -12.4208 },
+  ],
+};
+
 export const DEMO_ROUTES: DemoRoute[] = [
   SORRISO_SOJA,
   FELIZ_NATAL_FLORESTA,
   OESTE_BAHIA_CERRADO,
+  SORRISO_FAZENDEIRO,
 ];
 
 /**

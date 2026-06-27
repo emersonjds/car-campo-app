@@ -1,5 +1,6 @@
 // Modelos de domínio do CAR Campo. Contrato compartilhado por todos os módulos.
 import type { LngLat } from './lib/geo';
+import type { DeltaRelatorio } from './lib/delta';
 
 export type Perfil = 'produtor' | 'analista';
 
@@ -43,10 +44,48 @@ export interface Validacao {
   updatedAt: number;
 }
 
+/** Motivo da solicitação de visita técnica feita pelo produtor. */
+export type MotivoVisita = 'medicao' | 'documentacao';
+
+/** Solicitação de visita técnica (proativa do produtor). */
+export interface SolicitacaoVisita {
+  solicitadaEm: number;
+  motivo: MotivoVisita;
+  /** Resumo legível do porquê (ex.: "Acréscimo de +16,3 ha tocando área restritiva"). */
+  detalhe: string;
+}
+
 export interface Produtor {
   nome: string;
   /** CPF ou CNPJ — PII (LGPD) */
   cpfCnpj: string;
+  /** Telefone/WhatsApp para contato do analista (somente dígitos, com DDD). */
+  telefone?: string;
+}
+
+/** Visita de campo agendada pelo analista a partir da fila de avisos. */
+export interface VisitaAgendada {
+  agendadaEm: number;
+  /** Data planejada da visita (escolhida no calendário). Epoch ms do dia. */
+  dataVisita?: number;
+  /** Período do dia combinado para a visita. */
+  periodo?: 'manha' | 'tarde';
+  analista?: string;
+}
+
+/**
+ * Informe gerado pelo SISTEMA quando a medição do produtor diverge do registro
+ * anterior o suficiente para exigir visita. Gravado no save da demarcação (o
+ * produtor não vê) e exibido na Triagem/Visitas do analista como "novo" até
+ * ele abrir o imóvel. É a contraprova que motiva a visita de campo.
+ */
+export interface AlertaDivergencia {
+  detectadoEm: number;
+  delta_ha: number;
+  delta_pct: number;
+  severidade: 'critico' | 'alto' | 'medio' | 'baixo';
+  /** false = ainda não visto pelo analista (mostra selo "novo"). */
+  visto: boolean;
 }
 
 export interface ImovelDados {
@@ -63,10 +102,34 @@ export interface Imovel {
   produtor: Produtor;
   imovel: ImovelDados;
   geometry: ImovelGeometry;
+  /**
+   * Snapshot da geometria imediatamente anterior à última re-demarcação.
+   * Preenchido automaticamente pelo store.updateImovel ao detectar mudança de geometry.
+   * Usado pelo motor de delta (lib/delta.ts) para comparar perímetros.
+   */
+  geometryAnterior?: ImovelGeometry;
+  /**
+   * Resultado da última comparação de perímetros (delta de re-demarcação).
+   * Gerado por compararPerimetros() e persistido junto com o imóvel.
+   */
+  deltaRelatorio?: DeltaRelatorio;
   documentos: Documento[];
   status: ImovelStatus;
   /** Análise do analista de campo (opcional — só preenchida no fluxo do analista). */
   validacao?: Validacao;
+  /**
+   * Solicitação de visita técnica feita pelo PRODUTOR (proativa), ao detectar
+   * divergência de medição ou para conferência de documentação. Alimenta a fila
+   * de visitas do analista.
+   */
+  solicitacaoVisita?: SolicitacaoVisita;
+  /** Visita de campo agendada pelo analista (a partir da fila de avisos). */
+  visitaAgendada?: VisitaAgendada;
+  /**
+   * Informe automático do sistema: a última medição divergiu do registro e
+   * exige visita. Gerado no save da demarcação; o analista vê na triagem.
+   */
+  alertaDivergencia?: AlertaDivergencia;
   createdAt: number;
   updatedAt: number;
 }

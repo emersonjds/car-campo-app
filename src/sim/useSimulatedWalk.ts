@@ -77,7 +77,7 @@ export function useSimulatedWalk(): UseSimulatedWalk {
   const [points, setPoints] = useState<LngLat[]>([]);
   const [avatar, setAvatar] = useState<LngLat | null>(null);
   const [progress, setProgress] = useState(0);
-  const [speed, setSpeedState] = useState<1 | 2 | 4>(1);
+  const [speed, setSpeedState] = useState<1 | 2 | 4>(4);
 
   // Refs — tudo que o timer usa para evitar closures desatualizadas
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -87,7 +87,7 @@ export function useSimulatedWalk(): UseSimulatedWalk {
   const indexRef = useRef(0);
   const nextVertexRef = useRef(0);
   const accumRef = useRef(0); // acumulador fracional de passos
-  const speedRef = useRef<number>(1);
+  const speedRef = useRef<number>(4);
 
   const clearTick = useCallback(() => {
     if (intervalRef.current !== null) {

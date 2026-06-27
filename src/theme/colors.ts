@@ -10,4 +10,7 @@ export const colors = {
   branco: '#ffffff',
   alerta: '#a3302a',
   aviso: '#8a5a13',
+  // Diferença de perímetro na conferência do analista
+  acrescido: '#f59e0b', // âmbar — área acrescida
+  suprimido: '#2579c7', // azul — área suprimida (mesma da hidrografia/APP)
 };

@@ -22,6 +22,7 @@
 // Não representam a situação jurídica real de nenhuma área.
 
 import type { CamadaRef } from './overlay';
+import type { LngLat } from './geo';
 
 // ---------------------------------------------------------------------------
 // 1. Terra Indígena fictícia (fragmento) — cruza parcialmente SORRISO_SOJA
@@ -234,6 +235,34 @@ export const DEMO_CAMADAS: CamadaRef[] = [
   DESMATAMENTO_PRODES,
   QUEIMADA_AQ1KM,
   APP_RIACHO,
+];
+
+// ---------------------------------------------------------------------------
+// Perímetro anterior de demo — baseline para comparação de delta
+//
+// Versão LEVEMENTE MENOR da rota SORRISO_SOJA (vertices sul movidos ~0,001°
+// ao norte = ≈ 111 m), para que a comparação
+//   (anterior = DEMO_PERIMETRO_ANTERIOR, novo = SORRISO_SOJA vertices)
+// produza:
+//   • área anterior ≈ 32,7 ha  |  área nova ≈ 39,8 ha  |  Δ ≈ +7,1 ha (+21,6%)
+//   • área acrescida (faixa sul): intersecta EMBARGO_IBAMA e QUEIMADA_AQ1KM
+//   • severidade: CRÍTICO (acrescido toca embargo) — requerVisita = true
+//
+// Diferença em relação aos vértices SORRISO_SOJA:
+//   V4: -12.4228 → -12.4218  (sul direito, 0,001° norte)
+//   V5: -12.4230 → -12.4220  (extremo sul, 0,001° norte)
+//   V6: -12.4208 → -12.4208  (inalterado — extremo SW)
+//   V1–V3: inalterados (borda norte/leste)
+//
+// IMPORTANTE: dado FICTÍCIO, exclusivo para demonstração offline.
+// ---------------------------------------------------------------------------
+export const DEMO_PERIMETRO_ANTERIOR: LngLat[] = [
+  { longitude: -55.9530, latitude: -12.4180 }, // V1 NW  — igual ao SORRISO_SOJA
+  { longitude: -55.9470, latitude: -12.4176 }, // V2 NE  — igual ao SORRISO_SOJA
+  { longitude: -55.9455, latitude: -12.4200 }, // V3 E   — igual ao SORRISO_SOJA
+  { longitude: -55.9472, latitude: -12.4218 }, // V4 SE  — era -12.4228, movido +0,001° N
+  { longitude: -55.9512, latitude: -12.4220 }, // V5 S   — era -12.4230, movido +0,001° N
+  { longitude: -55.9532, latitude: -12.4208 }, // V6 SW  — igual ao SORRISO_SOJA
 ];
 
 /**
