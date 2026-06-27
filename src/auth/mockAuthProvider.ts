@@ -23,13 +23,13 @@ export function validarMatricula(
 }
 
 export const mockAuthProvider: AuthProvider = {
-  async loginGovBr() {
+  async loginGovBr(cpf: string) {
     // Identidade demo retornada como se viesse do Login Único (nome, CPF, selo).
     const sessao: Sessao = {
       perfil: 'produtor',
       method: 'govbr',
       nome: 'José da Silva',
-      cpf: '12345678909',
+      cpf,
       selo: 'ouro',
       token: `mock-govbr-${Date.now().toString(36)}`,
       loggedAt: Date.now(),

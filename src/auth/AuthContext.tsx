@@ -7,7 +7,7 @@ const provider = mockAuthProvider; // trocar por govbrAuthProvider quando real
 interface AuthValue {
   sessao: Sessao | null;
   loading: boolean;
-  loginGovBr: () => Promise<void>;
+  loginGovBr: (cpf: string) => Promise<void>;
   loginMatricula: (matricula: string, senha: string) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -29,7 +29,7 @@ export function AuthProviderComponent({ children }: { children: ReactNode }) {
   const value = useMemo<AuthValue>(() => ({
     sessao,
     loading,
-    loginGovBr: async () => { setSessao(await provider.loginGovBr()); },
+    loginGovBr: async (cpf) => { setSessao(await provider.loginGovBr(cpf)); },
     loginMatricula: async (m, s) => { setSessao(await provider.loginMatricula(m, s)); },
     logout: async () => { try { await provider.logout(); } finally { setSessao(null); } },
   }), [sessao, loading]);
