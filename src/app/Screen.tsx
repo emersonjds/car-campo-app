@@ -1,7 +1,8 @@
 // Casca de tela: SafeArea + barra de marca fina (app-bar, conforme os mockups)
 // + título de página opcional como heading escuro sobre o corpo claro.
 import { ReactNode } from 'react';
-import { SafeAreaView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { text, fonts } from '../theme/typography';
@@ -24,7 +25,7 @@ export function Screen({
   return (
     <View style={s.safe}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.branco} />
-      <SafeAreaView style={s.safeTop}>
+      <SafeAreaView edges={['top']} style={s.safeTop}>
         {/* Barra de marca fina: [voltar?] logo + CAR Campo ........ [ação/sino] */}
         <View style={s.appBar}>
           <View style={s.brand}>

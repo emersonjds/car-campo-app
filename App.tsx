@@ -5,6 +5,7 @@ import {
   Inter_800ExtraBold,
 } from '@expo-google-fonts/inter';
 import { useFonts } from 'expo-font';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProviderComponent } from './src/auth/AuthContext';
 import { NavigationProvider } from './src/app/navigation';
 import { AppShell } from './src/app/AppShell';
@@ -22,10 +23,12 @@ export default function App() {
   if (!fontsLoaded && !fontsError) return null;
 
   return (
-    <AuthProviderComponent>
-      <NavigationProvider>
-        <AppShell />
-      </NavigationProvider>
-    </AuthProviderComponent>
+    <SafeAreaProvider>
+      <AuthProviderComponent>
+        <NavigationProvider>
+          <AppShell />
+        </NavigationProvider>
+      </AuthProviderComponent>
+    </SafeAreaProvider>
   );
 }

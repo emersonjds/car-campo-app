@@ -1,6 +1,7 @@
 // Tela de login por persona — sem credenciais. Tocar no card entra direto.
 import { useState } from 'react';
-import { ActivityIndicator, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../auth/AuthContext';
 import { colors } from '../theme/colors';

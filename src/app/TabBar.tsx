@@ -3,6 +3,7 @@
 //  • Analista de campo: Painel · Medições · Documentos · Perfil
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
 import { useNav, type Route, type RouteName } from './navigation';
 import type { Perfil } from '../types';
@@ -36,10 +37,11 @@ export function tabsForPerfil(perfil: Perfil | null): Tab[] {
 
 export function TabBar() {
   const { route, perfil, switchTab } = useNav();
+  const insets = useSafeAreaInsets();
   const tabs = tabsForPerfil(perfil);
 
   return (
-    <View style={s.bar}>
+    <View style={[s.bar, { paddingBottom: insets.bottom + 6 }]}>
       {tabs.map((tab) => {
         const active = route.name === tab.name;
         return (
@@ -75,7 +77,7 @@ const s = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.line,
     paddingTop: 6,
-    paddingBottom: 26, // safe area iOS
+    // paddingBottom vem do safe-area inset (proporcional) — aplicado inline.
   },
   tab: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   // ponytail: pill só muda o fundo — evita refluxo de layout com paddingEmpty.
