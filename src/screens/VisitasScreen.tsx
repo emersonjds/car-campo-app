@@ -10,9 +10,9 @@ import { Alert, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } 
 import { Screen } from '../app/Screen';
 import { useNav } from '../app/navigation';
 import { EmptyState } from '../ui';
-import { CalendarModal, formatarVisita } from '../ui/CalendarModal';
+import { formatarVisita } from '../ui/CalendarModal';
 import { colors } from '../theme/colors';
-import { listImoveis, updateImovel } from '../lib/store';
+import { listImoveis } from '../lib/store';
 import { analisarSobreposicoes } from '../lib/overlay';
 import { analisarAlteracaoImovel } from '../lib/alteracao';
 import { gerarPainelAvisos, type AvisoConferencia, type PainelAvisos } from '../lib/conferencia';
@@ -38,17 +38,13 @@ const sevColor: Record<Severidade, string> = {
 export function VisitasScreen() {
   const { navigate } = useNav();
   const [imoveis, setImoveis] = useState<Imovel[]>([]);
-  // Imóvel cujo agendamento está aberto no calendário (null = fechado).
-  const [agendando, setAgendando] = useState<Imovel | null>(null);
 
   const load = useCallback(() => {
     let alive = true;
     listImoveis().then((list) => {
       if (alive) setImoveis(list);
     });
-    return () => {
-      alive = false;
-    };
+    return () => { alive = false; };
   }, []);
   useEffect(() => load(), [load]);
 
@@ -77,22 +73,9 @@ export function VisitasScreen() {
 
   const urgentes = fila.filter((f) => f.painel.severidadeGeral === 'critico').length;
 
-  // Abre o calendário para o imóvel selecionado.
-  const agendar = useCallback((im: Imovel) => setAgendando(im), []);
-
-  // Confirma a data/período escolhidos no calendário e atualiza a fila.
-  const confirmarAgenda = useCallback(
-    async (ts: number, periodo: 'manha' | 'tarde') => {
-      const im = agendando;
-      if (!im) return;
-      setAgendando(null);
-      await updateImovel(im.id, {
-        visitaAgendada: { agendadaEm: Date.now(), dataVisita: ts, periodo, analista: 'Analista' },
-      });
-      load();
-    },
-    [agendando, load],
-  );
+  const agendar = useCallback((im: Imovel) => {
+    navigate({ name: 'agendar-visita', imovelId: im.id });
+  }, [navigate]);
 
   const contatarWhatsApp = useCallback((im: VisitaItem) => {
     const tel = (im.imovel.produtor.telefone ?? TELEFONE_DEMO).replace(/\D/g, '');
@@ -139,19 +122,6 @@ export function VisitasScreen() {
         )}
       </ScrollView>
 
-      <CalendarModal
-        visible={agendando != null}
-        title={agendando?.visitaAgendada ? 'Reagendar visita' : 'Agendar visita'}
-        subtitle={
-          agendando
-            ? `${agendando.imovel.nome || 'Imóvel'} · ${agendando.produtor.nome}`
-            : undefined
-        }
-        confirmLabel="Confirmar visita"
-        initialTs={agendando?.visitaAgendada?.dataVisita}
-        onConfirm={confirmarAgenda}
-        onClose={() => setAgendando(null)}
-      />
     </Screen>
   );
 }

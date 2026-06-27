@@ -17,6 +17,7 @@ import { ValidacaoScreen } from '../screens/ValidacaoScreen';
 import { VisitasScreen } from '../screens/VisitasScreen';
 import { AlteracaoDetalheScreen } from '../screens/AlteracaoDetalheScreen';
 import { ConferenciaLabScreen } from '../screens/ConferenciaLabScreen';
+import { AgendarVisitaScreen } from '../screens/AgendarVisitaScreen';
 import { PainelScreen } from '../screens/PainelScreen';
 import { ConfigScreen } from '../screens/ConfigScreen';
 
@@ -73,6 +74,8 @@ export function Router() {
       return <AlteracaoDetalheScreen imovelId={route.imovelId} />;
     case 'conferencia-lab':
       return <ConferenciaLabScreen imovelId={route.imovelId} />;
+    case 'agendar-visita':
+      return <AgendarVisitaScreen imovelId={route.imovelId} />;
     default:
       return <HomeScreen />;
   }

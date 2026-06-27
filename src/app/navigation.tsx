@@ -23,7 +23,8 @@ export type Route =
   | { name: 'revisao'; imovelId: string }
   | { name: 'analise-ambiental'; imovelId: string }
   | { name: 'alteracao-detalhe'; imovelId: string }
-  | { name: 'conferencia-lab'; imovelId?: string };
+  | { name: 'conferencia-lab'; imovelId?: string }
+  | { name: 'agendar-visita'; imovelId: string };
 
 export type RouteName = Route['name'];
 

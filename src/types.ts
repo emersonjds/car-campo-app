@@ -70,6 +70,10 @@ export interface VisitaAgendada {
   dataVisita?: number;
   /** Período do dia combinado para a visita. */
   periodo?: 'manha' | 'tarde';
+  /** Slot de horário exato selecionado (ex.: "08:00", "14:30"). */
+  horario?: string;
+  /** Observação livre do analista sobre a divergência/motivo da visita. */
+  observacao?: string;
   analista?: string;
 }
 

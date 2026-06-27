@@ -18,6 +18,91 @@ function inicioDoDia(d: Date): number {
 
 export type Periodo = 'manha' | 'tarde';
 
+/**
+ * Grade de calendário inline (sem modal, sem período).
+ * Usada em AgendarVisitaScreen onde o horário é escolhido separadamente.
+ */
+export function CalendarPicker({
+  value,
+  onChange,
+  initialTs,
+}: {
+  /** Dia selecionado (epoch ms do dia, sem horas). null = nenhum. */
+  value: number | null;
+  onChange: (ts: number) => void;
+  initialTs?: number;
+}) {
+  const hoje = new Date();
+  const hojeMs = inicioDoDia(hoje);
+  const base = value ? new Date(value) : initialTs ? new Date(initialTs) : hoje;
+
+  const [ano, setAno] = useState(base.getFullYear());
+  const [mes, setMes] = useState(base.getMonth());
+
+  const primeiroDiaSemana = new Date(ano, mes, 1).getDay();
+  const diasNoMes = new Date(ano, mes + 1, 0).getDate();
+  const celulas: (number | null)[] = [
+    ...Array(primeiroDiaSemana).fill(null),
+    ...Array.from({ length: diasNoMes }, (_, i) => i + 1),
+  ];
+
+  const irMes = (delta: number) => {
+    const m = mes + delta;
+    if (m < 0) { setMes(11); setAno((a) => a - 1); }
+    else if (m > 11) { setMes(0); setAno((a) => a + 1); }
+    else setMes(m);
+  };
+  const podeVoltar = ano > hoje.getFullYear() || (ano === hoje.getFullYear() && mes > hoje.getMonth());
+
+  return (
+    <View>
+      <View style={s.monthRow}>
+        <TouchableOpacity
+          style={[s.navBtn, !podeVoltar && s.navBtnOff]}
+          onPress={() => podeVoltar && irMes(-1)}
+          disabled={!podeVoltar}
+          hitSlop={8}
+        >
+          <Text style={[s.navTxt, !podeVoltar && { opacity: 0.3 }]}>‹</Text>
+        </TouchableOpacity>
+        <Text style={s.monthLabel}>{MESES[mes]} {ano}</Text>
+        <TouchableOpacity style={s.navBtn} onPress={() => irMes(1)} hitSlop={8}>
+          <Text style={s.navTxt}>›</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={s.weekRow}>
+        {DIAS_SEMANA.map((d, i) => (
+          <Text key={i} style={s.weekDay}>{d}</Text>
+        ))}
+      </View>
+
+      <View style={s.grid}>
+        {celulas.map((dia, i) => {
+          if (dia == null) return <View key={i} style={s.cell} />;
+          const ts = new Date(ano, mes, dia).getTime();
+          const passado = ts < hojeMs;
+          const isHoje = ts === hojeMs;
+          const isSel = ts === value;
+          return (
+            <TouchableOpacity
+              key={i}
+              style={s.cell}
+              disabled={passado}
+              activeOpacity={0.7}
+              onPress={() => onChange(ts)}
+            >
+              <View style={[s.dayBtn, isSel && s.daySel, isHoje && !isSel && s.dayHoje]}>
+                <Text style={[s.dayTxt, passado && s.dayOff, isSel && s.dayTxtSel]}>{dia}</Text>
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
 export function CalendarModal({
   visible,
   title = 'Agendar visita',
