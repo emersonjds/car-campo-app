@@ -29,6 +29,7 @@ export type CamadaTipo =
   | 'unidade_conservacao'
   | 'embargo_ibama'
   | 'desmatamento'
+  | 'queimada'
   | 'app_hidrografia'
   | 'car_vizinho';
 
@@ -99,11 +100,12 @@ export interface AnaliseAmbiental {
  *
  * Regras:
  *   - 'critico'  : terra_indigena, unidade_conservacao, embargo_ibama
- *   - 'alerta'   : desmatamento
+ *   - 'alerta'   : desmatamento, queimada
  *   - 'info'     : app_hidrografia, car_vizinho
  *
- * Atenção: desmatamento e car_vizinho podem ter severidade elevada dinamicamente
- * pela função _severidadeDinamica() com base no percentual de sobreposição.
+ * Atenção: desmatamento, queimada e car_vizinho podem ter severidade elevada
+ * dinamicamente pela função _severidadeDinamica() com base no percentual de
+ * sobreposição.
  */
 export function severidadePorTipo(tipo: CamadaTipo): Severidade {
   switch (tipo) {
@@ -112,6 +114,7 @@ export function severidadePorTipo(tipo: CamadaTipo): Severidade {
     case 'embargo_ibama':
       return 'critico';
     case 'desmatamento':
+    case 'queimada':
       return 'alerta';
     case 'app_hidrografia':
     case 'car_vizinho':
@@ -121,10 +124,11 @@ export function severidadePorTipo(tipo: CamadaTipo): Severidade {
 
 /**
  * Ajuste dinâmico de severidade: desmatamento com > 20% do imóvel → 'critico';
- * car_vizinho com > 50% do imóvel → 'alerta'.
+ * queimada com > 20% do imóvel → 'critico'; car_vizinho com > 50% → 'alerta'.
  */
 function _severidadeDinamica(tipo: CamadaTipo, percentual: number): Severidade {
   if (tipo === 'desmatamento' && percentual > 20) return 'critico';
+  if (tipo === 'queimada' && percentual > 20) return 'critico';
   if (tipo === 'car_vizinho' && percentual > 50) return 'alerta';
   return severidadePorTipo(tipo);
 }
@@ -174,6 +178,18 @@ function _mensagem(
       return (
         `${icone} Seu imóvel sobrepõe ${cobertura} de desmatamento detectado pelo INPE (${nome}). ` +
         `Verifique se a área foi desmatada legalmente (autorização de supressão) antes de enviar ao CAR.`
+      );
+    case 'queimada':
+      if (severidade === 'critico') {
+        return (
+          `${icone} Área com cicatriz de queimada detectada: ${cobertura} do imóvel (INPE Programa Queimadas — ${nome}). ` +
+          `Percentual alto — fogo extenso pode indicar dano à vegetação/Reserva Legal e inviabilizar o crédito rural. ` +
+          `Averigue a origem do fogo e procure o órgão ambiental estadual.`
+        );
+      }
+      return (
+        `${icone} Área com cicatriz de queimada detectada: ${cobertura} do imóvel (INPE Programa Queimadas — ${nome}). ` +
+        `Verifique se houve autorização de queima controlada e averigue a origem do fogo antes de enviar ao CAR.`
       );
     case 'app_hidrografia':
       return (

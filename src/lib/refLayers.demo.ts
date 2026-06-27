@@ -100,6 +100,32 @@ const DESMATAMENTO_PRODES: CamadaRef = {
 };
 
 // ---------------------------------------------------------------------------
+// 3b. Área queimada AQ1km (cicatriz de fogo, fictícia) — cruza o sul de SORRISO_SOJA
+//
+// Simula uma cicatriz de queimada detectada pelo INPE (Programa Queimadas,
+// produto AQ1km mensal). Cenário comum em MT no fim da estação seca, quando o
+// fogo de limpeza de pasto/restos de cultura escapa para a lavoura ou vegetação.
+// Posicionada no centro-sul do polígono SORRISO_SOJA, cobrindo ~5–15% do imóvel
+// (interseção parcial — parte da cicatriz fica fora, ao sul da fazenda).
+// ---------------------------------------------------------------------------
+const QUEIMADA_AQ1KM: CamadaRef = {
+  tipo: 'queimada',
+  nome: 'Cicatriz de queimada AQ1km set/2023 (demo)',
+  fonte: 'INPE Programa Queimadas AQ1km — fixture offline',
+  rings: [
+    [
+      // Anel cruza a borda centro-sul da fazenda (lat fazenda ~-12.420 a -12.423).
+      // Começa dentro do imóvel e estende-se para fora, ao sul.
+      [-55.9515, -12.4205], // NW — dentro da fazenda
+      [-55.9485, -12.4207], // NE — dentro da fazenda
+      [-55.9483, -12.4238], // SE — fora da fazenda (ao sul)
+      [-55.9517, -12.4238], // SW — fora da fazenda
+      [-55.9515, -12.4205], // fecha anel (= primeiro ponto)
+    ],
+  ],
+};
+
+// ---------------------------------------------------------------------------
 // 4. APP Hidrografia — riacho que passa pela borda norte (info)
 //
 // Simula uma faixa de APP de 30 m de um curso d'água de 1ª ordem (< 10 m)
@@ -136,6 +162,7 @@ const APP_RIACHO: CamadaRef = {
  *   - TI Xavante Sorriso    → 'critico' (~15–20% do imóvel)
  *   - Embargo IBAMA         → 'critico' (~10% do imóvel)
  *   - PRODES 2023           → 'alerta'  (~12% do imóvel)
+ *   - Queimada AQ1km        → 'alerta'  (~5–15% do imóvel)
  *   - APP Riacho            → 'info'    (~5% do imóvel)
  *
  * Para FELIZ_NATAL_FLORESTA e OESTE_BAHIA_CERRADO não há fixtures demo;
@@ -146,5 +173,6 @@ export const DEMO_CAMADAS: CamadaRef[] = [
   TI_FRAGMENTO,
   EMBARGO_IBAMA,
   DESMATAMENTO_PRODES,
+  QUEIMADA_AQ1KM,
   APP_RIACHO,
 ];

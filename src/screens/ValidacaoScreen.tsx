@@ -18,6 +18,7 @@ function tipoLabel(tipo: CamadaTipo): string {
     case 'unidade_conservacao': return 'UC';
     case 'embargo_ibama':      return 'Embargo';
     case 'desmatamento':       return 'Desmat.';
+    case 'queimada':           return 'Queimada';
     case 'app_hidrografia':    return 'APP';
     case 'car_vizinho':        return 'CAR viz.';
   }

@@ -64,8 +64,15 @@ function sevStyle(sev: Sobreposicao['severidade']): SevStyle {
 
 function SobreposicaoCard({ item }: { item: Sobreposicao }) {
   const st = sevStyle(item.severidade);
+  // Cicatriz de fogo ganha ícone próprio (🔥); demais seguem a severidade.
   const icone =
-    item.severidade === 'critico' ? '⛔' : item.severidade === 'alerta' ? '⚠' : 'ℹ';
+    item.tipo === 'queimada'
+      ? '🔥'
+      : item.severidade === 'critico'
+        ? '⛔'
+        : item.severidade === 'alerta'
+          ? '⚠'
+          : 'ℹ';
   const areaFmt =
     item.area_ha < 10 ? item.area_ha.toFixed(1) : Math.round(item.area_ha).toString();
   const pctFmt =

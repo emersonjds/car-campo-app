@@ -421,6 +421,16 @@ function _gerarRecomendacoes(
     );
   }
 
+  if (tipos.has('queimada')) {
+    recs.push(
+      'Cicatriz de queimada detectada (INPE): averigue a origem do fogo. ' +
+        'Se houve queima controlada, mantenha a autorização do órgão ambiental; ' +
+        'caso contrário, regularize via PRA e comprove a recuperação da área. ' +
+        'Fogo recorrente ou sobre vegetação nativa pode gerar autuação, embargo e ' +
+        'suspensão do crédito rural.',
+    );
+  }
+
   if (tipos.has('app_hidrografia')) {
     recs.push(
       'APP de hidrografia: verifique se há uso indevido da faixa marginal. ' +

@@ -30,6 +30,12 @@
 //   • INPE TerraBrasilis — https://terrabrasilis.dpi.inpe.br/geoserver/ows
 //              Camada: prodes-amazon-nb:yearly_deforestation_biome (Amazônia)
 //              CRS servidor: SIRGAS 2000 (EPSG:4674).
+//   • INPE Programa Queimadas — https://terrabrasilis.dpi.inpe.br/geoserver/ows
+//              Produto AQ1km — Área Queimada mensal 1km (cicatriz de fogo).
+//              Camada: queimadas:aq1km_mensal (workspace queimadas do GeoServer
+//              TerraBrasilis; ver lista de camadas em
+//              https://terrabrasilis.dpi.inpe.br/queimadas/aq1km/).
+//              CRS servidor: SIRGAS 2000 (EPSG:4674); consultado via CRS:84.
 
 import type { CamadaRef, CamadaTipo } from './overlay';
 import { DEMO_CAMADAS } from './refLayers.demo';
@@ -109,6 +115,20 @@ const WFS_CONFIGS: WfsConfig[] = [
     typeName: 'prodes-amazon-nb:yearly_deforestation_biome',
     version: '2.0.0',
     fonteLabel: 'INPE TerraBrasilis PRODES (terrabrasilis.dpi.inpe.br)',
+    maxFeatures: 300,
+  },
+
+  // ---- Área queimada (cicatriz de fogo) — INPE Programa Queimadas ----
+  // Ref: https://terrabrasilis.dpi.inpe.br/queimadas/aq1km/
+  // Produto AQ1km — Área Queimada mensal (1km), polígonos de cicatriz de fogo
+  // derivados de sensoriamento remoto. Servido pelo GeoServer TerraBrasilis,
+  // workspace `queimadas`. Atualização mensal.
+  {
+    tipo: 'queimada',
+    baseUrl: 'https://terrabrasilis.dpi.inpe.br/geoserver/ows',
+    typeName: 'queimadas:aq1km_mensal',
+    version: '2.0.0',
+    fonteLabel: 'INPE Programa Queimadas AQ1km (terrabrasilis.dpi.inpe.br)',
     maxFeatures: 300,
   },
 ];
@@ -339,6 +359,7 @@ export async function fetchCamadasPorBBox(
     'unidade_conservacao',
     'embargo_ibama',
     'desmatamento',
+    'queimada',
     'app_hidrografia',
     'car_vizinho',
   ],
