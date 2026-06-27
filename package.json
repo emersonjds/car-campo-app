@@ -3,9 +3,11 @@
   "version": "1.0.0",
   "main": "index.ts",
   "dependencies": {
+    "@expo/vector-icons": "^15.1.1",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@turf/area": "^7.3.5",
     "@turf/boolean-intersects": "^7.3.5",
+    "@turf/difference": "^7.3.5",
     "@turf/helpers": "^7.3.5",
     "@turf/intersect": "^7.3.5",
     "@turf/union": "^7.3.5",
@@ -32,8 +34,9 @@
   },
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "android:device": "expo run:android --device",
+    "ios": "expo run:ios",
     "web": "expo start --web",
     "test": "vitest run",
     "coverage": "vitest run --coverage"

@@ -5,9 +5,11 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
+    "scheme": "carcampo",
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "br.com.carcampo.app",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Usamos sua localização (GPS) para desenhar o perímetro do imóvel rural enquanto você caminha.",
         "NSCameraUsageDescription": "Usamos a câmera para fotografar documentos e pontos da divisa do imóvel.",
@@ -15,6 +17,7 @@
       }
     },
     "android": {
+      "package": "br.com.carcampo.app",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -26,7 +29,12 @@
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
         "CAMERA"
-      ]
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": "COLOQUE_AQUI_SUA_CHAVE_GOOGLE_MAPS_ANDROID"
+        }
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -49,7 +57,7 @@
       "expo-secure-store"
     ],
     "extra": {
-      "apiBaseUrl": "http://localhost:3000"
+      "apiBaseUrl": "http://192.168.15.9:3000"
     }
   }
 }
