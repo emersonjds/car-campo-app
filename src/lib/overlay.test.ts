@@ -231,6 +231,7 @@ describe('severidadePorTipo', () => {
   it('desmatamento → alerta', () => expect(severidadePorTipo('desmatamento')).toBe('alerta'));
   it('queimada → alerta', () => expect(severidadePorTipo('queimada')).toBe('alerta'));
   it('app_hidrografia → info', () => expect(severidadePorTipo('app_hidrografia')).toBe('info'));
+  it('hidrografia → info', () => expect(severidadePorTipo('hidrografia')).toBe('info'));
   it('car_vizinho → info', () => expect(severidadePorTipo('car_vizinho')).toBe('info'));
 });
 
@@ -332,6 +333,14 @@ describe('mensagens e severidade dinâmica', () => {
     const app = _camadaQuadrado(-55.95, -12.42, 0.005, 'app_hidrografia');
     const r = analisarSobreposicoes(imóvel, [app]);
     expect(r.sobreposicoes[0]!.mensagem).toContain('APP');
+  });
+
+  it('hidrografia gera mensagem de curso d\'água', () => {
+    const imóvel = _square(-55.95, -12.42, 0.01);
+    const hidro = _camadaQuadrado(-55.95, -12.42, 0.005, 'hidrografia');
+    const r = analisarSobreposicoes(imóvel, [hidro]);
+    expect(r.sobreposicoes[0]!.mensagem).toContain('hidrografia');
+    expect(r.sobreposicoes[0]!.severidade).toBe('info');
   });
 
   it('car_vizinho > 50% escala para alerta (conflito de limites)', () => {

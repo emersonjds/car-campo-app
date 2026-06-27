@@ -14,6 +14,7 @@ export default defineConfig({
         'src/lib/refLayers.ts',
         'src/lib/refLayers.demo.ts',
         'src/lib/credito.ts',
+        'src/lib/app.ts',
       ],
       thresholds: {
         lines: 95,

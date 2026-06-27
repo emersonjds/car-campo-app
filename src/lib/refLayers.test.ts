@@ -59,10 +59,11 @@ describe('fetchCamadasPorBBox — todos online', () => {
 
     const r = await fetchCamadasPorBBox(BBOX_LONGE);
     expect(r.fonte).toBe('online');
-    // 5 tipos com WFS, cada um devolve 1 feature
-    expect(r.camadas.length).toBe(5);
+    // 6 tipos com WFS (terra_indigena, unidade_conservacao, embargo_ibama,
+    // desmatamento, queimada, hidrografia), cada um devolve 1 feature
+    expect(r.camadas.length).toBe(6);
     expect(r.camadas.every((c) => c.nome === 'TI Teste')).toBe(true);
-    expect(fetchMock).toHaveBeenCalledTimes(5);
+    expect(fetchMock).toHaveBeenCalledTimes(6);
   });
 
   it('parseia Polygon, MultiPolygon com holes e ignora geometrias inválidas', async () => {
