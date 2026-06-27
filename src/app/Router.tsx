@@ -10,6 +10,7 @@ import { CadastroScreen } from '../screens/CadastroScreen';
 import { DemarcacaoScreen } from '../screens/DemarcacaoScreen';
 import { DocumentosScreen } from '../screens/DocumentosScreen';
 import { RevisaoScreen } from '../screens/RevisaoScreen';
+import { AnaliseAmbientalScreen } from '../screens/AnaliseAmbientalScreen';
 import { ValidacaoScreen } from '../screens/ValidacaoScreen';
 import { PainelScreen } from '../screens/PainelScreen';
 import { ConfigScreen } from '../screens/ConfigScreen';
@@ -47,6 +48,8 @@ export function Router() {
       return <DocumentosScreen imovelId={route.imovelId} />;
     case 'revisao':
       return <RevisaoScreen imovelId={route.imovelId} />;
+    case 'analise-ambiental':
+      return <AnaliseAmbientalScreen imovelId={route.imovelId} />;
     default:
       return <HomeScreen />;
   }

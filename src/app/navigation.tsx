@@ -12,7 +12,8 @@ export type Route =
   | { name: 'cadastro'; imovelId?: string }
   | { name: 'demarcacao'; imovelId: string }
   | { name: 'documentos'; imovelId: string }
-  | { name: 'revisao'; imovelId: string };
+  | { name: 'revisao'; imovelId: string }
+  | { name: 'analise-ambiental'; imovelId: string };
 
 export type RouteName = Route['name'];
 

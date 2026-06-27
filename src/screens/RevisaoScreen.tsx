@@ -1,7 +1,7 @@
 // Tela de Revisão — passo 4/4 do wizard de demarcação do imóvel.
 // Exibe resumo, validação geométrica, exportação e envio à CAR Geo API.
 // Offline-first: nunca bloqueia o produtor por falta de rede.
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Screen } from '../app/Screen';
 import { WizardSteps } from '../app/WizardSteps';
@@ -9,6 +9,8 @@ import { useNav } from '../app/navigation';
 import { getImovel, updateImovel } from '../lib/store';
 import { areaHectares, perimeterM, validatePerimeter } from '../lib/geo';
 import { submitPerimeter } from '../lib/api';
+import { analisarSobreposicoes } from '../lib/overlay';
+import { DEMO_CAMADAS } from '../lib/refLayers.demo';
 import { exportGeoJSONFile, exportPDF, shareText } from '../lib/export';
 import {
   Badge,
@@ -69,6 +71,10 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 
 export function RevisaoScreen({ imovelId }: { imovelId: string }) {
   const { navigate, goBack, switchTab } = useNav();
+
+  // Análise ambiental resumida — síncrona com DEMO_CAMADAS (sem rede necessária).
+  // O laudo completo (com tentativa online) fica na AnaliseAmbientalScreen.
+  // Calculado via useMemo assim que imovel e pontos estiverem disponíveis.
   const [imovel, setImovel] = useState<Imovel | null>(null);
   const [loadingImovel, setLoadingImovel] = useState(true);
   const [activeAction, setActiveAction] = useState<ActiveAction>(null);
@@ -165,7 +171,18 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
         );
       }
     });
-  }, [imovel, imovelId, navigate, withAction]);
+  }, [imovel, imovelId, switchTab, withAction]);
+
+  // ---- Análise ambiental resumida (offline, instantânea) ----
+  // IMPORTANTE: este useMemo precisa vir ANTES dos early returns abaixo, senão a
+  // contagem de hooks muda entre renders (Rules of Hooks). `imovel` é nullable aqui.
+  const analiseResumo = useMemo(
+    () =>
+      imovel && imovel.geometry.points.length >= 3
+        ? analisarSobreposicoes(imovel.geometry.points, DEMO_CAMADAS, 'offline-demo')
+        : null,
+    [imovel],
+  );
 
   // ---- Estado: carregando ----
   if (loadingImovel) {
@@ -331,6 +348,49 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
           </View>
         </Card>
 
+        {/* --- Análise Ambiental --- */}
+        <Card style={s.card}>
+          <SectionTitle>Análise Ambiental</SectionTitle>
+          {analiseResumo === null ? (
+            <Text style={s.noDoc}>Demarcação incompleta — análise indisponível.</Text>
+          ) : (
+            <>
+              {!analiseResumo.ok ? (
+                <View style={s.analiseBannerCritico}>
+                  <Text style={s.analiseBannerCriticoText}>
+                    ⛔{' '}
+                    {analiseResumo.sobreposicoes.filter((x) => x.severidade === 'critico').length}{' '}
+                    sobreposição(ões) crítica(s) detectada(s)
+                  </Text>
+                  <Text style={s.analiseBannerHint}>
+                    Pode impedir o crédito rural. Veja o laudo antes de enviar.
+                  </Text>
+                </View>
+              ) : analiseResumo.sobreposicoes.length > 0 ? (
+                <View style={s.analiseBannerAviso}>
+                  <Text style={s.analiseBannerAvisoText}>
+                    ⚠ {analiseResumo.sobreposicoes.length} sobreposição(ões) sem impedimento crítico.
+                  </Text>
+                </View>
+              ) : (
+                <Text style={s.analiseOk}>
+                  ✓ Nenhuma sobreposição detectada (dados de demonstração).
+                </Text>
+              )}
+              <Text style={s.analiseNota}>
+                Baseado em camada de demonstração (offline). O laudo completo usa dados oficiais.
+              </Text>
+              <View style={[s.btnRow, { marginTop: 10 }]}>
+                <SecondaryButton
+                  label="Ver análise ambiental completa"
+                  onPress={() => navigate({ name: 'analise-ambiental', imovelId })}
+                  disabled={isBusy}
+                />
+              </View>
+            </>
+          )}
+        </Card>
+
         {/* --- Envio --- */}
         <View style={s.submitSection}>
           {!validation.ok ? (
@@ -486,5 +546,54 @@ const s = StyleSheet.create({
     marginBottom: 10,
     fontWeight: '700',
     lineHeight: 18,
+  },
+
+  // Análise ambiental resumida
+  analiseBannerCritico: {
+    backgroundColor: '#fce8e7',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: colors.alerta,
+  },
+  analiseBannerCriticoText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: colors.alerta,
+    lineHeight: 18,
+  },
+  analiseBannerHint: {
+    fontSize: 12,
+    color: colors.alerta,
+    marginTop: 4,
+    lineHeight: 17,
+  },
+  analiseBannerAviso: {
+    backgroundColor: '#fdf4e3',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#c07a1a',
+  },
+  analiseBannerAvisoText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.aviso,
+    lineHeight: 18,
+  },
+  analiseOk: {
+    fontSize: 13,
+    color: colors.verde,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  analiseNota: {
+    fontSize: 11,
+    color: colors.muted,
+    fontStyle: 'italic',
+    lineHeight: 16,
+    marginTop: 4,
   },
 });
