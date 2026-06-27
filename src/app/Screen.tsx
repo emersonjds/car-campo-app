@@ -1,8 +1,10 @@
-// Casca de tela: SafeArea + cabeçalho verde com botão voltar opcional.
+// Casca de tela: SafeArea + barra de marca fina (app-bar, conforme os mockups)
+// + título de página opcional como heading escuro sobre o corpo claro.
 import { ReactNode } from 'react';
 import { SafeAreaView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
+import { text, fonts } from '../theme/typography';
 import { useNav } from './navigation';
 
 export function Screen({
@@ -12,7 +14,7 @@ export function Screen({
   right,
   children,
 }: {
-  title: string;
+  title?: string;
   subtitle?: string;
   showBack?: boolean;
   right?: ReactNode;
@@ -21,43 +23,73 @@ export function Screen({
   const { goBack, canGoBack } = useNav();
   return (
     <View style={s.safe}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.verde} />
-      {/* SafeArea só no header: o inset do topo (notch/status bar) fica verde,
-          casando com o cabeçalho — sem faixa branca. O corpo claro vem por baixo. */}
+      <StatusBar barStyle="dark-content" backgroundColor={colors.branco} />
       <SafeAreaView style={s.safeTop}>
-        <View style={s.header}>
-          {/* Linha de topo: só aparece quando há "voltar" ou ação à direita —
-              evita o espaço morto acima do título nas abas raiz. */}
-          {((showBack && canGoBack) || right) && (
-            <View style={s.headerRow}>
-              {showBack && canGoBack ? (
-                <TouchableOpacity onPress={goBack} hitSlop={12} style={s.backBtn} accessibilityRole="button" accessibilityLabel="Voltar">
-                  <Ionicons name="chevron-back" size={22} color="#d8efe0" />
-                  <Text style={s.backText}>Voltar</Text>
-                </TouchableOpacity>
-              ) : (
-                <View />
-              )}
-              {right ?? null}
+        {/* Barra de marca fina: [voltar?] logo + CAR Campo ........ [ação/sino] */}
+        <View style={s.appBar}>
+          <View style={s.brand}>
+            {showBack && canGoBack && (
+              <TouchableOpacity onPress={goBack} hitSlop={12} style={s.backBtn} accessibilityRole="button" accessibilityLabel="Voltar">
+                <Ionicons name="chevron-back" size={24} color={colors.primary} />
+              </TouchableOpacity>
+            )}
+            <View style={s.logoMark}>
+              <Ionicons name="leaf" size={15} color={colors.branco} />
             </View>
-          )}
-          <Text style={s.title}>{title}</Text>
-          {subtitle ? <Text style={s.subtitle}>{subtitle}</Text> : null}
+            <Text style={s.brandName}>CAR Campo</Text>
+          </View>
+          <View style={s.appBarRight}>
+            {right ?? (
+              <TouchableOpacity hitSlop={10} accessibilityRole="button" accessibilityLabel="Notificações">
+                <Ionicons name="notifications-outline" size={22} color={colors.inkText} />
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
       </SafeAreaView>
+
+      {/* Título da página (heading escuro) — opcional */}
+      {(title || subtitle) && (
+        <View style={s.pageHead}>
+          {title ? <Text style={s.title}>{title}</Text> : null}
+          {subtitle ? <Text style={s.subtitle}>{subtitle}</Text> : null}
+        </View>
+      )}
+
       <View style={s.body}>{children}</View>
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.verdeBg },
-  safeTop: { backgroundColor: colors.verde },
-  header: { backgroundColor: colors.verde, paddingHorizontal: 18, paddingTop: 8, paddingBottom: 14 },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 },
-  backBtn: { flexDirection: 'row', alignItems: 'center', marginLeft: -4 },
-  backText: { color: '#d8efe0', fontSize: 15, fontWeight: '700', marginLeft: -2 },
-  title: { color: colors.branco, fontSize: 22, fontWeight: '800', marginTop: 4 },
-  subtitle: { color: '#d8efe0', fontSize: 13, marginTop: 2 },
+  safe: { flex: 1, backgroundColor: colors.neutral },
+  safeTop: { backgroundColor: colors.branco },
+  appBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: colors.branco,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.line,
+  },
+  brand: { flexDirection: 'row', alignItems: 'center', gap: 9 },
+  backBtn: { marginRight: 2, marginLeft: -4 },
+  logoMark: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  brandName: { fontFamily: fonts.extraBold, fontSize: 17, color: colors.primary },
+  appBarRight: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+
+  pageHead: { paddingHorizontal: 18, paddingTop: 14, paddingBottom: 4, backgroundColor: colors.neutral },
+  title: { ...text.headline, color: colors.inkText },
+  subtitle: { ...text.body, color: colors.mutedText, marginTop: 2 },
+
   body: { flex: 1 },
 });

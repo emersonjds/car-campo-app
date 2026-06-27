@@ -101,7 +101,7 @@ export function HomeScreen() {
   const medicoes = imoveis.filter((im) => im.geometry.points.length >= 3);
 
   return (
-    <Screen title="CAR Campo" showBack={false}>
+    <Screen showBack={false}>
       <ScrollView
         contentContainerStyle={s.scroll}
         showsVerticalScrollIndicator={false}
