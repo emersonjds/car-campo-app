@@ -1,24 +1,36 @@
 // Conferência de Terreno do ANALISTA.
 //
 // O analista faz uma NOVA MEDIÇÃO por cima do mapa do fazendeiro. A tela mostra,
-// num só mapa de satélite, 3 camadas: (1) camadas OFICIAIS (TI/UC, embargo,
-// desmate, queimada, APP/rio, CAR vizinho), (2) marcação do FAZENDEIRO (declarado,
-// branco tracejado) e (3) a re-medição do ANALISTA (conferido, verde). A área de
-// DIFERENÇA aparece em âmbar (acrescido) / azul (suprimido).
+// num só mapa de satélite, 3 camadas:
+//   (1) Dados Governo — camadas OFICIAIS (TI/UC, embargo, desmate, queimada, APP/rio,
+//       CAR vizinho): contorno vermelho, sem preenchimento (colors.critico).
+//   (2) Medição Produtor — perímetro DECLARADO pelo fazendeiro: azul preenchido (colors.tertiary).
+//   (3) Medição Analista — re-medição conferida: verde (colors.primary).
+// A área de DIFERENÇA aparece em âmbar (acrescido) / azul-escuro (suprimido).
 //
-// A simulação anima DOIS avatares (fazendeiro × analista) a 4x, com perímetros
-// que divergem de propósito. Resultado: painel de avisos ("o que revisitar"),
-// topologia, sobreposições e ações (recusar / agendar / aceitar, encaminhar a
-// órgão, anexar documentos de validação).
+// A simulação anima DOIS avatares (F/fazendeiro × A/analista) a 4x, com perímetros
+// que divergem de propósito. Resultado: painel de avisos, topologia, sobreposições
+// e ações (recusar / agendar / aceitar, encaminhar a órgão, anexar documentos).
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Dimensions, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  Alert,
+  Dimensions,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import MapView, { Marker, Polygon, Polyline } from 'react-native-maps';
 
 import { Screen } from '../app/Screen';
 import { useNav } from '../app/navigation';
 import { CalendarModal, type Periodo } from '../ui/CalendarModal';
-import { areaHectares, type LngLat } from '../lib/geo';
-import { analisarSobreposicoes, type AnaliseAmbiental, type CamadaTipo } from '../lib/overlay';
+import { type LngLat } from '../lib/geo';
+import { analisarSobreposicoes, type AnaliseAmbiental } from '../lib/overlay';
 import { DEMO_CAMADAS, DEMO_PERIMETRO_ANTERIOR } from '../lib/refLayers.demo';
 import { decisaoSugerida } from '../lib/alteracao';
 import {
@@ -33,6 +45,7 @@ import { getImovel, updateImovel } from '../lib/store';
 import { pickDocument, takePhoto } from '../lib/documents';
 import { PrimaryButton, SecondaryButton } from '../ui';
 import { colors } from '../theme/colors';
+import { fonts } from '../theme/typography';
 import type { Documento, ValidacaoStatus } from '../types';
 import type { Severidade } from '../lib/overlay';
 
@@ -43,7 +56,7 @@ const MAP_HEIGHT = Math.max(220, Math.floor(SCREEN_HEIGHT * 0.34));
 
 const ROTA_FAZENDEIRO = 'sorriso-fazendeiro';
 const ROTA_ANALISTA = 'sorriso-soja';
-/** Velocidade fixa da simulação (4x) — esperada para fazendeiro e analista. */
+/** Velocidade fixa da simulação (4x) */
 const SIM_SPEED = 4;
 
 // Perímetro DECLARADO pelo fazendeiro (referência estática + comparação).
@@ -58,57 +71,19 @@ const REGION = {
 
 const toLatLng = (p: LngLat) => ({ latitude: p.latitude, longitude: p.longitude });
 
-/** Cor por tipo de camada oficial (translúcida sobre o satélite). */
-function camadaCor(tipo: CamadaTipo): string {
-  switch (tipo) {
-    case 'terra_indigena':
-    case 'unidade_conservacao':
-      return '#b5651d';
-    case 'embargo_ibama':
-      return colors.alerta;
-    case 'desmatamento':
-      return colors.terra;
-    case 'queimada':
-      return '#d35400';
-    case 'app_hidrografia':
-    case 'hidrografia':
-      return colors.suprimido;
-    case 'car_vizinho':
-      return colors.muted;
-  }
-}
-
-function tipoLabel(tipo: CamadaTipo): string {
-  switch (tipo) {
-    case 'terra_indigena':
-    case 'unidade_conservacao':
-      return 'TI / UC';
-    case 'embargo_ibama':      return 'Embargo';
-    case 'desmatamento':       return 'Desmate';
-    case 'queimada':           return 'Queimada';
-    case 'app_hidrografia':
-    case 'hidrografia':        return 'APP / Rio';
-    case 'car_vizinho':        return 'CAR viz.';
-  }
-}
-
-/** Camadas oficiais demo convertidas para anéis do react-native-maps. */
+// ponytail: todas as camadas oficiais usam a mesma cor canônica (Dados Governo = vermelho).
 const CAMADA_POLYS = DEMO_CAMADAS.map((c) => ({
-  tipo: c.tipo,
-  cor: camadaCor(c.tipo),
   coords: (c.rings[0] ?? []).map((coord) => ({ latitude: coord[1] ?? 0, longitude: coord[0] ?? 0 })),
 }));
 
-/** Tipos oficiais únicos presentes nas camadas demo (para a legenda). */
-const CAMADA_TIPOS_LEGENDA = Array.from(new Set(DEMO_CAMADAS.map((c) => c.tipo)));
-
+// ponytail: cores por tone — usando tokens canônicos.
 const sevColor: Record<Severidade, string> = {
-  critico: colors.alerta,
-  alerta: colors.aviso,
-  info: colors.muted,
+  critico: colors.critico,
+  alerta:  colors.aviso,
+  info:    colors.mutedText,
 };
-const toneColor = { ok: colors.verde, aviso: colors.aviso, alerta: colors.alerta } as const;
-const toneBg = { ok: '#e2f3e8', aviso: '#fdf4e3', alerta: '#fce8e7' } as const;
+const toneColor = { ok: colors.primary, aviso: colors.aviso, alerta: colors.critico } as const;
+const toneBg    = { ok: '#e2f3e8', aviso: '#fdf4e3', alerta: '#fce8e7' } as const;
 
 /** Combina o status das duas simulações num único estado de UI. */
 function combinarStatus(a: SimStatus, b: SimStatus): SimStatus {
@@ -124,8 +99,8 @@ type Aceite = ValidacaoStatus | null;
 
 export function ConferenciaLabScreen({ imovelId }: { imovelId?: string }) {
   const { switchTab, goBack } = useNav();
-  const simFaz = useSimulatedWalk(); // avatar do fazendeiro
-  const simAna = useSimulatedWalk(); // avatar do analista
+  const simFaz = useSimulatedWalk(); // avatar do fazendeiro (Medição Produtor)
+  const simAna = useSimulatedWalk(); // avatar do analista (Medição Analista)
   const mapRef = useRef<MapView>(null);
 
   const [imovelNome, setImovelNome] = useState<string | null>(null);
@@ -180,7 +155,6 @@ export function ConferenciaLabScreen({ imovelId }: { imovelId?: string }) {
   const decisao = relatorio ? decisaoSugerida(relatorio.severidade) : null;
 
   // ---------- controles das duas simulações ----------
-  // A mecânica roda sempre em 4x (esperado tanto pro fazendeiro quanto pro analista).
   const iniciar = () => {
     simFaz.setSpeed(SIM_SPEED);
     simAna.setSpeed(SIM_SPEED);
@@ -208,7 +182,6 @@ export function ConferenciaLabScreen({ imovelId }: { imovelId?: string }) {
           : { label: '↺ Refazer', onPress: iniciar };
 
   // ---------- ações do analista ----------
-  // "Agendar visita" abre o calendário; recusar/aceitar abrem o modal de confirmação.
   const abrirDecisao = (st: ValidacaoStatus) => {
     if (st === 'pendente') {
       setAgendando(true);
@@ -218,13 +191,11 @@ export function ConferenciaLabScreen({ imovelId }: { imovelId?: string }) {
     }
   };
 
-  // Volta para a aba do analista, que recarrega a lista ao montar.
   const voltarParaHome = (tab: 'validacao' | 'visitas') => {
     if (imovelId) switchTab({ name: tab });
     else goBack();
   };
 
-  // Persiste recusar/aceitar e volta para a Triagem com a lista atualizada.
   const confirmarDecisao = async () => {
     const st = confirmando;
     if (!st) return;
@@ -238,7 +209,6 @@ export function ConferenciaLabScreen({ imovelId }: { imovelId?: string }) {
     voltarParaHome('validacao');
   };
 
-  // Persiste o agendamento (data + período) e vai para a fila de Visitas.
   const confirmarAgendamento = async (ts: number, periodo: Periodo) => {
     setAgendando(false);
     setAceite('pendente');
@@ -294,20 +264,26 @@ export function ConferenciaLabScreen({ imovelId }: { imovelId?: string }) {
       subtitle={imovelNome ? `Medindo: ${imovelNome}` : 'Analista mede por cima do declarado'}
     >
       <MapView ref={mapRef} style={{ height: MAP_HEIGHT }} initialRegion={REGION} mapType="satellite" showsCompass>
-        {/* (1) Camadas OFICIAIS */}
+
+        {/* (1) Dados Governo — contorno vermelho, sem preenchimento */}
         {CAMADA_POLYS.map((c, i) =>
           c.coords.length >= 3 ? (
-            <Polygon key={`cam-${i}`} coordinates={c.coords} strokeColor={c.cor} fillColor={`${c.cor}33`} strokeWidth={1.5} />
+            <Polygon
+              key={`cam-${i}`}
+              coordinates={c.coords}
+              strokeColor={colors.critico}
+              fillColor="transparent"
+              strokeWidth={1.5}
+            />
           ) : null,
         )}
 
-        {/* (2) Declarado (fazendeiro) — branco tracejado */}
+        {/* (2) Medição Produtor (declarado) — azul preenchido */}
         <Polygon
           coordinates={DECLARADO.map(toLatLng)}
-          strokeColor="#ffffff"
-          fillColor="rgba(255,255,255,0.06)"
+          strokeColor={colors.tertiary}
+          fillColor={`${colors.tertiary}33`}
           strokeWidth={2.5}
-          lineDashPattern={[8, 5]}
         />
 
         {/* Diferença: acrescido (âmbar) / suprimido (azul) — só parado/concluído */}
@@ -324,30 +300,45 @@ export function ConferenciaLabScreen({ imovelId }: { imovelId?: string }) {
             ) : null,
           )}
 
-        {/* (3) Conferido (analista) — verde */}
+        {/* (3) Medição Analista (conferido) — verde */}
         {conferidoCoords && (
-          <Polygon coordinates={conferidoCoords} strokeColor={colors.verde} fillColor="rgba(27,107,58,0.20)" strokeWidth={3} />
+          <Polygon
+            coordinates={conferidoCoords}
+            strokeColor={colors.primary}
+            fillColor={`${colors.primary}33`}
+            strokeWidth={3}
+          />
         )}
 
-        {/* Trilhas dos dois avatares */}
+        {/* Trilha do fazendeiro — azul (consistente com Medição Produtor) */}
         {simFaz.points.length > 1 && (
-          <Polyline coordinates={simFaz.points.map(toLatLng)} strokeColor="#ffffff" strokeWidth={2} lineDashPattern={[6, 4]} />
+          <Polyline
+            coordinates={simFaz.points.map(toLatLng)}
+            strokeColor={colors.tertiary}
+            strokeWidth={2}
+          />
         )}
+        {/* Trilha do analista — verde (consistente com Medição Analista) */}
         {simAna.points.length > 1 && (
-          <Polyline coordinates={simAna.points.map(toLatLng)} strokeColor={colors.verdeClaro} strokeWidth={3.5} />
+          <Polyline
+            coordinates={simAna.points.map(toLatLng)}
+            strokeColor={colors.primary}
+            strokeWidth={3.5}
+          />
         )}
 
-        {/* Avatares */}
+        {/* Avatar F — azul (Medição Produtor) */}
         {simFaz.avatar && (
           <Marker coordinate={toLatLng(simFaz.avatar)} anchor={{ x: 0.5, y: 0.5 }}>
-            <View style={[s.avatar, { backgroundColor: colors.branco, borderColor: colors.terra }]}>
-              <Text style={[s.avatarLabel, { color: colors.terra }]}>F</Text>
+            <View style={[s.avatar, { backgroundColor: colors.tertiary, borderColor: colors.tertiary }]}>
+              <Text style={[s.avatarLabel, { color: colors.branco }]}>F</Text>
             </View>
           </Marker>
         )}
+        {/* Avatar A — verde (Medição Analista) */}
         {simAna.avatar && (
           <Marker coordinate={toLatLng(simAna.avatar)} anchor={{ x: 0.5, y: 0.5 }}>
-            <View style={[s.avatar, { backgroundColor: colors.verde, borderColor: colors.verdeClaro }]}>
+            <View style={[s.avatar, { backgroundColor: colors.primary, borderColor: colors.primary }]}>
               <Text style={[s.avatarLabel, { color: colors.branco }]}>A</Text>
             </View>
           </Marker>
@@ -360,24 +351,24 @@ export function ConferenciaLabScreen({ imovelId }: { imovelId?: string }) {
           <Text style={s.pillText}>
             {status === 'done' && relatorio
               ? `Concluído — Δ ${relatorio.delta_ha >= 0 ? '+' : ''}${relatorio.delta_ha.toFixed(1)} ha (${relatorio.delta_pct >= 0 ? '+' : ''}${relatorio.delta_pct.toFixed(0)}%)`
-              : `Simulando Fazendeiro × Analista · ${SIM_SPEED}x · ${Math.round(Math.min(simFaz.progress, simAna.progress) * 100)}%`}
+              : `Simulando Produtor × Analista · ${SIM_SPEED}x · ${Math.round(Math.min(simFaz.progress, simAna.progress) * 100)}%`}
           </Text>
         </View>
       )}
 
       <ScrollView style={s.panel} contentContainerStyle={s.panelContent} showsVerticalScrollIndicator={false}>
-        {/* Legenda agrupada (casa com as cores do mapa) */}
+
+        {/* Legenda — chip e polígono usam exatamente a mesma cor */}
         <View style={s.legend}>
-          <Text style={s.legendGroup}>OFICIAL</Text>
+          <Text style={s.legendGroup}>DADOS GOVERNO</Text>
           <View style={s.chipRow}>
-            {CAMADA_TIPOS_LEGENDA.map((t) => (
-              <LegendChip key={t} cor={camadaCor(t)} label={tipoLabel(t)} />
-            ))}
+            {/* outlined=true → sem preenchimento, só borda vermelha */}
+            <LegendChip cor={colors.critico} label="Dados Governo" outlined />
           </View>
           <Text style={s.legendGroup}>PERÍMETROS</Text>
           <View style={s.chipRow}>
-            <LegendChip cor="#ffffff" label="Fazendeiro" dashed />
-            <LegendChip cor={colors.verde} label="Analista" />
+            <LegendChip cor={colors.tertiary} label="Medição Produtor" solid />
+            <LegendChip cor={colors.primary}   label="Medição Analista" solid />
           </View>
           {relatorio && (
             <>
@@ -410,7 +401,7 @@ export function ConferenciaLabScreen({ imovelId }: { imovelId?: string }) {
             <View style={s.card}>
               <Text style={s.cardTitle}>Topologia · declarado × conferido</Text>
               <View style={s.tripleRow}>
-                <Triple label="Declarado" value={`${relatorio.areaAnterior_ha.toFixed(2)} ha`} sub="fazendeiro" />
+                <Triple label="Declarado" value={`${relatorio.areaAnterior_ha.toFixed(2)} ha`} sub="produtor" />
                 <Triple label="Conferido" value={`${relatorio.areaNova_ha.toFixed(2)} ha`} sub="analista" />
                 <Triple
                   label="Diferença"
@@ -432,7 +423,7 @@ export function ConferenciaLabScreen({ imovelId }: { imovelId?: string }) {
               {painel.avisos.length > 0 ? (
                 painel.avisos.map((a, i) => <AvisoRow key={`${a.codigo}-${i}`} aviso={a} />)
               ) : (
-                <Text style={s.semAviso}>✓ Nenhum aviso — medição conforme as camadas oficiais (demo).</Text>
+                <Text style={s.semAviso}>{'✓'} Nenhum aviso — medição conforme as camadas oficiais (demo).</Text>
               )}
               {painel.temDadosOffline && (
                 <Text style={s.disclaimer}>
@@ -446,8 +437,8 @@ export function ConferenciaLabScreen({ imovelId }: { imovelId?: string }) {
             <Text style={s.sectionLabel}>DECISÃO DO ANALISTA</Text>
             <View style={s.decisaoRow}>
               <DecisaoChip label="Recusar medição" tone="alerta" ativo={aceite === 'reprovado'} onPress={() => abrirDecisao('reprovado')} />
-              <DecisaoChip label="Agendar visita" tone="aviso" ativo={aceite === 'pendente'} onPress={() => abrirDecisao('pendente')} />
-              <DecisaoChip label="Aceitar medição" tone="ok" ativo={aceite === 'aprovado'} onPress={() => abrirDecisao('aprovado')} />
+              <DecisaoChip label="Agendar visita"  tone="aviso"  ativo={aceite === 'pendente'}  onPress={() => abrirDecisao('pendente')} />
+              <DecisaoChip label="Aceitar medição" tone="ok"     ativo={aceite === 'aprovado'}  onPress={() => abrirDecisao('aprovado')} />
             </View>
 
             {/* Encaminhar a órgão */}
@@ -458,7 +449,7 @@ export function ConferenciaLabScreen({ imovelId }: { imovelId?: string }) {
                   {encaminhado ? '✓ Encaminhado — na fila de envio' : 'Notificar FUNAI, ICMBio, IBAMA, INCRA…'}
                 </Text>
               </View>
-              <Text style={s.acaoIcon}>→</Text>
+              <Text style={s.acaoIcon}>{'→'}</Text>
             </TouchableOpacity>
 
             {/* Anexar documentos */}
@@ -469,13 +460,13 @@ export function ConferenciaLabScreen({ imovelId }: { imovelId?: string }) {
                   {docs.length > 0 ? `✓ ${docs.length} anexo(s)` : 'Foto da divisa (GPS), laudo ou croqui'}
                 </Text>
               </View>
-              <Text style={s.acaoIcon}>＋</Text>
+              <Text style={s.acaoIcon}>{'＋'}</Text>
             </TouchableOpacity>
           </>
         )}
       </ScrollView>
 
-      {/* Rodapé: Limpar (compacto) · ação principal (flex) — mesmo par limpo da Triagem. */}
+      {/* Rodapé: Limpar (compacto) · ação principal (flex) */}
       <View style={s.footer}>
         <View style={s.footerLimpar}>
           <SecondaryButton label="Limpar" onPress={limpar} disabled={status === 'idle'} />
@@ -490,7 +481,7 @@ export function ConferenciaLabScreen({ imovelId }: { imovelId?: string }) {
         <Pressable style={s.mBackdrop} onPress={() => setConfirmando(null)}>
           <Pressable style={s.mSheet} onPress={() => {}}>
             <View style={s.mHandle} />
-            <Text style={[s.mTitle, { color: confirmando === 'reprovado' ? colors.alerta : colors.verde }]}>
+            <Text style={[s.mTitle, { color: confirmando === 'reprovado' ? colors.critico : colors.primary }]}>
               {confirmando === 'reprovado' ? 'Recusar medição' : 'Aceitar medição'}
             </Text>
             {relatorio && (
@@ -509,7 +500,7 @@ export function ConferenciaLabScreen({ imovelId }: { imovelId?: string }) {
             <TextInput
               style={s.mInput}
               placeholder="Ex.: divergência confirmada na divisa leste…"
-              placeholderTextColor={colors.muted}
+              placeholderTextColor={colors.mutedText}
               value={nota}
               onChangeText={setNota}
               multiline
@@ -519,7 +510,7 @@ export function ConferenciaLabScreen({ imovelId }: { imovelId?: string }) {
                 <Text style={s.mCancelTxt}>Cancelar</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[s.mOk, { backgroundColor: confirmando === 'reprovado' ? colors.alerta : colors.verde }]}
+                style={[s.mOk, { backgroundColor: confirmando === 'reprovado' ? colors.critico : colors.primary }]}
                 onPress={confirmarDecisao}
                 activeOpacity={0.85}
               >
@@ -545,10 +536,29 @@ export function ConferenciaLabScreen({ imovelId }: { imovelId?: string }) {
 
 // ---------- sub-componentes ----------
 
-function LegendChip({ cor, label, dashed, solid }: { cor: string; label: string; dashed?: boolean; solid?: boolean }) {
+/**
+ * Chip da legenda.
+ * - outlined: borda colorida, sem preenchimento (Dados Governo)
+ * - solid:    borda + fundo com 13% opacidade (Medição Produtor / Analista / Diferença)
+ * - padrão:   borda + fundo com 12% opacidade
+ */
+function LegendChip({
+  cor,
+  label,
+  dashed,
+  solid,
+  outlined,
+}: {
+  cor: string;
+  label: string;
+  dashed?: boolean;
+  solid?: boolean;
+  outlined?: boolean;
+}) {
+  const bg = outlined ? 'transparent' : solid ? `${cor}22` : `${cor}1f`;
   return (
-    <View style={[s.chip, { borderColor: cor, backgroundColor: solid ? `${cor}22` : `${cor}1f` }, dashed && s.chipDashed]}>
-      <View style={[s.chipDot, { backgroundColor: cor, borderColor: dashed ? colors.muted : cor }]} />
+    <View style={[s.chip, { borderColor: cor, backgroundColor: bg }, dashed && s.chipDashed]}>
+      <View style={[s.chipDot, { backgroundColor: outlined ? 'transparent' : cor, borderColor: cor }]} />
       <Text style={s.chipText}>{label}</Text>
     </View>
   );
@@ -558,7 +568,7 @@ function Triple({ label, value, sub, highlight }: { label: string; value: string
   return (
     <View style={s.triple}>
       <Text style={s.tripleLabel}>{label}</Text>
-      <Text style={[s.tripleValue, highlight && { color: colors.verde }]}>{value}</Text>
+      <Text style={[s.tripleValue, highlight && { color: colors.primary }]}>{value}</Text>
       {sub ? <Text style={s.tripleSub}>{sub}</Text> : null}
     </View>
   );
@@ -600,7 +610,7 @@ const s = StyleSheet.create({
 
   pill: {
     position: 'absolute',
-    top: MAP_HEIGHT - 34 + 0,
+    top: MAP_HEIGHT - 34,
     left: 10,
     right: 10,
     backgroundColor: 'rgba(255,255,255,0.92)',
@@ -608,58 +618,92 @@ const s = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 12,
   },
-  pillText: { fontSize: 12, fontWeight: '700', color: colors.ink, textAlign: 'center' },
+  pillText: { fontSize: 12, fontFamily: fonts.bold, color: colors.inkText, textAlign: 'center' },
 
   // Legenda
   legend: { marginBottom: 10 },
-  legendGroup: { fontSize: 9, fontWeight: '800', color: colors.muted, letterSpacing: 0.5, textTransform: 'uppercase', marginTop: 6, marginBottom: 4 },
+  legendGroup: {
+    fontSize: 9,
+    fontFamily: fonts.extraBold,
+    color: colors.mutedText,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    marginTop: 6,
+    marginBottom: 4,
+  },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 5 },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 5, height: 24, paddingHorizontal: 7, borderRadius: 4, borderWidth: 1 },
   chipDashed: { borderStyle: 'dashed' },
   chipDot: { width: 9, height: 9, borderRadius: 5, borderWidth: 1 },
-  chipText: { fontSize: 10, fontWeight: '700', color: colors.ink },
+  chipText: { fontSize: 10, fontFamily: fonts.bold, color: colors.inkText },
 
-  hint: { fontSize: 14, color: colors.muted, lineHeight: 20, marginTop: 4 },
+  hint: { fontSize: 14, fontFamily: fonts.regular, color: colors.mutedText, lineHeight: 20, marginTop: 4 },
 
   banner: { borderRadius: 12, borderWidth: 1, padding: 14, marginBottom: 12 },
-  bannerTitle: { fontSize: 16, fontWeight: '800' },
-  bannerText: { fontSize: 13, color: colors.ink, marginTop: 4, lineHeight: 18 },
-  bannerPrazo: { fontSize: 13, fontWeight: '800', marginTop: 6 },
+  bannerTitle: { fontSize: 16, fontFamily: fonts.extraBold },
+  bannerText: { fontSize: 13, fontFamily: fonts.regular, color: colors.inkText, marginTop: 4, lineHeight: 18 },
+  bannerPrazo: { fontSize: 13, fontFamily: fonts.bold, marginTop: 6 },
 
-  card: { backgroundColor: colors.verdeBg, borderRadius: 12, borderWidth: 1, borderColor: colors.line, padding: 14, marginBottom: 12 },
-  cardTitle: { fontSize: 13, fontWeight: '800', color: colors.ink, marginBottom: 10 },
+  card: {
+    backgroundColor: colors.verdeBg,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.line,
+    padding: 14,
+    marginBottom: 12,
+  },
+  cardTitle: { fontSize: 13, fontFamily: fonts.extraBold, color: colors.inkText, marginBottom: 10 },
 
   tripleRow: { flexDirection: 'row', justifyContent: 'space-between' },
   triple: { flex: 1, alignItems: 'center' },
-  tripleLabel: { fontSize: 11, color: colors.muted, fontWeight: '700', textTransform: 'uppercase' },
-  tripleValue: { fontSize: 16, fontWeight: '800', color: colors.ink, marginTop: 3 },
-  tripleSub: { fontSize: 11, color: colors.muted, marginTop: 1 },
-  concord: { fontSize: 13, color: colors.ink, marginTop: 12 },
-  concordVal: { fontWeight: '800', color: colors.verde },
+  tripleLabel: { fontSize: 11, fontFamily: fonts.bold, color: colors.mutedText, textTransform: 'uppercase' },
+  tripleValue: { fontSize: 16, fontFamily: fonts.extraBold, color: colors.inkText, marginTop: 3 },
+  tripleSub: { fontSize: 11, fontFamily: fonts.regular, color: colors.mutedText, marginTop: 1 },
+  concord: { fontSize: 13, fontFamily: fonts.regular, color: colors.inkText, marginTop: 12 },
+  concordVal: { fontFamily: fonts.extraBold, color: colors.primary },
 
   avisoRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
   avisoDot: { width: 10, height: 10, borderRadius: 5, marginTop: 3 },
-  avisoRotulo: { fontSize: 13, fontWeight: '800', color: colors.ink, lineHeight: 17 },
-  avisoAcao: { fontSize: 12, color: colors.verde, fontWeight: '700', marginTop: 2, lineHeight: 16 },
-  avisoLegal: { fontSize: 11, color: colors.muted, marginTop: 2, lineHeight: 15 },
-  semAviso: { fontSize: 13, color: colors.verde, fontWeight: '700' },
-  disclaimer: { fontSize: 10, color: colors.muted, fontStyle: 'italic', marginTop: 8, lineHeight: 14 },
+  avisoRotulo: { fontSize: 13, fontFamily: fonts.extraBold, color: colors.inkText, lineHeight: 17 },
+  avisoAcao: { fontSize: 12, fontFamily: fonts.bold, color: colors.primary, marginTop: 2, lineHeight: 16 },
+  avisoLegal: { fontSize: 11, fontFamily: fonts.regular, color: colors.mutedText, marginTop: 2, lineHeight: 15 },
+  semAviso: { fontSize: 13, fontFamily: fonts.bold, color: colors.primary },
+  disclaimer: { fontSize: 10, fontFamily: fonts.regular, color: colors.mutedText, fontStyle: 'italic', marginTop: 8, lineHeight: 14 },
 
-  sectionLabel: { fontSize: 11, fontWeight: '800', color: colors.muted, letterSpacing: 0.6, marginBottom: 8 },
+  sectionLabel: { fontSize: 11, fontFamily: fonts.extraBold, color: colors.mutedText, letterSpacing: 0.6, marginBottom: 8 },
   decisaoRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
-  decisaoChip: { flex: 1, paddingVertical: 16, borderRadius: 10, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.branco, alignItems: 'center', justifyContent: 'center' },
-  decisaoChipText: { fontSize: 12, fontWeight: '800', color: colors.muted, textAlign: 'center' },
+  decisaoChip: {
+    flex: 1,
+    paddingVertical: 16,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.branco,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  decisaoChipText: { fontSize: 12, fontFamily: fonts.extraBold, color: colors.mutedText, textAlign: 'center' },
 
-  acaoCard: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.branco, borderWidth: 1, borderColor: colors.line, borderRadius: 12, padding: 14, marginBottom: 10 },
-  acaoTitle: { fontSize: 14, fontWeight: '800', color: colors.ink },
-  acaoSub: { fontSize: 12, color: colors.muted, marginTop: 2 },
-  acaoIcon: { fontSize: 20, fontWeight: '800', color: colors.verde },
+  acaoCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: colors.branco,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 10,
+  },
+  acaoTitle: { fontSize: 14, fontFamily: fonts.extraBold, color: colors.inkText },
+  acaoSub: { fontSize: 12, fontFamily: fonts.regular, color: colors.mutedText, marginTop: 2 },
+  acaoIcon: { fontSize: 20, fontFamily: fonts.extraBold, color: colors.primary },
 
   // Avatares no mapa
   avatar: { width: 28, height: 28, borderRadius: 14, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
-  avatarLabel: { fontSize: 12, fontWeight: '800' },
+  avatarLabel: { fontSize: 12, fontFamily: fonts.extraBold },
 
-  // Rodapé — barra fixa; paddingBottom limpa o home indicator (sem safe-area-context).
+  // Rodapé
   footer: {
     flexDirection: 'row',
     alignItems: 'stretch',
@@ -681,16 +725,33 @@ const s = StyleSheet.create({
 
   // Modal de confirmação da decisão
   mBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
-  mSheet: { backgroundColor: colors.branco, borderTopLeftRadius: 22, borderTopRightRadius: 22, paddingHorizontal: 18, paddingTop: 10, paddingBottom: 34 },
+  mSheet: {
+    backgroundColor: colors.branco,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    paddingHorizontal: 18,
+    paddingTop: 10,
+    paddingBottom: 34,
+  },
   mHandle: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, backgroundColor: colors.line, marginBottom: 12 },
-  mTitle: { fontSize: 19, fontWeight: '800' },
-  mSub: { fontSize: 13, color: colors.ink, fontWeight: '600', marginTop: 4 },
-  mDesc: { fontSize: 13, color: colors.muted, lineHeight: 19, marginTop: 8 },
-  mLabel: { fontSize: 12, fontWeight: '800', color: colors.muted, marginTop: 16, marginBottom: 6 },
-  mInput: { minHeight: 64, borderWidth: 1, borderColor: colors.line, borderRadius: 12, padding: 12, fontSize: 14, color: colors.ink, textAlignVertical: 'top' },
+  mTitle: { fontSize: 19, fontFamily: fonts.extraBold },
+  mSub: { fontSize: 13, fontFamily: fonts.semibold, color: colors.inkText, marginTop: 4 },
+  mDesc: { fontSize: 13, fontFamily: fonts.regular, color: colors.mutedText, lineHeight: 19, marginTop: 8 },
+  mLabel: { fontSize: 12, fontFamily: fonts.extraBold, color: colors.mutedText, marginTop: 16, marginBottom: 6 },
+  mInput: {
+    minHeight: 64,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 14,
+    fontFamily: fonts.regular,
+    color: colors.inkText,
+    textAlignVertical: 'top',
+  },
   mActions: { flexDirection: 'row', gap: 12, marginTop: 18 },
   mCancel: { flex: 1, paddingVertical: 15, borderRadius: 14, borderWidth: 1, borderColor: colors.line, alignItems: 'center' },
-  mCancelTxt: { fontSize: 15, fontWeight: '800', color: colors.muted },
+  mCancelTxt: { fontSize: 15, fontFamily: fonts.extraBold, color: colors.mutedText },
   mOk: { flex: 2, paddingVertical: 15, borderRadius: 14, alignItems: 'center' },
-  mOkTxt: { fontSize: 15, fontWeight: '800', color: colors.branco },
+  mOkTxt: { fontSize: 15, fontFamily: fonts.extraBold, color: colors.branco },
 });

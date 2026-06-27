@@ -1,10 +1,11 @@
-// Aba "Validação" (analista) — revisa a geometria de cada imóvel e aprova/reprova.
+// Aba "Triagem" (analista) — revisa a geometria de cada imóvel e aprova/reprova.
 import { useCallback, useEffect, useState } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Screen } from '../app/Screen';
 import { useNav } from '../app/navigation';
 import { Badge, EmptyState, PrimaryButton, SecondaryButton } from '../ui';
 import { colors } from '../theme/colors';
+import { fonts } from '../theme/typography';
 import { listImoveis, updateImovel } from '../lib/store';
 import { validatePerimeter } from '../lib/geo';
 import { analisarSobreposicoes, type AnaliseAmbiental, type CamadaTipo } from '../lib/overlay';
@@ -26,8 +27,9 @@ function tipoLabel(tipo: CamadaTipo): string {
   }
 }
 
-const altColor = { ok: colors.verde, aviso: colors.aviso, alerta: colors.alerta } as const;
-const altBg = { ok: '#e2f3e8', aviso: '#fdf4e3', alerta: '#fce8e7' } as const;
+// ponytail: aliases canônicos referenciados aqui; mesmos hex que os aliases legados.
+const altColor = { ok: colors.primary, aviso: colors.aviso, alerta: colors.critico } as const;
+const altBg    = { ok: '#e2f3e8', aviso: '#fdf4e3', alerta: '#fce8e7' } as const;
 
 export function ValidacaoScreen() {
   const { navigate } = useNav();
@@ -117,8 +119,8 @@ export function ValidacaoScreen() {
 
           // Cores do alerta unificado: derivam de decAlt quando disponível.
           const alertaBg = decAlt ? altBg[decAlt.tone] : '#fce8e7';
-          const alertaBorderColor = decAlt ? altColor[decAlt.tone] : colors.alerta;
-          const alertaTextColor = decAlt ? altColor[decAlt.tone] : colors.alerta;
+          const alertaBorderColor = decAlt ? altColor[decAlt.tone] : colors.critico;
+          const alertaTextColor = decAlt ? altColor[decAlt.tone] : colors.critico;
 
           // Título e sub do alerta — altVisita tem precedência (mais detalhado).
           const alertaTitulo = altVisita
@@ -178,22 +180,22 @@ export function ValidacaoScreen() {
                 {v.problemas.length > 0 ? (
                   v.problemas.map((p, idx) => (
                     <Text key={`p-${idx}`} style={s.problema}>
-                      ✕ {p}
+                      {'✕'} {p}
                     </Text>
                   ))
                 ) : (
-                  <Text style={s.ok}>✓ Geometria válida</Text>
+                  <Text style={s.ok}>{'✓'} Geometria válida</Text>
                 )}
                 {v.avisos.map((a, idx) => (
                   <Text key={`a-${idx}`} style={s.aviso}>
-                    ⚠ {a}
+                    {'⚠'} {a}
                   </Text>
                 ))}
 
-                {/* Sobreposição como chips coloridos por severidade, não string corrida */}
+                {/* Sobreposição como chips coloridos por severidade */}
                 {analise && analise.sobreposicoes.length > 0 ? (
                   <View style={s.chips}>
-                    <Text style={[s.chipsIcone, { color: temCritico ? colors.alerta : colors.aviso }]}>
+                    <Text style={[s.chipsIcone, { color: temCritico ? colors.critico : colors.aviso }]}>
                       {temCritico ? '⛔' : '⚠'}
                     </Text>
                     {analise.sobreposicoes.map((x, idx) => (
@@ -204,7 +206,7 @@ export function ValidacaoScreen() {
                         <Text
                           style={[
                             s.chipText,
-                            { color: x.severidade === 'critico' ? colors.alerta : colors.aviso },
+                            { color: x.severidade === 'critico' ? colors.critico : colors.aviso },
                           ]}
                         >
                           {tipoLabel(x.tipo)}
@@ -213,14 +215,14 @@ export function ValidacaoScreen() {
                     ))}
                   </View>
                 ) : analise != null ? (
-                  <Text style={s.overlayClear}>✓ Sem sobreposição ambiental (demo)</Text>
+                  <Text style={s.overlayClear}>{'✓'} Sem sobreposição ambiental (demo)</Text>
                 ) : null}
 
                 {/* Conferência solicitada: chip inline, não banner */}
                 {item.solicitacaoVisita && (
                   <View style={s.confChip}>
                     <Text style={s.confChipText}>
-                      📍 Conf. solicitada pelo produtor
+                      {'📍'} Conf. solicitada pelo produtor
                       {item.solicitacaoVisita.motivo === 'documentacao' ? ' (doc.)' : ' (nova medição)'}
                     </Text>
                   </View>
@@ -237,7 +239,7 @@ export function ValidacaoScreen() {
                   activeOpacity={0.8}
                   onPress={() => navigate({ name: 'conferencia-lab', imovelId: item.id })}
                 >
-                  <Text style={s.secundariaBtnText}>Nova medição →</Text>
+                  <Text style={s.secundariaBtnText}>Nova medição {'→'}</Text>
                 </TouchableOpacity>
                 <View style={s.secundariaSep} />
                 <TouchableOpacity
@@ -245,7 +247,7 @@ export function ValidacaoScreen() {
                   activeOpacity={0.8}
                   onPress={() => navigate({ name: 'analise-ambiental', imovelId: item.id })}
                 >
-                  <Text style={s.secundariaBtnText}>Ver laudo →</Text>
+                  <Text style={s.secundariaBtnText}>Ver laudo {'→'}</Text>
                 </TouchableOpacity>
               </View>
 
@@ -282,12 +284,12 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
-  titulo: { flex: 1, fontSize: 16, fontWeight: '800', color: colors.ink },
-  sub: { fontSize: 12, color: colors.muted, marginTop: 4 },
-  ok: { fontSize: 13, color: colors.verde, fontWeight: '700', marginTop: 8 },
-  problema: { fontSize: 13, color: colors.alerta, fontWeight: '700', marginTop: 8, lineHeight: 18 },
-  aviso: { fontSize: 12, color: colors.aviso, marginTop: 4, lineHeight: 17 },
-  overlayClear: { fontSize: 12, color: colors.verde, fontWeight: '700', marginTop: 8 },
+  titulo: { flex: 1, fontSize: 16, fontFamily: fonts.extraBold, color: colors.inkText },
+  sub: { fontSize: 12, fontFamily: fonts.regular, color: colors.mutedText, marginTop: 4 },
+  ok: { fontSize: 13, fontFamily: fonts.bold, color: colors.primary, marginTop: 8 },
+  problema: { fontSize: 13, fontFamily: fonts.bold, color: colors.critico, marginTop: 8, lineHeight: 18 },
+  aviso: { fontSize: 12, fontFamily: fonts.regular, color: colors.aviso, marginTop: 4, lineHeight: 17 },
+  overlayClear: { fontSize: 12, fontFamily: fonts.bold, color: colors.primary, marginTop: 8 },
   actions: { flexDirection: 'row', marginTop: 12 },
 
   // Alerta unificado de topo (altVisita suprime alertaDivergencia — mesmo fato)
@@ -300,26 +302,26 @@ const s = StyleSheet.create({
   alertaHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   alertaNovoBadge: {
     fontSize: 10,
-    fontWeight: '900',
+    fontFamily: fonts.extraBold,
     color: colors.branco,
-    backgroundColor: colors.alerta,
+    backgroundColor: colors.critico,
     borderRadius: 5,
     paddingHorizontal: 6,
     paddingVertical: 2,
     overflow: 'hidden',
   },
-  alertaTitulo: { flex: 1, fontSize: 13, fontWeight: '800', lineHeight: 17 },
-  alertaSub: { fontSize: 11, color: colors.muted, marginTop: 3, lineHeight: 15 },
+  alertaTitulo: { flex: 1, fontSize: 13, fontFamily: fonts.extraBold, lineHeight: 17 },
+  alertaSub: { fontSize: 11, fontFamily: fonts.regular, color: colors.mutedText, marginTop: 3, lineHeight: 15 },
 
   // Chips de sobreposição ambiental
   chips: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6, marginTop: 8 },
-  chipsIcone: { fontSize: 13, fontWeight: '700' },
+  chipsIcone: { fontSize: 13, fontFamily: fonts.bold },
   chip: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1 },
-  chipCritico: { backgroundColor: '#fce8e7', borderColor: colors.alerta },
+  chipCritico: { backgroundColor: '#fce8e7', borderColor: colors.critico },
   chipAviso: { backgroundColor: '#fdf4e3', borderColor: '#c07a1a' },
-  chipText: { fontSize: 11, fontWeight: '800' },
+  chipText: { fontSize: 11, fontFamily: fonts.extraBold },
 
-  // Conferência solicitada — chip inline, não banner
+  // Conferência solicitada — chip inline
   confChip: {
     alignSelf: 'flex-start',
     marginTop: 8,
@@ -330,7 +332,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
-  confChipText: { fontSize: 11, fontWeight: '700', color: colors.aviso },
+  confChipText: { fontSize: 11, fontFamily: fonts.bold, color: colors.aviso },
 
   // Divisor visual entre corpo e ações
   divider: { height: 1, backgroundColor: colors.line, marginVertical: 12 },
@@ -338,6 +340,6 @@ const s = StyleSheet.create({
   // Ações secundárias — linha única, menor destaque visual
   secundarias: { flexDirection: 'row', marginBottom: 4 },
   secundariaBtn: { flex: 1, minHeight: 44, justifyContent: 'center', alignItems: 'center' },
-  secundariaBtnText: { fontSize: 13, fontWeight: '700', color: colors.verde },
+  secundariaBtnText: { fontSize: 13, fontFamily: fonts.bold, color: colors.primary },
   secundariaSep: { width: 1, backgroundColor: colors.line, marginVertical: 4 },
 });
