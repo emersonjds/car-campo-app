@@ -1,305 +1,208 @@
+// Tela de login por persona — sem credenciais. Tocar no card entra direto.
 import { useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
-import { Screen } from '../app/Screen';
+import { ActivityIndicator, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../auth/AuthContext';
-import { Card, Field, PrimaryButton } from '../ui';
 import { colors } from '../theme/colors';
 
-const GOVBR_BLUE = '#1351B4';
-
-function mascaraCpf(raw: string): string {
-  const d = raw.replace(/\D/g, '').slice(0, 11);
-  if (d.length <= 3) return d;
-  if (d.length <= 6) return `${d.slice(0, 3)}.${d.slice(3)}`;
-  if (d.length <= 9) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`;
-  return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
-}
-
 export function LoginScreen() {
-  const { loginGovBr, loginMatricula } = useAuth();
+  const { loginPersona } = useAuth();
+  const [busy, setBusy] = useState<'produtor' | 'analista' | null>(null);
 
-  // ponytail: pré-preenchido com as credenciais de demo para facilitar o teste.
-  const [cpf, setCpf] = useState('123.456.789-09');
-  const [senhaProd, setSenhaProd] = useState('demo');
-  const [erroProd, setErroProd] = useState<string | null>(null);
-
-  // Passo 1: escolher a persona. Só depois aparece o login dela.
-  const [persona, setPersona] = useState<'produtor' | 'analista' | null>(null);
-  const [matricula, setMatricula] = useState('12345');
-  const [senha, setSenha] = useState('car2026');
-
-  const [busy, setBusy] = useState(false);
-
-  function handleCpf(text: string) {
-    setCpf(mascaraCpf(text));
-    if (erroProd) setErroProd(null);
-  }
-
-  async function entrarGovBr() {
-    const rawCpf = cpf.replace(/\D/g, '');
-    if (rawCpf.length !== 11) {
-      setErroProd('Digite um CPF válido com 11 dígitos.');
-      return;
-    }
-    if (!senhaProd.trim()) {
-      setErroProd('Digite sua senha gov.br.');
-      return;
-    }
-    setBusy(true);
-    setErroProd(null);
+  async function entrar(perfil: 'produtor' | 'analista') {
+    if (busy) return;
+    setBusy(perfil);
     try {
-      await loginGovBr(rawCpf);
-    } catch (e) {
-      setErroProd(e instanceof Error ? e.message : 'Falha ao autenticar. Tente novamente.');
+      await loginPersona(perfil);
+    } catch {
+      // mock nunca lança; em produção: Alert com mensagem de erro.
     } finally {
-      setBusy(false);
-    }
-  }
-
-  async function entrarMatricula() {
-    setBusy(true);
-    try {
-      await loginMatricula(matricula, senha);
-    } catch (e) {
-      Alert.alert('Login', e instanceof Error ? e.message : 'Falha no login.');
-    } finally {
-      setBusy(false);
+      setBusy(null);
     }
   }
 
   return (
-    <Screen title="CAR Campo" subtitle="Entre para demarcar seu imóvel" showBack={false}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={s.flex}
-      >
-        <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
-          {/* Passo 1 — escolher quem é */}
-          {persona === null && (
-            <View style={s.chooserWrap}>
-              <Text style={s.escolhaTitulo}>Como você quer entrar?</Text>
-              <PersonaCard
-                variant="produtor"
-                titulo="Sou produtor rural"
-                sub="Entrar com a sua conta gov.br"
-                onPress={() => setPersona('produtor')}
-              />
-              <PersonaCard
-                variant="analista"
-                titulo="Sou analista"
-                sub="Entrar com matrícula e senha"
-                onPress={() => setPersona('analista')}
-              />
-            </View>
-          )}
-
-          {/* Passo 2a — produtor (gov.br) */}
-          {persona === 'produtor' && (
-            <>
-              <TrocarPersona onPress={() => setPersona(null)} />
-              <View style={s.govbrCard}>
-                <Text style={s.logo}>
-                  <Text style={s.logoGov}>gov</Text>
-                  <Text style={s.logoBr}>.br</Text>
-                </Text>
-                <Text style={s.govbrSub}>Entre com o CPF e senha da sua conta gov.br</Text>
-
-                <Field
-                  label="CPF"
-                  value={cpf}
-                  onChangeText={handleCpf}
-                  placeholder="000.000.000-00"
-                  keyboardType="number-pad"
-                  autoCapitalize="none"
-                />
-                <Field
-                  label="Senha"
-                  value={senhaProd}
-                  onChangeText={(t) => {
-                    setSenhaProd(t);
-                    if (erroProd) setErroProd(null);
-                  }}
-                  placeholder="Senha da conta gov.br"
-                  secureTextEntry
-                />
-
-                {erroProd ? <Text style={s.erro}>{erroProd}</Text> : null}
-
-                <TouchableOpacity
-                  style={[s.btnGovBr, busy && s.btnDisabled]}
-                  onPress={entrarGovBr}
-                  disabled={busy}
-                  activeOpacity={0.85}
-                  accessibilityRole="button"
-                  accessibilityLabel="Entrar com gov.br"
-                >
-                  {busy ? (
-                    <ActivityIndicator color={colors.branco} />
-                  ) : (
-                    <Text style={s.btnGovBrText}>Entrar</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-            </>
-          )}
-
-          {/* Passo 2b — analista (matrícula) */}
-          {persona === 'analista' && (
-            <>
-              <TrocarPersona onPress={() => setPersona(null)} />
-              <Card>
-                <Field
-                  label="Matrícula"
-                  value={matricula}
-                  onChangeText={setMatricula}
-                  placeholder="Ex: 12345"
-                  keyboardType="numeric"
-                />
-                <Field
-                  label="Senha"
-                  value={senha}
-                  onChangeText={setSenha}
-                  placeholder="Sua senha"
-                  secureTextEntry
-                />
-                <PrimaryButton label="Entrar" onPress={entrarMatricula} loading={busy} />
-                {__DEV__ && (
-                  <Text style={s.demo}>Demo: matrícula 12345 · senha car2026</Text>
-                )}
-              </Card>
-            </>
-          )}
-        </ScrollView>
-
-        {/* Rodapé LGPD — fixo abaixo do scroll, sempre visível */}
-        <View style={s.lgpdFooter}>
-          <Text style={s.lgpd}>Seus dados ficam protegidos neste aparelho (LGPD).</Text>
+    <SafeAreaView style={s.safe}>
+      <View style={s.root}>
+        {/* Logo */}
+        <View style={s.header}>
+          <View style={s.logoMark}>
+            <Ionicons name="leaf" size={38} color={colors.branco} />
+          </View>
+          <Text style={s.appName}>CAR CAMPO</Text>
+          <Text style={s.welcome}>Bem-vindo ao CAR Campo</Text>
+          <Text style={s.tagline}>Sua terra, sua gestão, em um só lugar.</Text>
         </View>
-      </KeyboardAvoidingView>
-    </Screen>
+
+        {/* Cards de persona */}
+        <View style={s.body}>
+          <Text style={s.euSou}>Eu sou:</Text>
+          <PersonaCard
+            titulo="Produtor Rural"
+            sub="Demarcar e acompanhar meu imóvel"
+            icone="leaf-outline"
+            acento={colors.primary}
+            busy={busy === 'produtor'}
+            onPress={() => entrar('produtor')}
+          />
+          <PersonaCard
+            titulo="Analista de Campo"
+            sub="Validar imóveis e agendar visitas"
+            icone="clipboard-outline"
+            acento={colors.secondary}
+            busy={busy === 'analista'}
+            onPress={() => entrar('analista')}
+          />
+        </View>
+
+        {/* Rodapé LGPD */}
+        <Text style={s.lgpd}>Seus dados ficam protegidos neste aparelho (LGPD).</Text>
+      </View>
+    </SafeAreaView>
   );
 }
+
+// ─── Subcomponente ───────────────────────────────────────────────────────────
 
 function PersonaCard({
-  variant,
   titulo,
   sub,
+  icone,
+  acento,
+  busy,
   onPress,
 }: {
-  variant: 'produtor' | 'analista';
   titulo: string;
   sub: string;
+  icone: keyof typeof Ionicons.glyphMap;
+  acento: string;
+  busy: boolean;
   onPress: () => void;
 }) {
-  const cardStyle = variant === 'produtor' ? s.personaCardProdutor : s.personaCardAnalista;
-
   return (
     <TouchableOpacity
-      style={[s.personaCardBase, cardStyle]}
+      style={[s.card, { borderTopColor: acento }]}
       onPress={onPress}
       activeOpacity={0.85}
+      disabled={!!busy}
       accessibilityRole="button"
+      accessibilityLabel={titulo}
     >
-      <Text style={s.personaTitulo}>{titulo}</Text>
-      <Text style={s.personaSub}>{sub}</Text>
+      <View style={[s.cardIcon, { backgroundColor: acento }]}>
+        {busy
+          ? <ActivityIndicator color={colors.branco} size="small" />
+          : <Ionicons name={icone} size={22} color={colors.branco} />
+        }
+      </View>
+      <View style={s.cardText}>
+        <Text style={s.cardTitulo}>{titulo}</Text>
+        <Text style={s.cardSub}>{sub}</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={20} color={colors.muted} />
     </TouchableOpacity>
   );
 }
 
-function TrocarPersona({ onPress }: { onPress: () => void }) {
-  return (
-    <TouchableOpacity style={s.trocar} onPress={onPress} activeOpacity={0.7} accessibilityRole="button">
-      <Text style={s.trocarTxt}>‹ Trocar tipo de acesso</Text>
-    </TouchableOpacity>
-  );
-}
+// ─── Estilos ─────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  flex: { flex: 1 },
-
-  // Conjunto da escolha centralizado verticalmente na tela.
-  chooserWrap: { flex: 1, justifyContent: 'center' },
-  escolhaTitulo: {
-    fontSize: 17,
-    fontWeight: '800',
-    color: colors.ink,
-    marginBottom: 20,
-    textAlign: 'center',
+  safe: { flex: 1, backgroundColor: colors.neutral },
+  root: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingVertical: 40,
+    justifyContent: 'space-between',
   },
 
-  // Card base — branco, limpo, centrado, alvo grande.
-  personaCardBase: {
+  // Header / logo
+  header: { alignItems: 'center', paddingTop: 16 },
+  logoMark: {
+    width: 76,
+    height: 76,
+    borderRadius: 22,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.branco,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.line,
-    paddingVertical: 28,
-    paddingHorizontal: 20,
-    marginBottom: 14,
-    minHeight: 100,
+    marginBottom: 18,
     shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 2,
+    shadowOpacity: 0.18,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 14,
+    elevation: 5,
   },
-  // Tira fina de identidade no topo (sem cor de fundo berrante).
-  personaCardProdutor: { borderTopWidth: 3, borderTopColor: colors.verde },
-  personaCardAnalista: { borderTopWidth: 3, borderTopColor: colors.terra },
-
-  personaTitulo: { fontSize: 19, fontWeight: '800', color: colors.ink, textAlign: 'center', marginBottom: 6 },
-  personaSub: { fontSize: 14, fontWeight: '600', color: colors.muted, textAlign: 'center' },
-
-  trocar: { paddingVertical: 8, marginBottom: 4 },
-  trocarTxt: { fontSize: 14, fontWeight: '800', color: colors.verde },
-
-  content: { padding: 16, paddingBottom: 8, flexGrow: 1 },
-
-  govbrCard: {
-    backgroundColor: colors.branco,
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#d0d0d0',
+  appName: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.mutedText,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+    marginBottom: 10,
+  },
+  welcome: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: colors.inkText,
+    textAlign: 'center',
     marginBottom: 8,
   },
-  logo: { fontSize: 28, fontWeight: '900', marginBottom: 6 },
-  logoGov: { color: '#333333' },
-  logoBr: { color: GOVBR_BLUE },
-  govbrSub: { fontSize: 14, color: colors.muted, marginBottom: 16, lineHeight: 20 },
-  erro: { fontSize: 13, color: colors.alerta, marginBottom: 10, lineHeight: 18 },
-  btnGovBr: {
-    backgroundColor: GOVBR_BLUE,
-    borderRadius: 12,
-    minHeight: 52,
+  tagline: {
+    fontSize: 15,
+    color: colors.mutedText,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+
+  // Cards
+  body: { gap: 14 },
+  euSou: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.mutedText,
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+    marginBottom: 4,
+  },
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    backgroundColor: colors.branco,
+    borderRadius: 16,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderTopWidth: 3,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  cardIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 4,
   },
-  btnGovBrText: { color: colors.branco, fontSize: 16, fontWeight: '800' },
-  btnDisabled: { opacity: 0.6 },
-  demo: { fontSize: 12, color: colors.muted, marginTop: 10, textAlign: 'center' },
+  cardText: { flex: 1 },
+  cardTitulo: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: colors.inkText,
+    marginBottom: 3,
+  },
+  cardSub: {
+    fontSize: 13,
+    color: colors.mutedText,
+    lineHeight: 18,
+  },
 
-  // Rodapé LGPD
-  lgpdFooter: {
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderTopWidth: 1,
-    borderTopColor: colors.line,
-    backgroundColor: colors.verdeBg,
-    alignItems: 'center',
+  // Footer
+  lgpd: {
+    fontSize: 12,
+    color: colors.mutedText,
+    textAlign: 'center',
+    lineHeight: 18,
   },
-  lgpd: { fontSize: 12, color: colors.muted, textAlign: 'center', lineHeight: 18 },
 });

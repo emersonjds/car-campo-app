@@ -54,6 +54,25 @@ export const mockAuthProvider: AuthProvider = {
     return sessao;
   },
 
+  async loginPersona(perfil: 'produtor' | 'analista') {
+    if (perfil === 'produtor') {
+      // Reutiliza o fluxo gov.br com CPF de demo — sem pedir credenciais.
+      return mockAuthProvider.loginGovBr('00000000000');
+    }
+    // Analista: sessão mock com o primeiro registro da lista.
+    const sessao: Sessao = {
+      perfil: 'analista',
+      method: 'matricula',
+      nome: 'Ana Lima (Analista)',
+      matricula: '12345',
+      orgao: 'SEMA-MT',
+      token: `mock-analista-${Date.now().toString(36)}`,
+      loggedAt: Date.now(),
+    };
+    await saveSession(sessao);
+    return sessao;
+  },
+
   async logout() {
     await clearSession();
   },

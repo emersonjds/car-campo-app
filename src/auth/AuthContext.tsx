@@ -9,6 +9,7 @@ interface AuthValue {
   loading: boolean;
   loginGovBr: (cpf: string) => Promise<void>;
   loginMatricula: (matricula: string, senha: string) => Promise<void>;
+  loginPersona: (perfil: 'produtor' | 'analista') => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -29,8 +30,9 @@ export function AuthProviderComponent({ children }: { children: ReactNode }) {
   const value = useMemo<AuthValue>(() => ({
     sessao,
     loading,
-    loginGovBr: async (cpf) => { setSessao(await provider.loginGovBr(cpf)); },
-    loginMatricula: async (m, s) => { setSessao(await provider.loginMatricula(m, s)); },
+    loginGovBr:    async (cpf)    => { setSessao(await provider.loginGovBr(cpf)); },
+    loginMatricula: async (m, s)  => { setSessao(await provider.loginMatricula(m, s)); },
+    loginPersona:  async (perfil) => { setSessao(await provider.loginPersona(perfil)); },
     logout: async () => { try { await provider.logout(); } finally { setSessao(null); } },
   }), [sessao, loading]);
 

@@ -1,13 +1,12 @@
-// Barra de navegação inferior. As abas mudam conforme o perfil:
-//  • Produtor rural: Imóveis · Perfil
-//  • Analista de campo: Triagem · Visitas · Painel · Perfil
+// Barra de navegação inferior — 4 abas por persona.
+//  • Produtor rural: Dashboard · Medições · Documentos · Perfil
+//  • Analista de campo: Painel · Medições · Documentos · Perfil
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors } from '../theme/colors';
 import { useNav, type Route, type RouteName } from './navigation';
 import type { Perfil } from '../types';
 
-// Ícone vetorial por aba: par (inativo = outline, ativo = preenchido), estilo iOS.
 type IoniconName = keyof typeof Ionicons.glyphMap;
 interface Tab {
   route: Route;
@@ -18,15 +17,17 @@ interface Tab {
 }
 
 const TABS_PRODUTOR: Tab[] = [
-  { route: { name: 'home' }, name: 'home', icon: 'map-outline', iconActive: 'map', label: 'Imóveis' },
-  { route: { name: 'config' }, name: 'config', icon: 'person-outline', iconActive: 'person', label: 'Perfil' },
+  { route: { name: 'dashboard' },      name: 'dashboard',      icon: 'home-outline',          iconActive: 'home',          label: 'Dashboard' },
+  { route: { name: 'medicoes' },       name: 'medicoes',       icon: 'map-outline',           iconActive: 'map',           label: 'Medições' },
+  { route: { name: 'documentos-hub' }, name: 'documentos-hub', icon: 'document-text-outline', iconActive: 'document-text', label: 'Documentos' },
+  { route: { name: 'perfil' },         name: 'perfil',         icon: 'person-outline',        iconActive: 'person',        label: 'Perfil' },
 ];
 
 const TABS_ANALISTA: Tab[] = [
-  { route: { name: 'validacao' }, name: 'validacao', icon: 'reader-outline', iconActive: 'reader', label: 'Triagem' },
-  { route: { name: 'visitas' }, name: 'visitas', icon: 'calendar-outline', iconActive: 'calendar', label: 'Visitas' },
-  { route: { name: 'painel' }, name: 'painel', icon: 'stats-chart-outline', iconActive: 'stats-chart', label: 'Painel' },
-  { route: { name: 'config' }, name: 'config', icon: 'person-outline', iconActive: 'person', label: 'Perfil' },
+  { route: { name: 'painel' },         name: 'painel',         icon: 'stats-chart-outline',   iconActive: 'stats-chart',   label: 'Painel' },
+  { route: { name: 'medicoes' },       name: 'medicoes',       icon: 'reader-outline',        iconActive: 'reader',        label: 'Medições' },
+  { route: { name: 'documentos-hub' }, name: 'documentos-hub', icon: 'document-text-outline', iconActive: 'document-text', label: 'Documentos' },
+  { route: { name: 'perfil' },         name: 'perfil',         icon: 'person-outline',        iconActive: 'person',        label: 'Perfil' },
 ];
 
 export function tabsForPerfil(perfil: Perfil | null): Tab[] {
@@ -51,13 +52,15 @@ export function TabBar() {
             accessibilityState={{ selected: active }}
             accessibilityLabel={tab.label}
           >
-            <Ionicons
-              name={active ? tab.iconActive : tab.icon}
-              size={24}
-              color={active ? colors.verde : colors.muted}
-            />
+            {/* Pill verde ao redor do ícone quando ativo */}
+            <View style={active ? s.pill : s.pillEmpty}>
+              <Ionicons
+                name={active ? tab.iconActive : tab.icon}
+                size={22}
+                color={active ? colors.verde : colors.muted}
+              />
+            </View>
             <Text style={[s.label, active && s.labelActive]}>{tab.label}</Text>
-            {active && <View style={s.dot} />}
           </TouchableOpacity>
         );
       })}
@@ -71,18 +74,23 @@ const s = StyleSheet.create({
     backgroundColor: colors.branco,
     borderTopWidth: 1,
     borderTopColor: colors.line,
-    paddingTop: 8,
-    paddingBottom: 26, // espaço para o indicador de home (safe area iOS)
+    paddingTop: 6,
+    paddingBottom: 26, // safe area iOS
   },
   tab: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  label: { fontSize: 11, color: colors.muted, marginTop: 2, fontWeight: '600' },
-  labelActive: { color: colors.verde, fontWeight: '800' },
-  dot: {
-    position: 'absolute',
-    top: 0,
-    width: 18,
-    height: 3,
-    borderRadius: 2,
-    backgroundColor: colors.verde,
+  // ponytail: pill só muda o fundo — evita refluxo de layout com paddingEmpty.
+  pill: {
+    backgroundColor: colors.verdeBg,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 5,
+    marginBottom: 2,
   },
+  pillEmpty: {
+    paddingHorizontal: 14,
+    paddingVertical: 5,
+    marginBottom: 2,
+  },
+  label:       { fontSize: 11, color: colors.muted,  marginTop: 1, fontWeight: '600' },
+  labelActive: { fontSize: 11, color: colors.verde,  marginTop: 1, fontWeight: '800' },
 });

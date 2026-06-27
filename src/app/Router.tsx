@@ -6,6 +6,8 @@ import { useNav } from './navigation';
 import { useAuth } from '../auth/AuthContext';
 import { LoginScreen } from '../screens/LoginScreen';
 import { HomeScreen } from '../screens/HomeScreen';
+import { MedicoesScreen } from '../screens/MedicoesScreen';
+import { DocumentosHubScreen } from '../screens/DocumentosHubScreen';
 import { CadastroScreen } from '../screens/CadastroScreen';
 import { DemarcacaoScreen } from '../screens/DemarcacaoScreen';
 import { DocumentosScreen } from '../screens/DocumentosScreen';
@@ -35,6 +37,17 @@ export function Router() {
   }
 
   switch (route.name) {
+    // ── Abas v2 ──────────────────────────────────────────────────────────────
+    case 'dashboard':
+      return <HomeScreen />;
+    case 'medicoes':
+      // ponytail: mesma rota, tela diferente por perfil — evita rota duplicada.
+      return sessao.perfil === 'analista' ? <ValidacaoScreen /> : <MedicoesScreen />;
+    case 'documentos-hub':
+      return <DocumentosHubScreen />;
+    case 'perfil':
+      return <ConfigScreen />;
+    // ── Abas legadas ─────────────────────────────────────────────────────────
     case 'home':
       return <HomeScreen />;
     case 'validacao':
@@ -45,6 +58,7 @@ export function Router() {
       return <PainelScreen />;
     case 'config':
       return <ConfigScreen />;
+    // ── Wizard / detalhe ─────────────────────────────────────────────────────
     case 'cadastro':
       return <CadastroScreen imovelId={route.imovelId} />;
     case 'demarcacao':

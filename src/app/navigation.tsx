@@ -5,11 +5,18 @@ import type { Perfil } from '../types';
 import { useAuth } from '../auth/AuthContext';
 
 export type Route =
+  // ── Abas v2 (4 abas por persona) ──────────────────────────────────────────
+  | { name: 'dashboard' }       // produtor: aba 1 → HomeScreen
+  | { name: 'medicoes' }        // ambos: aba 2 → MedicoesScreen / ValidacaoScreen
+  | { name: 'documentos-hub' }  // ambos: aba 3 → DocumentosHubScreen
+  | { name: 'perfil' }          // ambos: aba 4 → ConfigScreen
+  // ── Abas legadas (mantidas para backward-compat de navegações internas) ───
   | { name: 'home' }
   | { name: 'validacao' }
   | { name: 'visitas' }
   | { name: 'painel' }
   | { name: 'config' }
+  // ── Telas de detalhe / wizard ─────────────────────────────────────────────
   | { name: 'cadastro'; imovelId?: string }
   | { name: 'demarcacao'; imovelId: string }
   | { name: 'documentos'; imovelId: string }
@@ -21,7 +28,12 @@ export type Route =
 export type RouteName = Route['name'];
 
 /** Rotas que são "abas" de topo (mostram a barra inferior, sem botão voltar). */
-export const TAB_ROOTS: RouteName[] = ['home', 'validacao', 'visitas', 'painel', 'config'];
+export const TAB_ROOTS: RouteName[] = [
+  // v2 (4 abas por persona)
+  'dashboard', 'medicoes', 'documentos-hub', 'perfil',
+  // legadas (mantidas para navegações internas como PainelScreen → visitas)
+  'home', 'validacao', 'visitas', 'painel', 'config',
+];
 
 export function isTabRoot(name: RouteName): boolean {
   return TAB_ROOTS.includes(name);
@@ -54,7 +66,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const token = sessao?.token ?? null;
     if (token && token !== prevToken.current) {
-      setStack([{ name: sessao?.perfil === 'analista' ? 'validacao' : 'home' }]);
+      setStack([{ name: sessao?.perfil === 'analista' ? 'painel' : 'dashboard' }]);
     }
     prevToken.current = token;
   }, [sessao]);
