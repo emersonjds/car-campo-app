@@ -47,15 +47,24 @@ Ou use o modo **Simular caminhada** dentro do app (offline, não precisa GPS rea
 
 App multi-tela offline-first com fluxo de 4 passos por imóvel:
 
-- `App.tsx` — ponto de entrada (NavigationProvider + Router).
-- `src/app/navigation.tsx` — contexto de estado (perfil, tela, imóvel atual).
-- `src/app/Router.tsx` — roteador baseado em estado (sem react-navigation).
-- `src/screens/PerfilScreen.tsx` — escolha de perfil (1ª abertura).
-- `src/screens/HomeScreen.tsx` — "Meus imóveis" (lista offline).
-- `src/screens/CadastroScreen.tsx` — dados do imóvel e produtor.
+- `App.tsx` — ponto de entrada (AuthProvider + NavigationProvider + AppShell).
+- `src/app/navigation.tsx` — contexto de estado; **perfil derivado da sessão** (login).
+- `src/app/Router.tsx` — roteador baseado em estado (sem react-navigation); **gateia por sessão** (sem login → LoginScreen).
+- `src/app/AppShell.tsx` + `src/app/TabBar.tsx` — barra de navegação inferior (abas por perfil).
+- `src/screens/LoginScreen.tsx` — **login**: produtor via gov.br (mock), analista via matrícula+senha.
+- `src/screens/HomeScreen.tsx` — "Meus imóveis" (lista offline) + FAB novo imóvel.
+- `src/screens/CadastroScreen.tsx` — dados do imóvel e produtor (pré-preenche da sessão gov.br).
 - `src/screens/DemarcacaoScreen.tsx` — mapa com GPS real ou simulação.
 - `src/screens/DocumentosScreen.tsx` — anexar arquivos + foto georreferenciada.
 - `src/screens/RevisaoScreen.tsx` — validação, exportação e envio.
+- `src/screens/ValidacaoScreen.tsx` + `PainelScreen.tsx` — **analista**: validação geométrica e dashboard.
+- `src/screens/ConfigScreen.tsx` — aba Perfil: identidade logada + Sair.
+
+Autenticação (login):
+
+- `src/auth/AuthContext.tsx` — `useAuth()` (sessão, login gov.br/matrícula, logout).
+- `src/auth/AuthProvider.ts` + `mockAuthProvider.ts` — **seam**: mock agora; OIDC+PKCE real depois.
+- `src/auth/secureSession.ts` — sessão sensível (token/CPF) em **expo-secure-store** (LGPD).
 
 Camadas de negócio:
 

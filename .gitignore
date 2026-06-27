@@ -42,3 +42,6 @@ yarn-error.*
 
 # Serena (tooling cache)
 .serena/cache/
+
+# Superpowers SDD scratch
+.superpowers/
