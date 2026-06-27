@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fontes de Dados e Integração — CAR Campo</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      font-family: 'Segoe UI', 'Trebuchet MS', Arial, Helvetica, sans-serif;
+      font-size: 11pt;
+      line-height: 1.6;
+      color: #1d2b22;
+      background: #ffffff;
+    }
+
+    body {
+      padding: 20mm;
+    }
+
+    @page {
+      size: A4 portrait;
+      margin: 15mm;
+    }
+
+    @media print {
+      body { padding: 0; }
+      a { color: #1b6b3a; text-decoration: none; }
+      section { page-break-inside: avoid; }
+    }
+
+    h1 {
+      color: #1b6b3a;
+      font-size: 22pt;
+      font-weight: 600;
+      border-bottom: 3px solid #1b6b3a;
+      padding-bottom: 10px;
+      margin: 24px 0 16px 0;
+      page-break-after: avoid;
+    }
+
+    h2 {
+      color: #1b6b3a;
+      font-size: 13pt;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 20px;
+      margin-bottom: 10px;
+      page-break-after: avoid;
+    }
+
+    h3 {
+      color: #2e9e57;
+      font-size: 11pt;
+      font-weight: 600;
+      margin-top: 12px;
+      margin-bottom: 8px;
+      page-break-after: avoid;
+    }
+
+    p {
+      margin-bottom: 10px;
+      text-align: justify;
+    }
+
+    p.lead {
+      font-size: 12pt;
+      color: #1b6b3a;
+      font-weight: 500;
+      margin-bottom: 16px;
+    }
+
+    ul, ol {
+      margin-left: 20px;
+      margin-bottom: 12px;
+    }
+
+    li {
+      margin-bottom: 6px;
+    }
+
+    /* Cover */
+    .cover {
+      text-align: center;
+      padding-top: 80px;
+      page-break-after: always;
+    }
+
+    .cover-header {
+      color: #1b6b3a;
+      font-size: 13pt;
+      font-weight: 600;
+      margin-bottom: 20px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .cover-title {
+      font-size: 26pt;
+      font-weight: 700;
+      color: #1b6b3a;
+      margin-bottom: 16px;
+      line-height: 1.3;
+    }
+
+    .cover-subtitle {
+      font-size: 13pt;
+      color: #5d6b62;
+      margin-bottom: 60px;
+      line-height: 1.5;
+    }
+
+    .cover-meta {
+      margin-top: 120px;
+      font-size: 10pt;
+      color: #5d6b62;
+      line-height: 1.8;
+    }
+
+    /* TOC */
+    .toc {
+      page-break-after: always;
+    }
+
+    .toc h2 {
+      margin-bottom: 16px;
+    }
+
+    .toc ol {
+      margin-left: 20px;
+    }
+
+    .toc li {
+      margin-bottom: 8px;
+      font-size: 11pt;
+    }
+
+    .toc a {
+      color: #1b6b3a;
+      text-decoration: none;
+    }
+
+    section {
+      page-break-inside: avoid;
+    }
+
+    /* Highlight boxes */
+    .highlight {
+      background: #eef7f0;
+      border-left: 4px solid #1b6b3a;
+      padding: 12px 14px;
+      margin: 12px 0;
+      border-radius: 2px;
+    }
+
+    .highlight.warning {
+      background: #fbf0d9;
+      border-left-color: #8a5a13;
+    }
+
+    .highlight.critical {
+      background: #fde8e5;
+      border-left-color: #a3302a;
+    }
+
+    .highlight.info {
+      background: #e8f4fd;
+      border-left-color: #1976a8;
+    }
+
+    .highlight p {
+      margin-bottom: 4px;
+    }
+
+    .highlight p:last-child {
+      margin-bottom: 0;
+    }
+
+    pre, code {
+      font-family: 'Courier New', monospace;
+      font-size: 9pt;
+      color: #1d2b22;
+    }
+
+    pre {
+      background: #f5f5f5;
+      border: 1px solid #d9e4dc;
+      border-radius: 4px;
+      padding: 12px;
+      overflow-x: auto;
+      margin: 10px 0;
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0;
+      font-size: 9.5pt;
+    }
+
+    thead {
+      background: #1b6b3a;
+      color: #ffffff;
+    }
+
+    th {
+      padding: 8px 10px;
+      text-align: left;
+      font-weight: 600;
+      border: 1px solid #1b6b3a;
+    }
+
+    td {
+      padding: 7px 10px;
+      border-bottom: 1px solid #d9e4dc;
+      vertical-align: top;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #eef7f0;
+    }
+
+    tbody tr:hover {
+      background: #e2f3e8;
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 10px;
+      font-size: 8.5pt;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .badge-sim {
+      background: #e2f3e8;
+      color: #1b6b3a;
+    }
+
+    .badge-nao {
+      background: #fde8e5;
+      color: #a3302a;
+    }
+
+    .badge-parcial {
+      background: #fbf0d9;
+      color: #8a5a13;
+    }
+
+    .badge-alto {
+      background: #fde8e5;
+      color: #a3302a;
+    }
+
+    .badge-medio {
+      background: #fbf0d9;
+      color: #8a5a13;
+    }
+
+    .badge-baixo {
+      background: #e2f3e8;
+      color: #1b6b3a;
+    }
+
+    /* Source card */
+    .source-card {
+      border: 1px solid #d9e4dc;
+      border-radius: 4px;
+      padding: 14px 16px;
+      margin: 14px 0;
+      background: #fafcfb;
+    }
+
+    .source-card h3 {
+      margin-top: 0;
+      color: #1b6b3a;
+      font-size: 11.5pt;
+      border-bottom: 1px solid #d9e4dc;
+      padding-bottom: 6px;
+      margin-bottom: 10px;
+    }
+
+    .source-card .meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+
+    .meta-label {
+      font-weight: 600;
+      color: #1b6b3a;
+      min-width: 110px;
+      display: inline-block;
+    }
+
+    .source-card p {
+      margin-bottom: 6px;
+    }
+
+    /* Footer */
+    footer {
+      margin-top: 40px;
+      padding-top: 12px;
+      border-top: 1px solid #d9e4dc;
+      font-size: 9pt;
+      color: #5d6b62;
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    .page-break {
+      page-break-after: always;
+    }
+
+    .term {
+      font-weight: 600;
+      color: #1b6b3a;
+    }
+
+    ul.checklist {
+      list-style: none;
+      margin-left: 0;
+    }
+
+    ul.checklist li {
+      margin-left: 20px;
+      margin-bottom: 6px;
+    }
+
+    ul.checklist li:before {
+      content: "✓ ";
+      color: #1b6b3a;
+      font-weight: bold;
+      margin-right: 6px;
+    }
+
+    .priority-1 { font-weight: 700; color: #1b6b3a; }
+    .priority-2 { font-weight: 600; color: #2e9e57; }
+    .priority-3 { color: #5d6b62; }
+  </style>
+</head>
+<body>
+
+<!-- =========================================================
+     CAPA
+     ========================================================= -->
+<div class="cover">
+  <div class="cover-header">CAR Campo — Documentação Técnica · haCARthon Desafio 2 · Solução 4</div>
+  <div class="cover-title">Fontes de Dados e Integração</div>
+  <div class="cover-subtitle">
+    Catálogo das fontes de dados geoespaciais relevantes ao Desafio 2<br>
+    e ao app CAR Campo — estado atual e roadmap de integração
+  </div>
+  <div class="cover-meta">
+    <strong>Versão 1.0 — junho de 2026</strong><br>
+    Público: time de desenvolvimento, parceiros MGI/FBDS/ENAP, bancas de avaliação<br>
+    Repositório: <code>car-campo-app</code> · Desafio 2 · Solução 4<br>
+    Fontes verificadas em: 26/06/2026
+  </div>
+</div>
+
+<!-- =========================================================
+     SUMÁRIO
+     ========================================================= -->
+<div class="toc">
+  <h2>Sumário</h2>
+  <ol>
+    <li><a href="#contexto">Contexto — Desafio 2 e fontes do briefing</a></li>
+    <li><a href="#fontes">Catálogo de fontes oficiais</a>
+      <ol>
+        <li><a href="#funai">FUNAI — Terras Indígenas</a></li>
+        <li><a href="#icmbio">ICMBio / MMA — Unidades de Conservação</a></li>
+        <li><a href="#ibama">IBAMA SISCOM — Embargos Ativos</a></li>
+        <li><a href="#prodes">INPE TerraBrasilis — PRODES (Desmatamento)</a></li>
+        <li><a href="#deter">INPE TerraBrasilis — DETER (Alertas em tempo real)</a></li>
+        <li><a href="#queimadas">INPE — Programa Queimadas AQ1km</a></li>
+        <li><a href="#fbds">FBDS — Hidrografia, APP e Uso/Cobertura</a></li>
+        <li><a href="#ana">ANA / SNIRH — Hidrografia Nacional</a></li>
+        <li><a href="#snif">SNIF — Sistema Nacional de Informações Florestais</a></li>
+        <li><a href="#sicar-consulta">Portal de Dados do CAR / Consulta Pública (SICAR)</a></li>
+        <li><a href="#painel">Painel da Regularização Ambiental (SFB/Power BI)</a></li>
+      </ol>
+    </li>
+    <li><a href="#priorizacao">Tabela de priorização de integração</a></li>
+    <li><a href="#fontes-ref">Referências e fontes</a></li>
+  </ol>
+</div>
+
+<!-- =========================================================
+     1. CONTEXTO
+     ========================================================= -->
+<section id="contexto">
+  <h1>1. Contexto — Desafio 2 e fontes do briefing</h1>
+
+  <p class="lead">O Desafio 2 do haCARthon pede "acesso a dados geoespaciais: uso/cobertura, feições naturais, APP e áreas de uso restrito". Este catálogo documenta cada fonte oficial relevante, o que o app já integra e o que falta.</p>
+
+  <p>O CAR Campo opera em <strong>dois regimes de dados</strong>:</p>
+
+  <ul>
+    <li><strong>Regime online</strong> — fetch WFS por bounding box (bbox) no momento da análise; resultado real, authoritative.</li>
+    <li><strong>Regime offline-demo</strong> — fixtures pré-carregadas (região de Sorriso/MT); usadas em campo sem rede ou quando qualquer WFS falha. O app sempre sinaliza a origem dos dados (<code>fonteDados: 'online' | 'offline-demo'</code>).</li>
+  </ul>
+
+  <div class="highlight warning">
+    <p><strong>Atenção sobre painéis e dashboards:</strong> o painel.car.gov.br (Qlik Sense, Power BI) é plataforma de visualização estatística — gráficos, totalizações, filtros por estado/município. Ele <em>não</em> expõe API geoespacial consultável. A análise real de sobreposição exige acesso direto aos WFS (FUNAI, ICMBio, IBAMA, INPE) que retornam geometrias completas para interseção poligonal.</p>
+  </div>
+</section>
+
+<!-- =========================================================
+     2. CATÁLOGO DE FONTES
+     ========================================================= -->
+<section id="fontes">
+  <h1>2. Catálogo de Fontes Oficiais</h1>
+
+  <!-- ---- FUNAI ---- -->
+  <div class="source-card" id="funai">
+    <h3>2.1 FUNAI — Terras Indígenas</h3>
+
+    <p><span class="meta-label">O que é:</span> Base oficial de limites de Terras Indígenas (TIs) homologadas, declaradas, delimitadas e em estudo, mantida pela Fundação Nacional dos Povos Indígenas (FUNAI). Inclui todas as fases do processo demarcatório.</p>
+
+    <p><span class="meta-label">Camadas:</span> Polígonos de TIs por fase (<em>homologada, declarada, em estudo, reserva indígena</em>).</p>
+
+    <p><span class="meta-label">Formato de acesso:</span> WFS OGC (GeoServer). Retorna GeoJSON por bbox.</p>
+
+    <p><span class="meta-label">Endpoint:</span> <code>https://geoserver.funai.gov.br/geoserver/wfs</code></p>
+
+    <p><span class="meta-label">typeName integrado:</span> <code>funai:ti_sirgas</code></p>
+
+    <p><span class="meta-label">CRS servidor:</span> SIRGAS 2000 (EPSG:4674); consultado via CRS:84 (WGS84 lon/lat).</p>
+
+    <p><span class="meta-label">Atualização:</span> Mensal.</p>
+
+    <p><span class="meta-label">Status no app:</span> <span class="badge badge-sim">JA INTEGRADA</span> — <code>src/lib/refLayers.ts</code>, WFS 2.0.0, <code>maxFeatures: 200</code>.</p>
+
+    <p><span class="meta-label">Por que importa:</span> Sobreposição com TI é <strong>impedimento constitucional</strong> ao uso agropecuário (CF art. 231 § 6°) e ao crédito rural. Qualquer hectare de sobreposição é classificado como <em>critico</em> e bloqueia todas as linhas de crédito. Pré-requisito de triagem para o analista.</p>
+  </div>
+
+  <!-- ---- ICMBio ---- -->
+  <div class="source-card" id="icmbio">
+    <h3>2.2 ICMBio / MMA — Unidades de Conservação</h3>
+
+    <p><span class="meta-label">O que é:</span> Cadastro Nacional de Unidades de Conservação (CNUC/ICMBio), gerido pelo Instituto Chico Mendes de Conservação da Biodiversidade. Cobre UCs federais, estaduais e municipais. Distingue Proteção Integral (Parques, Estações Ecológicas, Reservas Biológicas) de Uso Sustentável (APAs, Florestas Nacionais, RESEXs etc.).</p>
+
+    <p><span class="meta-label">Camadas:</span> Polígonos de UCs por categoria e esfera administrativa.</p>
+
+    <p><span class="meta-label">Formato de acesso:</span> WFS OGC via INDE (Infraestrutura Nacional de Dados Espaciais).</p>
+
+    <p><span class="meta-label">Endpoint:</span> <code>https://geoservicos.inde.gov.br/geoserver/ICMBio/ows</code></p>
+
+    <p><span class="meta-label">typeName integrado:</span> <code>ICMBio:BCIM_Unidade_Conservacao_A_2021</code></p>
+
+    <p><span class="meta-label">CRS servidor:</span> SIRGAS 2000 (EPSG:4674).</p>
+
+    <p><span class="meta-label">Status no app:</span> <span class="badge badge-sim">JA INTEGRADA</span> — <code>src/lib/refLayers.ts</code>, WFS 2.0.0, <code>maxFeatures: 200</code>.</p>
+
+    <p><span class="meta-label">Por que importa:</span> UC de Proteção Integral proíbe atividade agropecuária (Lei 9.985/2000 art. 7°) — bloqueio critico de crédito. UC de Uso Sustentável gera <em>alerta</em>; depende do plano de manejo. O analista precisa distinguir a categoria antes de emitir parecer.</p>
+  </div>
+
+  <!-- ---- IBAMA ---- -->
+  <div class="source-card" id="ibama">
+    <h3>2.3 IBAMA SISCOM — Embargos Ativos</h3>
+
+    <p><span class="meta-label">O que é:</span> Camada pública de áreas com embargo ambiental ativo, mantida pelo IBAMA no Sistema de Monitoramento e Controle (SISCOM). Registra autos de infração com proibição de atividade por supressão irregular de vegetação ou outro ilícito ambiental.</p>
+
+    <p><span class="meta-label">Camadas:</span> Polígonos de áreas embargadas (ativos) com atributos: número do auto de infração, data, município, status.</p>
+
+    <p><span class="meta-label">Formato de acesso:</span> WFS OGC (GeoServer).</p>
+
+    <p><span class="meta-label">Endpoint:</span> <code>https://siscom.ibama.gov.br/geoserver/wfs</code></p>
+
+    <p><span class="meta-label">typeName integrado:</span> <code>publica:vw_brasil_adm_embargo_a</code></p>
+
+    <p><span class="meta-label">CRS servidor:</span> WGS84 (EPSG:4326).</p>
+
+    <p><span class="meta-label">Atualização:</span> Diária.</p>
+
+    <p><span class="meta-label">Status no app:</span> <span class="badge badge-sim">JA INTEGRADA</span> — <code>src/lib/refLayers.ts</code>, WFS 1.1.0, <code>maxFeatures: 500</code>.</p>
+
+    <p><span class="meta-label">Por que importa:</span> Embargo ativo é <strong>pré-requisito de crédito rural</strong> (Resolução CMN 5.193/2024 — veda crédito com recursos públicos a imóvel em área embargada por ilícito ambiental). Além disso, operação em área embargada é crime. Atualização diária torna esta a camada de maior urgência temporal.</p>
+  </div>
+
+  <!-- ---- PRODES ---- -->
+  <div class="source-card" id="prodes">
+    <h3>2.4 INPE TerraBrasilis — PRODES (Desmatamento Anual)</h3>
+
+    <p><span class="meta-label">O que é:</span> Projeto PRODES (Monitoramento do Desmatamento da Floresta Amazônica por Satélite), do Instituto Nacional de Pesquisas Espaciais (INPE). Mapeamento anual consolidado de supressão de vegetação nativa. Referência oficial do governo federal para quantificação de desmatamento. Disponível para Amazônia e Cerrado.</p>
+
+    <p><span class="meta-label">Camadas:</span> Polígonos de desmatamento por ano (incremento anual) e por bioma; atributos: ano, área em km², data de detecção.</p>
+
+    <p><span class="meta-label">Formato de acesso:</span> WFS OGC e WMS, via plataforma TerraBrasilis.</p>
+
+    <p><span class="meta-label">Endpoint:</span> <code>https://terrabrasilis.dpi.inpe.br/geoserver/ows</code></p>
+
+    <p><span class="meta-label">typeName integrado (Amazônia):</span> <code>prodes-amazon-nb:yearly_deforestation_biome</code></p>
+
+    <p><span class="meta-label">typeName disponivel (Cerrado):</span> <code>prodes-cerrado-nb:yearly_deforestation</code> — <span class="badge badge-nao">NAO INTEGRADA</span> (apenas Amazônia está ativa; Cerrado está documentado no comentário do código mas não configurado).</p>
+
+    <p><span class="meta-label">CRS servidor:</span> SIRGAS 2000 (EPSG:4674).</p>
+
+    <p><span class="meta-label">Atualização:</span> Anual (agosto/setembro de cada ano).</p>
+
+    <p><span class="meta-label">Status no app (Amazônia):</span> <span class="badge badge-sim">JA INTEGRADA</span> — <code>src/lib/refLayers.ts</code>, WFS 2.0.0, <code>maxFeatures: 300</code>.</p>
+
+    <p><span class="meta-label">Por que importa:</span> Desmatamento detectado após 22/07/2008 (data de corte do Código Florestal — art. 61-A, Lei 12.651/2012) pode configurar passivo florestal e inviabilizar crédito rural. O app sinaliza a sobreposição; a legalidade depende de análise dos órgãos competentes (ver documento de Limites e Conformidade).</p>
+  </div>
+
+  <!-- ---- DETER ---- -->
+  <div class="source-card" id="deter">
+    <h3>2.5 INPE TerraBrasilis — DETER (Alertas em Tempo Real)</h3>
+
+    <p><span class="meta-label">O que é:</span> Sistema DETER (Detecção de Desmatamento em Tempo Real) do INPE. Gera alertas de desmatamento e degradação com latência de dias (vs. meses do PRODES). Usado pelo IBAMA para acionamento de fiscalização. Menor resolução espacial que o PRODES; alertas são polígonos preliminares, confirmados pelo PRODES.</p>
+
+    <p><span class="meta-label">Camadas:</span> Polígonos de alerta de desmatamento e degradação, com data e classe do alerta.</p>
+
+    <p><span class="meta-label">Formato de acesso:</span> WFS OGC e WMS via TerraBrasilis; workspace <code>deter-amz</code> (Amazônia) e <code>deter-cerrado</code>.</p>
+
+    <p><span class="meta-label">Endpoint:</span> <code>https://terrabrasilis.dpi.inpe.br/geoserver/ows</code></p>
+
+    <p><span class="meta-label">typeNames disponíveis:</span> <code>deter-amz:deter_alerts</code>, <code>deter-cerrado:deter_cerrado_alerts</code></p>
+
+    <p><span class="meta-label">CRS servidor:</span> SIRGAS 2000 (EPSG:4674).</p>
+
+    <p><span class="meta-label">Atualização:</span> Diária (alertas preliminares).</p>
+
+    <p><span class="meta-label">Status no app:</span> <span class="badge badge-nao">NAO INTEGRADA</span> — o <code>CamadaTipo</code> <code>'desmatamento'</code> em <code>overlay.ts</code> é atendido apenas pelo PRODES. Não há WfsConfig para DETER em <code>refLayers.ts</code>.</p>
+
+    <p><span class="meta-label">Por que importa / roadmap:</span> DETER complementa o PRODES para alertas recentes (útil para analista priorizar fiscalização). Integrar DETER requer WfsConfig adicional no mesmo endpoint; esforço baixo uma vez que a infraestrutura WFS já está em produção.</p>
+  </div>
+
+  <!-- ---- Queimadas ---- -->
+  <div class="source-card" id="queimadas">
+    <h3>2.6 INPE — Programa Queimadas AQ1km</h3>
+
+    <p><span class="meta-label">O que é:</span> Produto AQ1km (Área Queimada mensal a 1 km de resolução) do Programa Queimadas do INPE. Mapeia cicatrizes de incêndio por sensoriamento remoto. Distinto de focos de calor: registra a área efetivamente afetada pelo fogo.</p>
+
+    <p><span class="meta-label">Camadas:</span> Polígonos de cicatriz de queimada mensal, com atributos de mês/ano e área.</p>
+
+    <p><span class="meta-label">Formato de acesso:</span> WFS OGC via GeoServer TerraBrasilis, workspace <code>queimadas</code>.</p>
+
+    <p><span class="meta-label">Endpoint:</span> <code>https://terrabrasilis.dpi.inpe.br/geoserver/ows</code></p>
+
+    <p><span class="meta-label">typeName integrado:</span> <code>queimadas:aq1km_mensal</code></p>
+
+    <p><span class="meta-label">CRS servidor:</span> SIRGAS 2000 (EPSG:4674).</p>
+
+    <p><span class="meta-label">Atualização:</span> Mensal.</p>
+
+    <p><span class="meta-label">Status no app:</span> <span class="badge badge-sim">JA INTEGRADA</span> — <code>src/lib/refLayers.ts</code>, WFS 2.0.0, <code>maxFeatures: 300</code>.</p>
+
+    <p><span class="meta-label">Por que importa:</span> Queimada extensiva sobre vegetação nativa ou Reserva Legal pode indicar dano ambiental, gerar autuação e embargo futuro. No app, &gt; 20% do imóvel com cicatriz eleva severidade de <em>alerta</em> para <em>critico</em>.</p>
+  </div>
+
+  <!-- ---- FBDS ---- -->
+  <div class="source-card" id="fbds">
+    <h3>2.7 FBDS — Hidrografia, APP e Uso/Cobertura do Solo</h3>
+
+    <p><span class="meta-label">O que é:</span> Repositório de dados geoespaciais de alta resolução produzido pela Fundação Brasileira para o Desenvolvimento Sustentável (FBDS) no projeto "Mapeamento de Alta Resolução dos Biomas Brasileiros". Usa imagens RapidEye (5 m de resolução espacial), escala compatível com 1:25.000. Citado explicitamente no briefing do haCARthon como fonte para "mapas que os estados utilizaram no CAR".</p>
+
+    <p><span class="meta-label">Camadas:</span></p>
+    <ul>
+      <li><strong>Hidrografia:</strong> trechos fluviais (linhas), nascentes (pontos), rios de dupla margem (polígonos), massas d'água.</li>
+      <li><strong>APP:</strong> polígonos de Área de Preservação Permanente delimitados conforme arts. 4° e 5° da Lei 12.651/2012 (margem de cursos d'água, nascentes, lagos).</li>
+      <li><strong>Uso e cobertura:</strong> classificação supervisionada do uso do solo por bioma e estado.</li>
+    </ul>
+
+    <p><span class="meta-label">Formato de acesso:</span> Download por estado em shapefile/GeoJSON no repositório público.</p>
+
+    <p><span class="meta-label">URL do repositório:</span> <code>https://geo.fbds.org.br/</code></p>
+
+    <p><span class="meta-label">CRS:</span> SIRGAS 2000 (EPSG:4674) nas camadas geradas; reproject para WGS84/CRS:84 antes de cruzar.</p>
+
+    <p><span class="meta-label">WFS nacional consolidado:</span> Nao existe endpoint WFS nacional público unificado; acesso por download de shapefile por estado/município.</p>
+
+    <p><span class="meta-label">Status no app:</span> <span class="badge badge-nao">NAO INTEGRADA (online)</span> — o tipo <code>'app_hidrografia'</code> existe em <code>overlay.ts</code> e é servido por fixture demo; <em>nao ha WfsConfig</em> em <code>refLayers.ts</code> para esta camada. O design da funcionalidade está especificado em <code>docs/superpowers/specs/2026-06-26-app-hidrografia-demarcacao-design.md</code>.</p>
+
+    <p><span class="meta-label">Por que importa / foco do Desafio 2:</span> APP mal declarada é a principal causa de retificações de CAR. Sobrepor hidrografia e APP ao vivo durante a demarcação mostra ao produtor "Seu Raimundo" onde ele nao pode demarcar — antes de enviar ao SICAR. É o <strong>próximo passo prioritário de integração</strong> (ver tabela de priorização).</p>
+  </div>
+
+  <!-- ---- ANA / SNIRH ---- -->
+  <div class="source-card" id="ana">
+    <h3>2.8 ANA / SNIRH — Hidrografia Nacional</h3>
+
+    <p><span class="meta-label">O que é:</span> Base hidrográfica oficial do Brasil mantida pela Agência Nacional de Águas e Saneamento Básico (ANA) no âmbito do Sistema Nacional de Informações sobre Recursos Hídricos (SNIRH). Inclui rede de drenagem, bacias hidrográficas, corpos d'água e estações de monitoramento.</p>
+
+    <p><span class="meta-label">Camadas relevantes:</span> Trechos de curso d'água (linhas), bacias hidrográficas (polígonos), massas d'água.</p>
+
+    <p><span class="meta-label">Formato de acesso:</span> Portal de dados abertos (<code>dadosabertos.ana.gov.br</code>), catálogo de metadados GeoNetwork (<code>metadados.snirh.gov.br/geonetwork</code>), REST ArcGIS (<code>snirh.gov.br/arcgis/rest/services</code>). Download em shapefile, GeoJSON e outros formatos.</p>
+
+    <p><span class="meta-label">CRS:</span> Depende do produto — geralmente SIRGAS 2000 (EPSG:4674) ou WGS84.</p>
+
+    <p><span class="meta-label">Status no app:</span> <span class="badge badge-nao">NAO INTEGRADA</span> — complementar ao FBDS para linha-d'água quando nao houver polígono de APP pronto. Uso previsto: derivação de APP por buffer (<code>@turf/buffer</code>) quando o polígono de APP da FBDS nao estiver disponível para o município.</p>
+
+    <p><span class="meta-label">Por que importa:</span> Alternativa de fallback para hidrografia quando o FBDS nao cobre o estado/município ou quando a largura do rio é necessária para dimensionar a faixa de APP (art. 4° da Lei 12.651/2012).</p>
+  </div>
+
+  <!-- ---- SNIF ---- -->
+  <div class="source-card" id="snif">
+    <h3>2.9 SNIF — Sistema Nacional de Informações Florestais</h3>
+
+    <p><span class="meta-label">O que é:</span> Sistema mantido pelo Serviço Florestal Brasileiro (SFB/MAPA) com dados e estatísticas sobre florestas plantadas e nativas no Brasil. Inclui o Inventário Florestal Nacional (IFN) com dados botânicos, biofísicos e socioeconômicos coletados em campo.</p>
+
+    <p><span class="meta-label">Dados disponíveis:</span> Séries históricas de cobertura florestal, produção de madeira, Reserva Legal (RL) por estado, dados do IFN. Mapas interativos por bioma e estado.</p>
+
+    <p><span class="meta-label">Formato de acesso:</span> Portal web (<code>snif.florestal.gov.br</code>), download em CSV, GeoJSON, GeoTIFF, Shapefile; APIs de geoserviços WMS/WFS disponíveis. Portal ArcGIS Hub (<code>portal-sistema-nacional-de-informacoes-florestais-imagem-govfed.hub.arcgis.com</code>).</p>
+
+    <p><span class="meta-label">CRS:</span> Varia por produto; geralmente SIRGAS 2000 ou WGS84.</p>
+
+    <p><span class="meta-label">Status no app:</span> <span class="badge badge-nao">NAO INTEGRADA</span> — o SNIF é essencialmente uma <em>fonte estatística e de contexto</em>, nao uma camada de sobreposição poligonal com imóveis individuais. Contribui para o documento de contexto e para indicadores de Reserva Legal a nível de bioma, nao para a análise geometrica em tempo real.</p>
+
+    <p><span class="meta-label">Por que importa:</span> Dados do SNIF amparam narrativa de conformidade e crédito (ex.: percentual de RL por bioma como referência para avaliar passivo); útil para analista em pareceres consolidados e para relatórios de impacto do haCARthon.</p>
+  </div>
+
+  <!-- ---- Portal de Dados CAR / Consulta Pública ---- -->
+  <div class="source-card" id="sicar-consulta">
+    <h3>2.10 Portal de Dados do CAR / Consulta Pública (SICAR)</h3>
+
+    <p><span class="meta-label">O que é:</span> Módulo de consulta pública do Sistema Nacional de Cadastro Ambiental Rural (SICAR), mantido pelo MMA/MGI. Permite consultar, visualizar no mapa e fazer download de dados de imóveis CAR registrados, por estado e município. Em maio de 2026 o MGI lançou nova plataforma de consulta (<code>consulta.car.gov.br</code>) com mapa interativo e filtros avançados.</p>
+
+    <p><span class="meta-label">Dados disponíveis:</span> Perímetros de imóveis registrados no CAR (shapefile por município), feições ambientais declaradas (APP, RL, vegetação nativa), status do cadastro (ativo, pendente, cancelado, suspenso). Inclui análise de sobreposições com FUNAI, ICMBio, INCRA no relatório individual.</p>
+
+    <p><span class="meta-label">Formato de acesso:</span> Download de shapefile por município via interface web (<code>consultapublica.car.gov.br</code>). Nao há WFS nacional público com API de bbox direta para periúmetros de CAR de vizinhos em tempo real.</p>
+
+    <p><span class="meta-label">Status no app:</span> <span class="badge badge-nao">NAO INTEGRADA (online)</span> — o tipo <code>'car_vizinho'</code> existe em <code>overlay.ts</code> e é servido por fixture demo; nao há WfsConfig em <code>refLayers.ts</code>. Detectar dupla declaração (sobreposição entre imóveis vizinhos) exigiria acesso à base SICAR por bbox — atualmente disponível apenas via download de shapefile offline, nao via WFS live.</p>
+
+    <p><span class="meta-label">Por que importa:</span> Sobreposição entre CAR vizinhos (dupla declaração) é uma das principais causas de análise demorada e recurso. Para o analista (Luana), é o alerta que mais consome tempo de triagem manual. Integração dependente de API SICAR ou pré-carga do shapefile municipal na sessão.</p>
+  </div>
+
+  <!-- ---- Painel ---- -->
+  <div class="source-card" id="painel">
+    <h3>2.11 Painel da Regularização Ambiental (SFB / Power BI)</h3>
+
+    <p><span class="meta-label">O que é:</span> Plataforma de inteligência de dados lançada pelo Serviço Florestal Brasileiro (SFB) em 2024 (versão Power BI atualizada em 2025/2026). Consolida dados do SICAR sobre situação cadastral, passivo de APP, Reserva Legal, aderência ao PRA por estado e município. Referência do briefing como "Painel da Regularização Ambiental".</p>
+
+    <p><span class="meta-label">URL:</span> <code>https://app.powerbi.com/view?r=eyJrIjoiZmRiM...</code> (link oficial SFB) e <code>https://consulta.car.gov.br/</code></p>
+
+    <p><span class="meta-label">Dados disponíveis:</span> Estatísticas de cadastros ativos/pendentes/cancelados, área total por estado/bioma, déficit de RL e APP, aderência ao PRA, número de imóveis por status.</p>
+
+    <p><span class="meta-label">Formato de acesso:</span> Visualização interativa Power BI (dashboard web); nao expõe API REST/WFS pública. Dados tabulares para exportação eventual em CSV.</p>
+
+    <p><span class="meta-label">Status no app:</span> <span class="badge badge-nao">NAO INTEGRADA</span> — e nao deve ser integrada como fonte geoespacial. É plataforma de BI, nao de análise de sobreposição.</p>
+
+    <p><span class="meta-label">Por que importa:</span> Contexto estratégico e narrativo — ampara a argumentação do haCARthon sobre escala do problema (ex.: quantos imóveis têm passivo de APP, quantos aderiram ao PRA). Também serve como referência cruzada para o analista verificar status estadual do CAR sem consultar o SICAR diretamente.</p>
+  </div>
+
+</section>
+
+<!-- =========================================================
+     3. TABELA DE PRIORIZAÇÃO
+     ========================================================= -->
+<section id="priorizacao">
+  <h1>3. Tabela de Priorização de Integração</h1>
+
+  <p class="lead">Recomendação de ordem de implementação considerando alinhamento com o Desafio 2, esforço técnico e valor regulatório entregue. As fontes já integradas nao constam na tabela.</p>
+
+  <div class="highlight">
+    <p><strong>Recomendação principal:</strong> começar pela integração de <strong>APP/Hidrografia (FBDS)</strong>, que é o foco central do Desafio 2 (feições naturais e APP) e resolve a maior causa de retificação de CAR. A arquitetura e o contrato de API já estão especificados em <code>docs/superpowers/specs/2026-06-26-app-hidrografia-demarcacao-design.md</code>.</p>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Fonte</th>
+        <th>Esforco</th>
+        <th>Valor</th>
+        <th>Desafio 2</th>
+        <th>Bloqueio de crédito?</th>
+        <th>Acao recomendada</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="priority-1">1</td>
+        <td class="priority-1">FBDS — APP/Hidrografia</td>
+        <td><span class="badge badge-medio">Médio</span></td>
+        <td><span class="badge badge-alto">Alto</span></td>
+        <td><span class="badge badge-sim">Sim (foco)</span></td>
+        <td>Nao diretamente; sinaliza passivo</td>
+        <td>Carregar shapefile por estado; implementar <code>src/lib/app.ts</code> com <code>derivarAPP()</code> via <code>@turf/buffer</code>; fixtures SORRISO_SOJA</td>
+      </tr>
+      <tr>
+        <td class="priority-1">2</td>
+        <td class="priority-1">INPE DETER (Alertas)</td>
+        <td><span class="badge badge-baixo">Baixo</span></td>
+        <td><span class="badge badge-alto">Alto</span></td>
+        <td><span class="badge badge-sim">Sim</span></td>
+        <td>Indiretamente (aciona IBAMA)</td>
+        <td>Adicionar WfsConfig em <code>refLayers.ts</code>: <code>deter-amz:deter_alerts</code>; mesma lógica PRODES; novo tipo <code>'desmatamento_deter'</code></td>
+      </tr>
+      <tr>
+        <td class="priority-1">3</td>
+        <td class="priority-1">PRODES Cerrado</td>
+        <td><span class="badge badge-baixo">Baixo</span></td>
+        <td><span class="badge badge-alto">Alto</span></td>
+        <td><span class="badge badge-sim">Sim</span></td>
+        <td>Indiretamente (passivo florestal)</td>
+        <td>Adicionar entrada WfsConfig para <code>prodes-cerrado-nb:yearly_deforestation</code>; já documentado no comentário de <code>refLayers.ts</code></td>
+      </tr>
+      <tr>
+        <td class="priority-2">4</td>
+        <td class="priority-2">ANA/SNIRH — Hidrografia</td>
+        <td><span class="badge badge-medio">Médio</span></td>
+        <td><span class="badge badge-medio">Médio</span></td>
+        <td><span class="badge badge-sim">Sim</span></td>
+        <td>Nao</td>
+        <td>Fallback quando FBDS nao cobre o município; necessário para derivação de APP por largura de rio</td>
+      </tr>
+      <tr>
+        <td class="priority-2">5</td>
+        <td class="priority-2">SICAR — CAR Vizinho (shapefile)</td>
+        <td><span class="badge badge-alto">Alto</span></td>
+        <td><span class="badge badge-alto">Alto</span></td>
+        <td><span class="badge badge-parcial">Indireto</span></td>
+        <td>Nao (triagem analista)</td>
+        <td>Pré-carga offline do shapefile municipal via job de sincronização; sem WFS live disponível. Planejado para pós-hackathon</td>
+      </tr>
+      <tr>
+        <td class="priority-3">6</td>
+        <td>SNIF — Dados Florestais</td>
+        <td><span class="badge badge-baixo">Baixo</span></td>
+        <td><span class="badge badge-baixo">Baixo (app)</span></td>
+        <td><span class="badge badge-parcial">Contexto</span></td>
+        <td>Nao</td>
+        <td>Usar apenas como referência de narrativa e pareceres; nao integrar como camada de sobreposição</td>
+      </tr>
+      <tr>
+        <td class="priority-3">7</td>
+        <td>Painel Regularização Ambiental</td>
+        <td><span class="badge badge-baixo">Nao aplicável</span></td>
+        <td><span class="badge badge-baixo">Baixo (app)</span></td>
+        <td><span class="badge badge-parcial">Contexto</span></td>
+        <td>Nao</td>
+        <td>Nao integrar; usar como referência de contexto no pitch e documentos de impacto</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="highlight warning">
+    <p><strong>Nota sobre CAR vizinho:</strong> detectar sobreposição entre imóveis CAR em tempo real exigiria acesso à API do SICAR com autenticação ou pre-download do shapefile municipal completo. Nao há WFS público de geometrias CAR por bbox. A fixture demo (<code>DEMO_CAMADAS</code> com tipo <code>'car_vizinho'</code>) cobre a demonstração do hackathon; a integração real é pós-hackathon.</p>
+  </div>
+
+</section>
+
+<!-- =========================================================
+     4. REFERÊNCIAS
+     ========================================================= -->
+<section id="fontes-ref">
+  <h1>4. Referências e Fontes</h1>
+
+  <h3>Endpoints e bases de dados</h3>
+  <ul>
+    <li>FUNAI GeoServer WFS: <code>https://geoserver.funai.gov.br/geoserver/wfs</code></li>
+    <li>ICMBio / INDE WFS: <code>https://geoservicos.inde.gov.br/geoserver/ICMBio/ows</code></li>
+    <li>IBAMA SISCOM WFS: <code>https://siscom.ibama.gov.br/geoserver/wfs</code></li>
+    <li>INPE TerraBrasilis WFS: <code>https://terrabrasilis.dpi.inpe.br/geoserver/ows</code></li>
+    <li>INPE Queimadas AQ1km: <code>https://terrabrasilis.dpi.inpe.br/queimadas/aq1km/</code></li>
+    <li>FBDS repositório de mapas: <code>https://geo.fbds.org.br/</code></li>
+    <li>ANA dados abertos: <code>https://dadosabertos.ana.gov.br/</code></li>
+    <li>ANA SNIRH metadados GeoNetwork: <code>https://metadados.snirh.gov.br/geonetwork</code></li>
+    <li>SNIF: <code>https://snif.florestal.gov.br/</code></li>
+    <li>SICAR Consulta Pública: <code>https://consultapublica.car.gov.br/</code></li>
+    <li>Painel Regularização Ambiental (SFB/Power BI): <code>https://consulta.car.gov.br/</code></li>
+  </ul>
+
+  <h3>Legislação e regulação</h3>
+  <ul>
+    <li>Lei Federal 12.651/2012 — Código Florestal Brasileiro</li>
+    <li>Decreto 7.830/2012 — Regulamenta o SICAR e o CAR</li>
+    <li>Lei 9.985/2000 — SNUC (categorias de UC)</li>
+    <li>Lei 11.326/2006 — Define agricultor familiar (Pronaf)</li>
+    <li>Lei 13.999/2020 — Pronampe</li>
+    <li>Resolução CMN 5.193/2024 — Requisitos ambientais para crédito rural com recursos públicos</li>
+    <li>RFC 7946 — GeoJSON</li>
+    <li>OGC WFS 2.0.0 — padrão de acesso a feições vetoriais</li>
+  </ul>
+
+  <h3>Código-fonte relevante do app</h3>
+  <ul>
+    <li><code>src/lib/refLayers.ts</code> — configurações WFS e fetch por bbox</li>
+    <li><code>src/lib/overlay.ts</code> — motor de sobreposição e tipos <code>CamadaTipo</code></li>
+    <li><code>src/lib/credito.ts</code> — avaliação de aptidão de crédito</li>
+    <li><code>docs/superpowers/specs/2026-06-26-app-hidrografia-demarcacao-design.md</code> — design da integração APP/hidrografia</li>
+  </ul>
+
+  <h3>Verificações externas realizadas neste documento</h3>
+  <ul>
+    <li>Confirmação de endpoint FUNAI WFS (geoserver.funai.gov.br) — ref. gov.br/funai, junho 2026</li>
+    <li>Confirmação Res. CMN 5.193/2024 (requisito CAR e ausência de embargo para crédito rural) — site.mppr.mp.br/meioambiente, junho 2026</li>
+    <li>Confirmação FBDS como repositório por shapefile de APP/hidrografia — geo.fbds.org.br, github.com/open-geodata/br_fbds, junho 2026</li>
+    <li>Confirmação ANA/SNIRH geoserviços REST — snirh.gov.br, dadosabertos.ana.gov.br, junho 2026</li>
+    <li>Confirmação Painel Regularização Ambiental Power BI (SFB) — gov.br/florestal, junho 2026</li>
+    <li>Confirmação nova plataforma SICAR consulta.car.gov.br (MGI, maio 2026) — gov.br/gestao, junho 2026</li>
+  </ul>
+</section>
+
+<footer>
+  <strong>CAR Campo — Fontes de Dados e Integração · Versão 1.0 · Junho de 2026</strong><br>
+  haCARthon · Desafio 2 · Solução 4 · MGI, FBDS, ENAP, Impact Hub Brasil, NICFI<br>
+  Documento gerado para o time de desenvolvimento e bancas de avaliação
+</footer>
+
+</body>
+</html>

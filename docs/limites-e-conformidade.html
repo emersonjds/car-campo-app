@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Limites e Conformidade — CAR Campo</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      font-family: 'Segoe UI', 'Trebuchet MS', Arial, Helvetica, sans-serif;
+      font-size: 11pt;
+      line-height: 1.6;
+      color: #1d2b22;
+      background: #ffffff;
+    }
+
+    body {
+      padding: 20mm;
+    }
+
+    @page {
+      size: A4 portrait;
+      margin: 15mm;
+    }
+
+    @media print {
+      body { padding: 0; }
+      a { color: #1b6b3a; text-decoration: none; }
+      section { page-break-inside: avoid; }
+    }
+
+    h1 {
+      color: #1b6b3a;
+      font-size: 22pt;
+      font-weight: 600;
+      border-bottom: 3px solid #1b6b3a;
+      padding-bottom: 10px;
+      margin: 24px 0 16px 0;
+      page-break-after: avoid;
+    }
+
+    h2 {
+      color: #1b6b3a;
+      font-size: 13pt;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 20px;
+      margin-bottom: 10px;
+      page-break-after: avoid;
+    }
+
+    h3 {
+      color: #2e9e57;
+      font-size: 11pt;
+      font-weight: 600;
+      margin-top: 12px;
+      margin-bottom: 8px;
+      page-break-after: avoid;
+    }
+
+    p {
+      margin-bottom: 10px;
+      text-align: justify;
+    }
+
+    p.lead {
+      font-size: 12pt;
+      color: #1b6b3a;
+      font-weight: 500;
+      margin-bottom: 16px;
+    }
+
+    ul, ol {
+      margin-left: 20px;
+      margin-bottom: 12px;
+    }
+
+    li {
+      margin-bottom: 6px;
+    }
+
+    /* Cover */
+    .cover {
+      text-align: center;
+      padding-top: 80px;
+      page-break-after: always;
+    }
+
+    .cover-header {
+      color: #1b6b3a;
+      font-size: 13pt;
+      font-weight: 600;
+      margin-bottom: 20px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .cover-title {
+      font-size: 26pt;
+      font-weight: 700;
+      color: #1b6b3a;
+      margin-bottom: 16px;
+      line-height: 1.3;
+    }
+
+    .cover-subtitle {
+      font-size: 13pt;
+      color: #5d6b62;
+      margin-bottom: 60px;
+      line-height: 1.5;
+    }
+
+    .cover-meta {
+      margin-top: 120px;
+      font-size: 10pt;
+      color: #5d6b62;
+      line-height: 1.8;
+    }
+
+    /* TOC */
+    .toc {
+      page-break-after: always;
+    }
+
+    .toc h2 {
+      margin-bottom: 16px;
+    }
+
+    .toc li {
+      margin-bottom: 8px;
+      font-size: 11pt;
+    }
+
+    .toc a {
+      color: #1b6b3a;
+      text-decoration: none;
+    }
+
+    section {
+      page-break-inside: avoid;
+    }
+
+    /* Highlight boxes */
+    .highlight {
+      background: #eef7f0;
+      border-left: 4px solid #1b6b3a;
+      padding: 12px 14px;
+      margin: 12px 0;
+      border-radius: 2px;
+    }
+
+    .highlight.warning {
+      background: #fbf0d9;
+      border-left-color: #8a5a13;
+    }
+
+    .highlight.critical {
+      background: #fde8e5;
+      border-left-color: #a3302a;
+    }
+
+    .highlight.info {
+      background: #e8f4fd;
+      border-left-color: #1976a8;
+    }
+
+    .highlight p {
+      margin-bottom: 4px;
+    }
+
+    .highlight p:last-child {
+      margin-bottom: 0;
+    }
+
+    pre, code {
+      font-family: 'Courier New', monospace;
+      font-size: 9pt;
+      color: #1d2b22;
+    }
+
+    pre {
+      background: #f5f5f5;
+      border: 1px solid #d9e4dc;
+      border-radius: 4px;
+      padding: 12px;
+      overflow-x: auto;
+      margin: 10px 0;
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0;
+      font-size: 9.5pt;
+    }
+
+    thead {
+      background: #1b6b3a;
+      color: #ffffff;
+    }
+
+    th {
+      padding: 8px 10px;
+      text-align: left;
+      font-weight: 600;
+      border: 1px solid #1b6b3a;
+    }
+
+    td {
+      padding: 7px 10px;
+      border-bottom: 1px solid #d9e4dc;
+      vertical-align: top;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #eef7f0;
+    }
+
+    /* Badge */
+    .badge {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 10px;
+      font-size: 8.5pt;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .badge-sim { background: #e2f3e8; color: #1b6b3a; }
+    .badge-nao { background: #fde8e5; color: #a3302a; }
+    .badge-parcial { background: #fbf0d9; color: #8a5a13; }
+
+    /* Limit blocks */
+    .limit-block {
+      border: 1px solid #d9e4dc;
+      border-radius: 4px;
+      margin: 14px 0;
+      overflow: hidden;
+    }
+
+    .limit-block .limit-header {
+      padding: 10px 14px;
+      font-weight: 700;
+      font-size: 11pt;
+    }
+
+    .limit-block .limit-header.can {
+      background: #e2f3e8;
+      color: #1b6b3a;
+      border-bottom: 1px solid #a8d4b8;
+    }
+
+    .limit-block .limit-header.cannot {
+      background: #fde8e5;
+      color: #a3302a;
+      border-bottom: 1px solid #f0b8b3;
+    }
+
+    .limit-block .limit-body {
+      padding: 12px 14px;
+      background: #fafcfb;
+    }
+
+    .limit-block .limit-body p {
+      margin-bottom: 6px;
+    }
+
+    .limit-block .limit-body p:last-child {
+      margin-bottom: 0;
+    }
+
+    /* Code annotation */
+    .code-ref {
+      font-family: 'Courier New', monospace;
+      font-size: 8.5pt;
+      background: #f0f4f1;
+      padding: 1px 5px;
+      border-radius: 3px;
+      color: #1b6b3a;
+    }
+
+    /* Footer */
+    footer {
+      margin-top: 40px;
+      padding-top: 12px;
+      border-top: 1px solid #d9e4dc;
+      font-size: 9pt;
+      color: #5d6b62;
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    .page-break { page-break-after: always; }
+    .term { font-weight: 600; color: #1b6b3a; }
+
+    ul.checklist, ul.xlist {
+      list-style: none;
+      margin-left: 0;
+    }
+
+    ul.checklist li { margin-left: 20px; margin-bottom: 6px; }
+    ul.checklist li:before { content: "✓ "; color: #1b6b3a; font-weight: bold; margin-right: 6px; }
+    ul.xlist li { margin-left: 20px; margin-bottom: 6px; }
+    ul.xlist li:before { content: "✗ "; color: #a3302a; font-weight: bold; margin-right: 6px; }
+
+    .section-label {
+      display: inline-block;
+      font-size: 8.5pt;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 3px;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+    .label-da { background: #e2f3e8; color: #1b6b3a; }
+    .label-nao { background: #fde8e5; color: #a3302a; }
+  </style>
+</head>
+<body>
+
+<!-- =========================================================
+     CAPA
+     ========================================================= -->
+<div class="cover">
+  <div class="cover-header">CAR Campo — Documentação Técnica · haCARthon Desafio 2 · Solução 4</div>
+  <div class="cover-title">Limites e Conformidade</div>
+  <div class="cover-subtitle">
+    O que o app pode e nao pode afirmar:<br>
+    guia de honestidade técnica para o time, parceiros e bancas de avaliação
+  </div>
+  <div class="cover-meta">
+    <strong>Versão 1.0 — junho de 2026</strong><br>
+    Público: time de desenvolvimento, parceiros MGI/FBDS/ENAP, bancas de avaliação<br>
+    Repositório: <code>car-campo-app</code> · Desafio 2 · Solução 4<br>
+    Fontes verificadas em: 26/06/2026
+  </div>
+</div>
+
+<!-- =========================================================
+     SUMÁRIO
+     ========================================================= -->
+<div class="toc">
+  <h2>Sumário</h2>
+  <ol>
+    <li><a href="#por-que">Por que este documento existe</a></li>
+    <li><a href="#tabela">Tabela resumo — dá / nao dá</a></li>
+    <li><a href="#sobreposicao">Sobreposição geométrica: o que dá e o que nao dá afirmar</a></li>
+    <li><a href="#desmatamento">Legalidade de desmatamento e a data de corte 22/07/2008</a></li>
+    <li><a href="#app-buffer">APP derivada por buffer: estimativa, nao homologação</a></li>
+    <li><a href="#gps">Precisão do GPS de celular e o problema dos slivers</a></li>
+    <li><a href="#datum">Datum e projeção: WGS84, SIRGAS 2000 e CRS:84</a></li>
+    <li><a href="#credito">Conformidade ambiental e crédito rural: o que o app pode afirmar</a></li>
+    <li><a href="#lgpd">Conformidade LGPD: CPF/CNPJ, coordenadas e transmissão de dados</a></li>
+    <li><a href="#referencias">Referências e fontes</a></li>
+  </ol>
+</div>
+
+<!-- =========================================================
+     1. POR QUE ESTE DOCUMENTO EXISTE
+     ========================================================= -->
+<section id="por-que">
+  <h1>1. Por que este documento existe</h1>
+
+  <p class="lead">Ferramentas de análise geoespacial podem criar uma falsa sensação de certeza. Um número em hectares com duas casas decimais parece preciso. Uma cor vermelha no mapa parece definitiva. Este documento estabelece os limites do que o CAR Campo pode afirmar com rigor — e o que deve ser comunicado como estimativa, alerta ou indicação, nunca como veredicto jurídico.</p>
+
+  <p>O objetivo nao é diminuir o valor do app. É o oposto: uma ferramenta que comunica seus limites claramente é mais confiável — para o produtor rural, para o analista ambiental, para o banco que avalia crédito e para a banca do haCARthon.</p>
+
+  <div class="highlight">
+    <p><strong>Princípio central:</strong> o app <em>detecta e quantifica</em>; quem <em>decide e julga</em> são os órgãos competentes (IBAMA, FUNAI, ICMBio, INCRA, Justiça) e as instituições financeiras. Nunca invertemos essa hierarquia.</p>
+  </div>
+
+  <p>Este documento deve ser lido em conjunto com <code>src/lib/overlay.ts</code> (motor de sobreposição), <code>src/lib/refLayers.ts</code> (fontes de dados) e <code>src/lib/credito.ts</code> (avaliação de crédito), que implementam as salvaguardas técnicas descritas aqui.</p>
+</section>
+
+<!-- =========================================================
+     2. TABELA RESUMO
+     ========================================================= -->
+<section id="tabela">
+  <h1>2. Tabela Resumo — Dá / Nao Dá</h1>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Tema</th>
+        <th>O que DA afirmar</th>
+        <th>O que NAO DA afirmar</th>
+        <th>Quem define</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Sobreposição geométrica</strong></td>
+        <td>N ha e P% do imóvel se sobrepõem à camada X</td>
+        <td>Que o produtor é invasor ou criminoso; titularidade da terra</td>
+        <td>INCRA / FUNAI / Justiça</td>
+      </tr>
+      <tr>
+        <td><strong>Legalidade de desmatamento</strong></td>
+        <td>Há desmatamento detectado pelo INPE pós-22/07/2008 em Y ha</td>
+        <td>Que o desmatamento é ilegal (pode ter autorização ou ser consolidado)</td>
+        <td>IBAMA / MAPA / Justiça</td>
+      </tr>
+      <tr>
+        <td><strong>APP por buffer</strong></td>
+        <td>Estimativa de Z ha de APP dentro do imóvel (com ressalva)</td>
+        <td>Que é o limite legal homologado (depende de largura do rio e projeto técnico)</td>
+        <td>Órgão ambiental / ATER</td>
+      </tr>
+      <tr>
+        <td><strong>Precisão espacial</strong></td>
+        <td>Área geodésica calculada com incerteza de ±5–10 m nos vértices</td>
+        <td>Precisão sub-métrica; que slivers menores que ~10–20 m de largura são sobreposição real</td>
+        <td>Topógrafo / INCRA (georreferenciamento)</td>
+      </tr>
+      <tr>
+        <td><strong>Datum / CRS</strong></td>
+        <td>Análise feita em CRS:84 (WGS84 lon/lat); diferença SIRGAS 2000 é sub-métrica</td>
+        <td>Equivalência exata em zonas de fronteira ou divisas estreitas</td>
+        <td>Norma técnica; IBGE</td>
+      </tr>
+      <tr>
+        <td><strong>Aptidão a crédito</strong></td>
+        <td>Imóvel aparentemente apto / bloqueado para linha X, com motivo explícito</td>
+        <td>Aprovação ou oferta de crédito; condições e taxas</td>
+        <td>IF / BACEN / MCR</td>
+      </tr>
+      <tr>
+        <td><strong>Dados pessoais (LGPD)</strong></td>
+        <td>CPF/CNPJ mascarado nas telas; bbox enviada ao WFS (nao coordenadas brutas)</td>
+        <td>Que o app é "anônimo" — CPF/CNPJ são PII com tratamento necessário</td>
+        <td>ANPD / LGPD (Lei 13.709/2018)</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- =========================================================
+     3. SOBREPOSIÇÃO
+     ========================================================= -->
+<section id="sobreposicao">
+  <h1>3. Sobreposição Geométrica: o que dá e o que nao dá afirmar</h1>
+
+  <div class="limit-block">
+    <div class="limit-header can">DA afirmar — sobreposição quantificada</div>
+    <div class="limit-body">
+      <p>O app calcula, com rigor geodésico (biblioteca Turf.js, WGS84 elipsoidal), a <strong>área de interseção em hectares e o percentual do imóvel afetado</strong> por cada camada de referência.</p>
+      <p>Exemplo de afirmação válida: <em>"O perímetro declarado sobrepõe 2,5 ha (5,0%) da Terra Indígena X, conforme base FUNAI WFS (geoserver.funai.gov.br), consultada em [data]."</em></p>
+      <p>O campo <code>fonteDados</code> (<code>'online' | 'offline-demo'</code>) sempre acompanha o resultado — o app nunca reporta dados reais quando a consulta foi servida por fixture de demonstração.</p>
+    </div>
+  </div>
+
+  <div class="limit-block">
+    <div class="limit-header cannot">NAO DA afirmar — titularidade e decisão jurídica</div>
+    <div class="limit-body">
+      <p><strong>Sobreposição geometrica nao é prova de invasão dolosa nem de titularidade indevida.</strong> Que o perímetro de um imóvel cruza com o polígono de uma Terra Indígena no mapa da FUNAI nao significa, por si só, que o produtor é invasor, que seu título é nulo ou que existe crime em curso. Pode haver:</p>
+      <ul>
+        <li>Erro de desenho do perímetro (o produtor desenhou além do seu limite real).</li>
+        <li>Divergência entre bases cartográficas (limites da TI atualizados vs. matrícula antiga).</li>
+        <li>Sobreposição residual de bases (ruído de GPS, datum ligeiramente diferente).</li>
+      </ul>
+      <p>Titularidade de terra é questão de direito real — competência exclusiva do <strong>INCRA (SIPRA), FUNAI, Cartório de Registro de Imóveis e Poder Judiciário</strong>. O app aponta o fato geométrico; quem decide é a autoridade competente.</p>
+      <p>O texto da mensagem para o produtor, implementado em <code>src/lib/overlay.ts</code> (<code>_mensagem()</code>), sempre usa <em>"Procure a FUNAI"</em> ou <em>"consulte o ICMBio"</em> — nunca "você está invadindo".</p>
+    </div>
+  </div>
+
+  <div class="highlight">
+    <p><strong>No código:</strong> <code>overlay.ts</code> calcula interseção via <code>@turf/intersect</code> e retorna <code>area_ha</code>, <code>percentual</code> e <code>severidade</code>. A severidade <em>critico</em> gera bloqueio no motor de crédito (<code>credito.ts</code>), mas a mensagem ao produtor sempre orienta a buscar o órgão competente antes de concluir qualquer coisa.</p>
+  </div>
+</section>
+
+<!-- =========================================================
+     4. LEGALIDADE DE DESMATAMENTO
+     ========================================================= -->
+<section id="desmatamento">
+  <h1>4. Legalidade de Desmatamento e a Data de Corte 22/07/2008</h1>
+
+  <div class="limit-block">
+    <div class="limit-header can">DA afirmar — deteccao de desmatamento pós-22/07/2008</div>
+    <div class="limit-body">
+      <p>O app pode afirmar que o INPE detectou supressão de vegetação (PRODES/DETER) dentro do perímetro do imóvel em data posterior a 22 de julho de 2008, informando a área em hectares e o percentual do imóvel afetado.</p>
+      <p>Essa detecção é sinal de <em>alerta</em> — indicativo de que pode existir passivo florestal que exige verificação e eventualmente regularização via PRA (Programa de Regularização Ambiental).</p>
+    </div>
+  </div>
+
+  <div class="limit-block">
+    <div class="limit-header cannot">NAO DA afirmar — legalidade ou ilegalidade definitiva</div>
+    <div class="limit-body">
+      <p><strong>O app nao pode afirmar que o desmatamento detectado é ilegal.</strong> A determinação de ilegalidade depende de múltiplos fatores que estão fora do escopo de uma análise automatizada de sobreposição:</p>
+      <ul>
+        <li><strong>Autorização de supressão (ASV/SUPRIM):</strong> o proprietário pode ter obtido autorização do órgão ambiental estadual ou federal para supressão da vegetação antes de executá-la. O app nao tem acesso ao banco de autorizações dos estados.</li>
+        <li><strong>Área consolidada (Lei 12.651/2012, art. 61-A e art. 5°, § 4°):</strong> desmatamentos ocorridos <em>antes de 22 de julho de 2008</em> em Áreas de Preservação Permanente podem ser regularizáveis como "uso consolidado" — o proprietário que ocupava a APP antes dessa data pode ter direito à manutenção da atividade, com recomposição parcial proporcional ao tamanho do imóvel. O mesmo marco temporal se aplica à Reserva Legal (art. 67).</li>
+        <li><strong>Investigação de autoria:</strong> quem afirma legalidade ou ilegalidade de forma definitiva é a Justiça, após investigação do IBAMA, Polícia Federal ou Ministério Público.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="highlight warning">
+    <p><strong>Por que 22 de julho de 2008?</strong></p>
+    <p>O Decreto Federal 6.321, de 21 de dezembro de 2007, e a posterior edição do Decreto 6.514/2008 (publicado em 22 de julho de 2008) estabeleceram o marco de referência para o monitoramento de desmatamento no contexto do Código Florestal. A Lei 12.651/2012 (Código Florestal) consolidou essa data como referência para definir o que é "uso consolidado" em APP (art. 61-A) e para a manutenção de passivos de Reserva Legal em pequenos imóveis (art. 67). Desmatamento anterior a 22/07/2008 é tratado como <em>área consolidada</em> e sujeito a regime de recomposição gradual, nao de vedação absoluta.</p>
+    <p><em>Fonte: Lei 12.651/2012 art. 3° inc. IV (define área rural consolidada); art. 61-A (APP em área rural consolidada); art. 67 (RL em imóvel com até 4 módulos fiscais).</em></p>
+  </div>
+
+  <div class="highlight">
+    <p><strong>No código:</strong> <code>overlay.ts</code> classifica desmatamento como <em>alerta</em> (base) e eleva para <em>critico</em> quando a sobreposição excede 20% do imóvel (<code>_severidadeDinamica()</code>). A mensagem (<code>_mensagem()</code>) orienta o produtor a "verificar se a área foi desmatada legalmente (autorização de supressão) antes de enviar ao CAR" — nunca afirma ilegalidade.</p>
+  </div>
+</section>
+
+<!-- =========================================================
+     5. APP POR BUFFER
+     ========================================================= -->
+<section id="app-buffer">
+  <h1>5. APP Derivada por Buffer: Estimativa, Nao Homologação</h1>
+
+  <div class="limit-block">
+    <div class="limit-header can">DA afirmar — estimativa de APP dentro do imóvel</div>
+    <div class="limit-body">
+      <p>Quando se usa o polígono de APP da FBDS (gerado por sensoriamento remoto RapidEye 5 m, 1:25.000), ou quando se deriva APP por buffer sobre a hidrografia oficial, o app pode afirmar uma <strong>estimativa de quantos hectares de APP caem dentro do perímetro do imóvel</strong>.</p>
+      <p>Esta estimativa é útil para orientar o produtor sobre onde provavelmente nao pode construir, desmatar ou ocupar — e para o analista priorizar imóveis com maior potencial de passivo de APP.</p>
+      <p>A mensagem correta: <em>"Seu imóvel inclui aproximadamente Z ha de estimativa de APP de curso d'água — verifique a obrigação de recomposição (Código Florestal, art. 61-A)."</em></p>
+    </div>
+  </div>
+
+  <div class="limit-block">
+    <div class="limit-header cannot">NAO DA afirmar — APP oficial homologada</div>
+    <div class="limit-body">
+      <p><strong>A APP derivada por buffer automatico é uma estimativa técnica, nao o limite legal definitivo.</strong> Os motivos:</p>
+      <ul>
+        <li><strong>Largura do rio frequentemente desconhecida:</strong> a legislação define a faixa de APP pela largura do curso d'água (art. 4°, Lei 12.651/2012): rios com até 10 m de largura exigem faixa de 30 m; entre 10 e 50 m, faixa de 50 m; e assim por diante até 500 m para rios com mais de 600 m de largura. Um buffer fixo nao captura essa variação sem medir a largura real de cada trecho.</li>
+        <li><strong>Projeto técnico e vistoria de campo:</strong> o limite exato de APP é definido por levantamento topográfico e projeto técnico elaborado por profissional habilitado (engenheiro florestal ou agrônomo), com ART/RRT, e validado pelo órgão ambiental estadual. Nenhum app substitui esse processo.</li>
+        <li><strong>Feições nao cobertas:</strong> o MVP cobre apenas margem de curso d'água e nascente (raio 50 m); lago/reservatório, topo de morro e encosta com declividade superior a 45° requerem tratamento adicional.</li>
+        <li><strong>Base FBDS pode nao cobrir o município:</strong> a cobertura por estado/município é irregular; onde a base FBDS nao está disponível, o buffer é derivado da hidrografia ANA/SNIRH — menos preciso para APPs estreitas.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="highlight warning">
+    <p><strong>Regra de comunicação obrigatória:</strong> toda referência a APP gerada pelo app deve usar o rótulo <em>"estimativa de campo"</em> — nunca <em>"APP homologada"</em> ou <em>"limite legal de APP"</em>. O spec de design (<code>docs/superpowers/specs/2026-06-26-app-hidrografia-demarcacao-design.md</code>) já prevê essa ressalva: <em>"APP derivada por buffer é estimativa (depende da largura do rio, nem sempre conhecida) — rotular como 'estimativa de campo', nao como APP oficial homologada."</em></p>
+  </div>
+
+  <h3>Tabela de faixas de APP de cursos d'água (referência)</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Largura do curso d'água</th>
+        <th>Faixa de APP (cada margem)</th>
+        <th>Fonte legal</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Ate 10 m</td><td>30 m</td><td>Lei 12.651/2012, art. 4°, I, a</td></tr>
+      <tr><td>10 a 50 m</td><td>50 m</td><td>Lei 12.651/2012, art. 4°, I, b</td></tr>
+      <tr><td>50 a 200 m</td><td>100 m</td><td>Lei 12.651/2012, art. 4°, I, c</td></tr>
+      <tr><td>200 a 600 m</td><td>200 m</td><td>Lei 12.651/2012, art. 4°, I, d</td></tr>
+      <tr><td>Acima de 600 m</td><td>500 m</td><td>Lei 12.651/2012, art. 4°, I, e</td></tr>
+      <tr><td>Nascente / olho d'água</td><td>Raio de 50 m</td><td>Lei 12.651/2012, art. 4°, IV</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- =========================================================
+     6. PRECISÃO GPS
+     ========================================================= -->
+<section id="gps">
+  <h1>6. Precisão do GPS de Celular e o Problema dos Slivers</h1>
+
+  <div class="limit-block">
+    <div class="limit-header can">DA afirmar — area geodésica calculada com incerteza posicional explícita</div>
+    <div class="limit-body">
+      <p>O app calcula área e perímetro geodésicos (<code>src/lib/geo.ts</code>) com fórmula esférica sobre coordenadas WGS84. O resultado é correto <em>para o polígono que foi registrado</em>.</p>
+      <p>O campo <code>incertezaPosicional_m</code> em <code>AnaliseAmbiental</code> registra o pior valor de <em>accuracy</em> (em metros) reportado pelo GPS entre os vértices capturados — essa informação deve ser exibida junto ao resultado para que o produtor e o analista saibam a qualidade do levantamento.</p>
+      <p>Exemplo válido: <em>"Área calculada: 48,3 ha · incerteza posicional máxima dos vértices: 8 m."</em></p>
+    </div>
+  </div>
+
+  <div class="limit-block">
+    <div class="limit-header cannot">NAO DA afirmar — precisao sub-métrica ou exatidao cadastral</div>
+    <div class="limit-body">
+      <p><strong>GPS de celular tem erro posicional típico de ±5–10 metros em condições favoráveis</strong> (céu aberto, smartphone de geração recente). Em condições adversas (vegetação densa, vale encaixado, interferência atmosférica), o erro pode exceder 15–20 m.</p>
+      <p>Consequências práticas:</p>
+      <ul>
+        <li><strong>Slivers menores que 10–20 m de largura</strong> (polígonos finos de interseção) podem ser inteiramente ruído de GPS, nao sobreposição real com TI, UC ou CAR vizinho. O app descarta sobreposições com área total abaixo de um limiar mínimo (implementado em <code>overlay.ts</code>: <code>if (totalIntersectM2 &lt;= 0) continue</code>) — mas slivers acima de zero ainda podem ser artefato.</li>
+        <li><strong>Área declarada vs. calculada:</strong> diferenças de até ~5% entre a área que o produtor afirma ter e a área calculada pelo GPS são normais dada a incerteza posicional. Só diferenças acima de 10–15% devem acionar alerta de revisão de perímetro.</li>
+        <li><strong>Georreferenciamento legal (INCRA):</strong> o georreferenciamento certificado pelo INCRA (Lei 10.267/2001, IN/INCRA 77/2013) exige precisão posicional de 0,50 m para vértices de divisa — uma ordem de magnitude melhor que o GPS de celular. O CAR Campo nao gera nem substitui esse georreferenciamento.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="highlight">
+    <p><strong>Salvaguarda no código:</strong> <code>usePerimeterTracker.ts</code> descarta fixes com <code>accuracy &gt; 10 m</code> (configurável). O campo <code>accuracy</code> de cada vértice é propagado ao <code>AnaliseAmbiental.incertezaPosicional_m</code> para rastreabilidade. Nao há afirmação de precisão sub-métrica em nenhuma parte do app.</p>
+  </div>
+</section>
+
+<!-- =========================================================
+     7. DATUM E PROJEÇÃO
+     ========================================================= -->
+<section id="datum">
+  <h1>7. Datum e Projeção: WGS84, SIRGAS 2000 e CRS:84</h1>
+
+  <div class="limit-block">
+    <div class="limit-header can">DA afirmar — análise feita em WGS84 (CRS:84), diferença SIRGAS é sub-métrica</div>
+    <div class="limit-body">
+      <p>Toda a análise de sobreposição é realizada em <strong>coordenadas WGS84 lon/lat (GeoJSON RFC 7946)</strong>. Os WFS dos órgãos federais reportam coordenadas em SIRGAS 2000 (EPSG:4674), que é o sistema geodésico de referência oficial do Brasil desde 2000.</p>
+      <p>A diferença entre WGS84 e SIRGAS 2000 é inferior a 1 metro em todo o território nacional — desprezível para análise de sobreposição de propriedades rurais (que têm vértices com incerteza de ±5–10 m de GPS de celular). O código usa CRS:84 nas requisições WFS para garantir a ordem de eixo lon/lat em qualquer versão de servidor.</p>
+    </div>
+  </div>
+
+  <div class="limit-block">
+    <div class="limit-header cannot">NAO DA afirmar — exatidao milimétrica ou invariância em qualquer CRS</div>
+    <div class="limit-body">
+      <p><strong>Nao afirmar equivalência exata entre WGS84 e SIRGAS 2000</strong> em contextos que exijam precisão milimétrica (geodésia de alta precisão, georreferenciamento INCRA) — a diferença, embora sub-métrica, existe e é mensurável com receptores GNSS de dupla frequência.</p>
+      <p><strong>Problema do eixo invertido WFS 1.1.0:</strong> o padrão WFS 1.1.0 com EPSG:4326 <em>inverte</em> a ordem dos eixos para lat/lon (ao contrário do padrão GeoJSON que é lon/lat). O código em <code>refLayers.ts</code> usa <code>srsName=CRS:84</code> especificamente para contornar essa ambiguidade — mas servidores WFS nao conformes podem ainda retornar coordenadas em ordem incorreta. O time deve verificar a plausibilidade das coordenadas recebidas (longitude de imóveis brasileiros: -35° a -74°; latitude: -5° a -34°).</p>
+      <p><strong>Projeção para cálculo de área:</strong> o app <em>nunca</em> calcula área em graus decimais (o que seria incorreto). Usa fórmula geodésica esférica sobre WGS84 (Turf.js <code>turfArea()</code>), que é adequada para imóveis rurais até centenas de quilômetros de extensão.</p>
+    </div>
+  </div>
+
+  <div class="highlight info">
+    <p><strong>Referência rápida de CRS:</strong></p>
+    <ul style="margin-left:16px; margin-top:6px;">
+      <li><code>EPSG:4326</code> = WGS84, eixo lat/lon (padrão ISO — cuidado com WFS 1.1.0)</li>
+      <li><code>CRS:84</code> = WGS84, eixo lon/lat explícito (padrão GeoJSON/RFC 7946) — <strong>usado pelo app</strong></li>
+      <li><code>EPSG:4674</code> = SIRGAS 2000, eixo lat/lon (oficial Brasil, sub-métrico vs. WGS84)</li>
+    </ul>
+  </div>
+</section>
+
+<!-- =========================================================
+     8. CRÉDITO RURAL
+     ========================================================= -->
+<section id="credito">
+  <h1>8. Conformidade Ambiental e Crédito Rural: o que o app pode afirmar</h1>
+
+  <div class="limit-block">
+    <div class="limit-header can">DA afirmar — indicadores de aptidao e bloqueios</div>
+    <div class="limit-body">
+      <p>O módulo <code>credito.ts</code> avalia indicadores de aptidão ao crédito rural com base nos resultados de sobreposição ambiental:</p>
+      <ul>
+        <li><strong>Bloqueios críticos:</strong> embargo IBAMA ativo, sobreposição com TI, sobreposição com UC de Proteção Integral — qualquer um desses <em>impede</em> o acesso a crédito rural com recursos públicos (Resolução CMN 5.193/2024; Manual de Crédito Rural — MCR Seção 2, BACEN).</li>
+        <li><strong>Score de conformidade (0–100):</strong> penalizado por severidade e percentual de área afetada; imóveis com bloqueio crítico têm score limitado a 30.</li>
+        <li><strong>Linha Pronaf:</strong> aptidão indicada com base em módulos fiscais (Lei 11.326/2006 art. 3°, limite de 4 MF) ou estimativa pela área quando módulos nao estão cadastrados.</li>
+        <li><strong>Teto estimado em R$:</strong> estimativa grosseira de ordem de grandeza (R$/ha × área, com teto por linha) — sempre acompanhada do disclaimer obrigatório.</li>
+      </ul>
+      <p>Afirmação válida: <em>"O imóvel aparentemente nao tem bloqueios críticos de conformidade ambiental para crédito rural — score de conformidade: 87/100. Sujeito a análise e aprovação da instituição financeira."</em></p>
+    </div>
+  </div>
+
+  <div class="limit-block">
+    <div class="limit-header cannot">NAO DA afirmar — aprovação, oferta de crédito ou taxa</div>
+    <div class="limit-body">
+      <p><strong>O app nunca promete aprovação de crédito</strong>. A avaliação de aptidão é informativa e remove obstáculos conhecidos de conformidade ambiental — nao é proposta comercial nem substitui a análise da instituição financeira (IF).</p>
+      <ul>
+        <li>A concessão depende de: comprovação de renda e atividade rural, apresentação de documentação completa (DAP/CAF, CCIR, notas de produtor, etc.), garantias reais ou pessoais, enquadramento no MCR vigente na safra e política interna da IF.</li>
+        <li>Taxas, prazos e tetos de cada linha variam por safra e banco — o app nao cita valores específicos sem o disclaimer.</li>
+        <li>O requisito de CAR ativo e ausência de embargo foi estabelecido pela <strong>Resolução CMN 5.193/2024</strong> (vigente a partir de agosto de 2023 para CAR; embargo IBAMA proibindo crédito com recursos públicos). O app cita essa base legal no disclaimer.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="highlight">
+    <p><strong>Disclaimer obrigatório (implementado em <code>credito.ts</code>):</strong> <em>"Estimativa informativa gerada a partir dos dados de conformidade ambiental do imóvel. Nao constitui oferta de crédito, proposta comercial nem diagnóstico jurídico. A concessão depende de análise e aprovação da instituição financeira, comprovação de renda e atividade, apresentação de documentação completa e enquadramento no Manual de Crédito Rural (MCR/BACEN) vigente na safra."</em></p>
+  </div>
+</section>
+
+<!-- =========================================================
+     9. LGPD
+     ========================================================= -->
+<section id="lgpd">
+  <h1>9. Conformidade LGPD: CPF/CNPJ, Coordenadas e Transmissão de Dados</h1>
+
+  <p class="lead">A Lei Geral de Proteção de Dados (LGPD — Lei 13.709/2018) se aplica ao CAR Campo porque o app coleta e processa dados pessoais de produtores rurais. Este capítulo documenta os controles implementados e os limites do que pode ser afirmado.</p>
+
+  <h2>9.1 CPF e CNPJ sao Dados Pessoais (PII)</h2>
+
+  <div class="limit-block">
+    <div class="limit-header can">DA afirmar — CPF/CNPJ mascarado em tela e em log</div>
+    <div class="limit-body">
+      <p>CPF e CNPJ são dados pessoais identificáveis (PII) protegidos pela LGPD (art. 5°, I). O app trata esses campos como dados sensíveis de acesso:</p>
+      <ul>
+        <li>Armazenados em <strong>expo-secure-store</strong> (armazenamento seguro do dispositivo, criptografado pelo SO) via <code>src/auth/secureSession.ts</code>.</li>
+        <li>Nunca logados em console em produção (a LGPD veda armazenamento ou transmissão desnecessários).</li>
+        <li>Exibidos mascarados nas telas de identificação quando possível.</li>
+        <li>Transmitidos à API apenas sobre HTTPS (exceto em modo desenvolvimento local).</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="limit-block">
+    <div class="limit-header cannot">NAO DA afirmar — anonimato total</div>
+    <div class="limit-body">
+      <p><strong>O app nao é anônimo:</strong> o produtor se autentica com CPF (fluxo gov.br mock) e seus dados de imóvel são associados ao CPF no armazenamento local (<code>AsyncStorage</code>). A anonimização plena exigiria separação criptográfica entre identificador e geometria — fora do escopo do MVP do hackathon.</p>
+      <p>Em produção futura: implementar base legal de tratamento (consentimento ou execução de contrato — LGPD art. 7°), política de privacidade clara e prazo de retenção definido para dados de localização.</p>
+    </div>
+  </div>
+
+  <h2>9.2 Coordenadas GPS sao Dados de Localização</h2>
+
+  <div class="limit-block">
+    <div class="limit-header can">DA afirmar — bbox enviada ao WFS, nao coordenadas brutas do produtor</div>
+    <div class="limit-body">
+      <p>Ao consultar os WFS (FUNAI, IBAMA etc.), o app envia apenas a <strong>bounding box (bbox)</strong> do imóvel — um retângulo de coordenadas que cobre a região, com buffer de ~1 km (<code>_expandBBox(bbox, 0.01)</code>). Isso é deliberado:</p>
+      <ul>
+        <li>O servidor WFS externo nunca recebe o perímetro exato do imóvel — somente um quadrante aproximado.</li>
+        <li>Isso minimiza a exposição de dados de localização precisa do produtor a terceiros (LGPD art. 6°, princípio da minimização).</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="limit-block">
+    <div class="limit-header cannot">NAO DA afirmar — coordenadas armazenadas de forma anônima</div>
+    <div class="limit-body">
+      <p>As coordenadas do imóvel ficam armazenadas localmente no <code>AsyncStorage</code> associadas ao registro do imóvel do produtor. Esse armazenamento <strong>nao é criptografado por padrão</strong> no AsyncStorage (diferentemente do Secure Store). Em um app de produção, dados de geometria de imóvel rural com identificação de produtor devem ter proteção adicional.</p>
+      <p>Nao logar coordenadas individuais de vértices em sistemas de log externos (analytics, crash reporting) — a localização precisa de um imóvel é dado pessoal com potencial de causar dano ao titular (risco de apropriação indevida de terra, LGPD art. 5°, II).</p>
+    </div>
+  </div>
+
+  <h2>9.3 Controle de Acesso e Transmissão</h2>
+  <ul>
+    <li><strong>HTTPS obrigatório</strong> fora do ambiente de desenvolvimento. A CAR Geo API é consultada somente por HTTPS em produção (<code>src/lib/config.ts</code> — <code>EXPO_PUBLIC_API_BASE_URL</code>).</li>
+    <li><strong>Token de sessão</strong> armazenado em <code>expo-secure-store</code> (<code>secureSession.ts</code>), nao em AsyncStorage simples.</li>
+    <li><strong>Logout</strong> (<code>ConfigScreen.tsx</code>) limpa a sessão do Secure Store e redireciona ao login — dados do imóvel (geometria, documentos) permanecem no AsyncStorage do produtor logado; nao são transmitidos a terceiros sem ação explícita do usuário (botão "Enviar ao SICAR").</li>
+    <li><strong>Documentos e fotos</strong> ficam no sandbox do app (<code>expo-file-system</code>); geotag de foto é opcional e deve ser informado ao produtor antes de ser ativado.</li>
+  </ul>
+
+  <div class="highlight warning">
+    <p><strong>Obrigação legal de transparência (LGPD art. 9° e 18°):</strong> o titular tem direito de saber quais dados são coletados e para qual finalidade. Em produção, o app deve exibir política de privacidade clara antes do cadastro e oferecer mecanismo de exclusão de dados (direito ao esquecimento). Isso está fora do MVP do hackathon mas é obrigatório antes de qualquer lançamento público.</p>
+  </div>
+</section>
+
+<!-- =========================================================
+     10. REFERÊNCIAS
+     ========================================================= -->
+<section id="referencias">
+  <h1>10. Referências e Fontes</h1>
+
+  <h3>Legislação verificada</h3>
+  <ul>
+    <li><strong>Lei 12.651/2012</strong> — Código Florestal: art. 3° (conceitos, inc. IV — área rural consolidada), art. 4° (APP de cursos d'água, nascentes), art. 61-A (uso consolidado em APP), art. 67 (RL em imóvel com ate 4 MF). Texto disponível em: planalto.gov.br/ccivil_03/_ato2011-2014/2012/lei/l12651compilado.htm</li>
+    <li><strong>Decreto 6.514/2008</strong> — marco regulatório de infrações ambientais; publicado em 22 de julho de 2008 (data de corte para área consolidada). Texto disponível em: planalto.gov.br</li>
+    <li><strong>Resolução CMN 5.193/2024</strong> — requisitos ambientais para crédito rural com recursos públicos: CAR ativo, ausência de embargo IBAMA, nao sobreposição com TI ou UC. Referência verificada em: site.mppr.mp.br/meioambiente e bcb.gov.br/mcr</li>
+    <li><strong>Lei 13.999/2020</strong> — Pronampe (micro e pequenas empresas rurais).</li>
+    <li><strong>Lei 11.326/2006</strong> — agricultor familiar (art. 3°, inc. II — limite de 4 módulos fiscais).</li>
+    <li><strong>Lei 9.985/2000</strong> — SNUC (categorias de UC: Proteção Integral vs. Uso Sustentável).</li>
+    <li><strong>Lei 13.709/2018</strong> — LGPD (art. 5° PII, art. 6° princípios, art. 7° bases legais, art. 9° transparência, art. 18° direitos do titular).</li>
+    <li><strong>CF art. 231 § 6°</strong> — nulidade de atos que tenham por objeto ocupação de terras indígenas.</li>
+  </ul>
+
+  <h3>Fontes técnicas</h3>
+  <ul>
+    <li>RFC 7946 — GeoJSON: lon/lat WGS84 como sistema de referência padrão.</li>
+    <li>OGC WFS 2.0.0 — padrão de CRS e parâmetro <code>srsName</code>; diferença de eixo entre CRS:84 e EPSG:4326 no WFS 1.1.0.</li>
+    <li>IBGE — SIRGAS 2000 como datum oficial do Brasil; diferença sub-métrica em relação ao WGS84.</li>
+    <li>INPE TerraBrasilis — metodologia PRODES e DETER: terrabrasilis.dpi.inpe.br</li>
+  </ul>
+
+  <h3>Código-fonte relevante do app</h3>
+  <ul>
+    <li><code>src/lib/overlay.ts</code> — motor de sobreposição, severidade, mensagens</li>
+    <li><code>src/lib/refLayers.ts</code> — endpoints WFS, CRS:84, timeout 6 s, fallback offline-demo</li>
+    <li><code>src/lib/credito.ts</code> — avaliarCredito(), disclaimer, referências MCR/BACEN</li>
+    <li><code>src/auth/secureSession.ts</code> — armazenamento seguro de CPF/token</li>
+    <li><code>src/hooks/usePerimeterTracker.ts</code> — descarte de fix com accuracy > 10 m</li>
+    <li><code>docs/superpowers/specs/2026-06-26-app-hidrografia-demarcacao-design.md</code> — limites da APP por buffer</li>
+  </ul>
+
+  <h3>Verificações externas realizadas neste documento</h3>
+  <ul>
+    <li>Confirmação data de corte 22/07/2008 (área consolidada) — Decreto 6.514/2008; Lei 12.651/2012 art. 61-A — advambiental.com.br, blog.mege.com.br, junho 2026</li>
+    <li>Confirmação Res. CMN 5.193/2024 (CAR + ausência de embargo para crédito rural) — site.mppr.mp.br/meioambiente, martinszanchet.com.br, junho 2026</li>
+    <li>Confirmação diferença sub-métrica WGS84 vs. SIRGAS 2000 — IBGE e literatura geodésica</li>
+    <li>Confirmação LGPD art. 5° (PII), art. 6° (minimização) — planalto.gov.br</li>
+  </ul>
+</section>
+
+<footer>
+  <strong>CAR Campo — Limites e Conformidade · Versão 1.0 · Junho de 2026</strong><br>
+  haCARthon · Desafio 2 · Solução 4 · MGI, FBDS, ENAP, Impact Hub Brasil, NICFI<br>
+  Documento gerado para o time de desenvolvimento e bancas de avaliação
+</footer>
+
+</body>
+</html>

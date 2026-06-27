@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CAR Campo — Roadmap priorizado por persona</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      font-family: 'Segoe UI', 'Trebuchet MS', Arial, Helvetica, sans-serif;
+      font-size: 11pt;
+      line-height: 1.6;
+      color: #1d2b22;
+      background: #ffffff;
+    }
+
+    body {
+      padding: 20mm;
+    }
+
+    @page {
+      size: A4 portrait;
+      margin: 15mm;
+    }
+
+    @media print {
+      body { padding: 0; }
+      a { color: #1b6b3a; text-decoration: none; }
+    }
+
+    h1 {
+      color: #1b6b3a;
+      font-size: 22pt;
+      font-weight: 600;
+      border-bottom: 3px solid #1b6b3a;
+      padding-bottom: 10px;
+      margin: 24px 0 16px 0;
+      page-break-after: avoid;
+    }
+
+    h1.title-main {
+      text-align: center;
+      border: none;
+      margin-top: 60px;
+      margin-bottom: 8px;
+      font-size: 26pt;
+    }
+
+    h1.subtitle {
+      text-align: center;
+      border: none;
+      color: #5d6b62;
+      font-size: 14pt;
+      font-weight: 400;
+      margin-top: 4px;
+      margin-bottom: 40px;
+    }
+
+    h2 {
+      color: #1b6b3a;
+      font-size: 13pt;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 20px;
+      margin-bottom: 10px;
+      page-break-after: avoid;
+    }
+
+    h3 {
+      color: #2e9e57;
+      font-size: 11pt;
+      font-weight: 600;
+      margin-top: 12px;
+      margin-bottom: 8px;
+      page-break-after: avoid;
+    }
+
+    h4 {
+      color: #1d2b22;
+      font-size: 10pt;
+      font-weight: 600;
+      margin-top: 10px;
+      margin-bottom: 6px;
+    }
+
+    p {
+      margin-bottom: 10px;
+      text-align: justify;
+    }
+
+    p.lead {
+      font-size: 12pt;
+      color: #1b6b3a;
+      font-weight: 500;
+      margin-bottom: 16px;
+    }
+
+    ul, ol {
+      margin-left: 20px;
+      margin-bottom: 12px;
+    }
+
+    li {
+      margin-bottom: 6px;
+    }
+
+    .cover {
+      text-align: center;
+      padding-top: 80px;
+      page-break-after: always;
+    }
+
+    .cover-header {
+      color: #1b6b3a;
+      font-size: 13pt;
+      font-weight: 600;
+      margin-bottom: 20px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .cover-title {
+      font-size: 28pt;
+      font-weight: 700;
+      color: #1b6b3a;
+      margin-bottom: 16px;
+      line-height: 1.3;
+    }
+
+    .cover-subtitle {
+      font-size: 14pt;
+      color: #5d6b62;
+      margin-bottom: 60px;
+      line-height: 1.5;
+    }
+
+    .cover-meta {
+      margin-top: 120px;
+      font-size: 10pt;
+      color: #5d6b62;
+      line-height: 1.8;
+    }
+
+    .box-contexto {
+      background: #eef7f0;
+      border-left: 4px solid #1b6b3a;
+      padding: 12px 16px;
+      margin: 12px 0;
+      border-radius: 4px;
+      font-size: 10pt;
+    }
+
+    .box-contexto strong {
+      color: #1b6b3a;
+    }
+
+    .idea-card {
+      background: #fff;
+      border: 1px solid #d9e4dc;
+      border-left: 4px solid #1b6b3a;
+      padding: 12px 14px;
+      margin-bottom: 12px;
+      border-radius: 4px;
+      page-break-inside: avoid;
+    }
+
+    .idea-title {
+      font-size: 11pt;
+      font-weight: 600;
+      color: #1b6b3a;
+      margin-bottom: 6px;
+    }
+
+    .idea-subtitle {
+      font-size: 9pt;
+      color: #5d6b62;
+      font-style: italic;
+      margin-bottom: 8px;
+    }
+
+    .idea-row {
+      display: flex;
+      margin-bottom: 6px;
+      font-size: 9pt;
+    }
+
+    .idea-label {
+      font-weight: 600;
+      color: #1d2b22;
+      min-width: 60px;
+      margin-right: 8px;
+    }
+
+    .idea-text {
+      flex: 1;
+      color: #1d2b22;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 9pt;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .badge-alto {
+      background: #ffdddd;
+      color: #8b2e2e;
+    }
+
+    .badge-medio {
+      background: #fff4dd;
+      color: #8a5a13;
+    }
+
+    .badge-baixo {
+      background: #ddeddd;
+      color: #2e5c2e;
+    }
+
+    .badge-done {
+      background: #d9e4dc;
+      color: #1b6b3a;
+    }
+
+    .badge-next {
+      background: #e2f3e8;
+      color: #1b6b3a;
+    }
+
+    .badge-future {
+      background: #f0f0f0;
+      color: #5d6b62;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0;
+      font-size: 10pt;
+    }
+
+    th {
+      background: #1b6b3a;
+      color: #fff;
+      padding: 8px 10px;
+      text-align: left;
+      font-weight: 600;
+    }
+
+    td {
+      padding: 8px 10px;
+      border-bottom: 1px solid #d9e4dc;
+    }
+
+    tr:nth-child(even) td {
+      background: #eef7f0;
+    }
+
+    .section-break {
+      page-break-before: always;
+    }
+
+    .persona-header {
+      background: #eef7f0;
+      border-left: 4px solid #1b6b3a;
+      padding: 12px 14px;
+      margin: 16px 0 12px 0;
+      border-radius: 4px;
+      font-size: 10pt;
+    }
+
+    .persona-header strong {
+      color: #1b6b3a;
+      font-size: 11pt;
+    }
+
+    .roadmap-phase {
+      margin-bottom: 20px;
+      page-break-inside: avoid;
+    }
+
+    .phase-title {
+      background: #1b6b3a;
+      color: #fff;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-weight: 600;
+      font-size: 11pt;
+      margin-bottom: 10px;
+    }
+
+    .phase-items {
+      margin-left: 10px;
+    }
+
+    .phase-item {
+      margin-bottom: 8px;
+      font-size: 10pt;
+      display: flex;
+      align-items: flex-start;
+    }
+
+    .phase-marker {
+      color: #1b6b3a;
+      font-weight: bold;
+      margin-right: 8px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .phase-text {
+      flex: 1;
+    }
+
+    footer {
+      margin-top: 24px;
+      border-top: 1px solid #d9e4dc;
+      padding-top: 8px;
+      font-size: 9pt;
+      color: #5d6b62;
+      text-align: center;
+      line-height: 1.5;
+    }
+
+  </style>
+</head>
+<body>
+
+<!-- ===== CAPA ===== -->
+<div class="cover">
+  <div class="cover-header">CAR Campo</div>
+  <div class="cover-title">Roadmap priorizado</div>
+  <div class="cover-subtitle">Backlog de ideias por persona e fases de implementação<br/>Orientado por problemas do Desafio 2 do haCARthon</div>
+  <div class="cover-meta">
+    Versão 1.0 | junho de 2026<br/>
+    Dois públicos, dois registros<br/>
+    Seu Raimundo (produtor) · Luana (analista)
+  </div>
+</div>
+
+<!-- ===== Introdução ===== -->
+<h1>Princípio: Duas trilhas de valor</h1>
+
+<p class="lead">O CAR Campo é projetado para dois públicos com necesidades distintas, que interagem no mesmo fluxo: produtor rural (Seu Raimundo) e analista ambiental (Luana). Cada feature impacta uma ou ambas as trilhas.</p>
+
+<p>Este documento mapeia o backlog de ideias priorizadas por:</p>
+<ul>
+  <li><strong>Persona:</strong> qual beneficiário resolve o problema?</li>
+  <li><strong>Problema do briefing:</strong> como conecta aos desafios do haCARthon?</li>
+  <li><strong>Impacto esperado:</strong> o que muda para aquela pessoa?</li>
+  <li><strong>Esforço:</strong> Alto / Médio / Baixo (estimado em jornadas, sem análise detalhada)</li>
+</ul>
+
+<!-- ===== TRILHA RAIMUNDO ===== -->
+<h1 class="section-break">Trilha 1: Seu Raimundo (Produtor Rural)</h1>
+
+<div class="persona-header">
+  <strong>Persona:</strong> Pequeno/médio produtor; depende da terra; teme perder direitos, desconfia de digital, se informa por vizinhos/sindicatos/WhatsApp
+</div>
+
+<h2>Backlog priorizado</h2>
+
+<div class="idea-card">
+  <div class="idea-title">1. Linguagem do Código Florestal traduzida em alertas de sobreposição</div>
+  <div class="idea-subtitle">Comunicar sem jargão jurídico</div>
+  <div class="idea-row">
+    <div class="idea-label">Problema:</div>
+    <div class="idea-text">Seu Raimundo não entende "APP", "hidrografia", "PRA". Quando o app diz "Sobreposição com APP 5%", ele fica confuso. Resulta em retificações desnecessárias.</div>
+  </div>
+  <div class="idea-row">
+    <div class="idea-label">Solução:</div>
+    <div class="idea-text">Quando APP aparece, mostrar: "Área de Preservação Permanente de rio (você não pode usar, mas pode conversar com IBAMA sobre recomposição)". Mesma lógica para TI ("Terra dos povos indígenas — você não pode estar aqui"), embargo ("IBAMA proibiu — conversa com cartório antes de prosseguir").</div>
+  </div>
+  <div class="idea-row">
+    <div class="idea-label">Impacto:</div>
+    <div class="idea-text">Seu Raimundo toma decisão certa (corrige desenho ou procura advogado) SEM esperar retificação do órgão. Reduz ciclo em semanas.</div>
+  </div>
+  <div class="idea-row">
+    <div class="idea-label">Esforço:</div>
+    <div class="idea-text"><span class="badge badge-medio">Médio</span> — reescrever mensagens de overlay.ts, adicionar variantes de mensagem por tipo de camada, testes.</div>
+  </div>
+</div>
+
+<div class="idea-card">
+  <div class="idea-title">2. Exemplo visual: "Seu desenho comparado com a realidade"</div>
+  <div class="idea-subtitle">Aumentar confiança na geometria</div>
+  <div class="idea-row">
+    <div class="idea-label">Problema:</div>
+    <div class="idea-text">Seu Raimundo caminha, o app diz "50 ha calculados", mas ele declarou 50 ha e confia no "dizer do vizinho". Não tem certeza se o desenho está certo. Medo de enviar errado e ter que refazer.</div>
+  </div>
+  <div class="idea-row">
+    <div class="idea-label">Solução:</div>
+    <div class="idea-text">Tela de comparação: "Você declarou 50 ha | App calculou 49.5 ha (diferença 1%). Tudo OK!" OU "Você declarou 50 ha | App calculou 80 ha (diferença 60%). Revisar desenho?". Incluir mapa com overlay de declarado vs. calculado (cores diferentes).</div>
+  </div>
+  <div class="idea-row">
+    <div class="idea-label">Impacto:</div>
+    <div class="idea-text">Seu Raimundo detecta erros antes de enviar. Confiança no app sobe. Menos retificações.</div>
+  </div>
+  <div class="idea-row">
+    <div class="idea-label">Esforço:</div>
+    <div class="idea-text"><span class="badge badge-baixo">Baixo</span> — UI simples, reutiliza geo.ts (já tem área calculada), comparação numérica.</div>
+  </div>
+</div>
+
+<div class="idea-card">
+  <div class="idea-title">3. Modo offline-only: "Sem internet não precisa"</div>
+  <div class="idea-subtitle">Remover bloqueio de sobreposição</div>
+  <div class="idea-row">
+    <div class="idea-label">Problema:</div>
+    <div class="idea-text">Seu Raimundo mora na roça, internet cai direto. Hoje o app tenta buscar WFS, timeout, cai para demo offline. Ele vê dados fictícios e fica confuso se é real ou não. Quer desenhar e SÓ disso, não se importa com sobreposição agora.</div>
+  </div>
+  <div class="idea-row">
+    <div class="idea-label">Solução:</div>
+    <div class="idea-text">Flag "Modo offline-only" no cadastro: pula toda análise de WFS, não tenta buscar nada, só captura geometria + documenta. Sobreposição é feita depois (quando Luana recebe e valida, ou quando ele volta com internet). Mensagem clara: "Offline: geometria salva, análise será feita no órgão".</div>
+  </div>
+  <div class="idea-row">
+    <div class="idea-label">Impacto:</div>
+    <div class="idea-text">Produtores em áreas remotas conseguem desenhar, não ficam presos. Melhor UX sem estresse de timeout.</div>
+  </div>
+  <div class="idea-row">
+    <div class="idea-label">Esforço:</div>
+    <div class="idea-text"><span class="badge badge-baixo">Baixo</span> — condicional no RevisaoScreen, pula chamada a analisarSobreposicoes, flag no tipo Imovel.</div>
+  </div>
+</div>
+
+<div class="idea-card">
+  <div class="idea-title">4. Tutorial com exemplo real: "Veja como se faz"</div>
+  <div class="idea-subtitle">Educação no próprio app</div>
+  <div class="idea-row">
+    <div class="idea-label">Problema:</div>
+    <div class="idea-text">Seu Raimundo abre o app pela 1ª vez, não sabe o que fazer. "Caminhar"? "Marcar vértice"? Confuso. Precisa de vídeo no WhatsApp de vizinho ou tutorial de ONG.</div>
+  </div>
+  <div class="idea-row">
+    <div class="idea-label">Solução:</div>
+    <div class="idea-text">Tutorial interativo integrado: 1ª vez que entra, botão "Ver exemplo". Abre rota pré-gravada SORRISO_SOJA, avatar caminha, ele vê o ciclo completo (desenho → cálculo → sobreposição → laudo → PDF). Depois pode entrar em modo real ou "Simular caminhada".</div>
+  </div>
+  <div class="idea-row">
+    <div class="idea-label">Impacto:</div>
+    <div class="idea-text">Reduz barreia de entrada. Seu Raimundo entende fluxo antes de começar. Menos emails para ONG/sindicato pedindo ajuda.</div>
+  </div>
+  <div class="idea-row">
+    <div class="idea-label">Esforço:</div>
+    <div class="idea-text"><span class="badge badge-medio">Médio</span> — reutiliza sim.routes.ts e useSimulatedWalk, adiciona modal de onboarding, copy em português.</div>
+  </div>
+</div>
+
+<div class="idea-card">
+  <div class="idea-title">5. Prova de campo com foto georreferenciada + anotações</div>
+  <div class="idea-subtitle">Documentar a realidade física</div>
+  <div class="idea-row">
+    <div class="idea-label">Problema:</div>
+    <div class="idea-text">Seu Raimundo desenha, mas depois Luana questiona: "Como sabe que a divisa é ali?". Sem foto, sem prova, é "achismo". Ele tira foto com celular, mas não marca onde foi tirada.</div>
+  </div>
+  <div class="idea-row">
+    <div class="idea-label">Solução:</div>
+    <div class="idea-text">Tela de "Prova de campo": tirar foto de cada lado do imóvel (norte, sul, leste, oeste, cercas, marcos, APP). Cada foto auto-geotag com GPS + timestamp. Opcionalmente adicionar anotação de voz ou texto ("Cerca de arame, vizinho é Sr. João"). Anexa ao PDF de exportação.</div>
+  </div>
+  <div class="idea-row">
+    <div class="idea-label">Impacto:</div>
+    <div class="idea-text">Luana vê prova visual da divisa. Aceita CAR mais rápido. Seu Raimundo não apanha pelo "desenho errado".</div>
+  </div>
+  <div class="idea-row">
+    <div class="idea-label">Esforço:</div>
+    <div class="idea-text"><span class="badge badge-alto">Alto</span> — expo-camera, geotag com exif, persistir array de fotos, UI de galeria, integração no PDF (muitas imagens = PDF grande).</div>
+  </div>
+</div>
+
+<div class="idea-card">
+  <div class="idea-title">6. "Dúvida frequente": FAQ ancorado no app</div>
+  <div class="idea-subtitle">Responder sem sair do app</div>
+  <div class="idea-row">
+    <div class="idea-label">Problema:</div>
+    <div class="idea-text">Seu Raimundo tem dúvida: "O que é módulo fiscal?". Procura no Google, cai em site complexo da Embrapa, desiste. Quer resposta curta, confiável, no próprio app.</div>
+  </div>
+  <div class="idea-row">
+    <div class="idea-label">Solução:</div>
+    <div class="idea-text">Aba "Dúvidas" com FAQ em pt-BR claro: "Módulo fiscal = unidade de medida da terra (vareia por região, ex.: 20 ha no MT). Você pode calcular em gov.br/car". Outras: "Quando devo corrigir o desenho?", "Como saber se tem APP aqui?", "Posso vender antes do CAR aprovado?". Respostas de 2–3 frases, sem links externos.</div>
+  </div>
+  <div class="idea-row">
+    <div class="idea-label">Impacto:</div>
+    <div class="idea-text">Seu Raimundo resolve dúvida sozinho, conclui o CAR, menos abandono. Reduz demanda em canais de atendimento (ONG, sindicato).</div>
+  </div>
+  <div class="idea-row">
+    <div class="idea-label">Esforço:</div>
+    <div class="idea-text"><span class="badge badge-baixo">Baixo</span> — tela simples com lista de FAQ (dados em array de objetos, sem CMS), busca por palavra-chave.</div>
+  </div>
+</div>
+
+<!-- ===== TRILHA LUANA ===== -->
+<h1 class="section-break">Trilha 2: Luana (Analista Ambiental de OEMA)</h1>
+
+<div class="persona-header">
+  <strong>Persona:</strong> Analista ambiental; valida CAR/PRA/CRA; sofre com ciclo de retificações; valoriza clareza, organização e ferramentas que agilizem triagem
+</div>
+
+<h2>Backlog priorizado</h2>
+
+<div class="idea-card">
+  <div class="idea-title">1. Triagem automática: imóveis ordenados por risco</div>
+  <div class="idea-subtitle">Começar pelos críticos</div>
+  <div class="idea-row">
+    <div class="idea-label">Problema:</div>
+    <div class="idea-text">Luana recebe 200 imóveis por semana. Não sabe por onde começar. Hoje abre um em SIG pesado, verifica sobreposição manualmente. Toma horas. Alguns imóveis têm crítico óbvio (TI, embargo), mas ela não vê até abrir.</div>
+  </div>
+  <div class="idea-row">
+    <div class="idea-label">Solução:</div>
+    <div class="idea-text">Painel "Triagem": lista todos imóveis recebidos, ordenados por severidade de sobreposição. Crítico (TI, UC, embargo) sobe, depois alerta, depois info. Cada linha mostra: nome imóvel, área, produtor, sobreposição resumida ("2.5 ha em embargo IBAMA", "TI 12%"), ícones ⛔ ⚠ ℹ, status (rascunho/enviado). Um clique abre o laudo completo.</div>
+  </div>
+  <div class="idea-row">
+    <div class="idea-label">Impacto:</div>
+    <div class="idea-text">Luana sabe imediatamente qual imóvel é problema, qual é fácil. Prioriza críticos para auditar, libera os "OK" em batch. Reduz ciclo de retificação em 30–50%.</div>
+  </div>
+  <div class="idea-row">
+    <div class="idea-label">Esforço:</div>
+    <div class="idea-text"><span class="badge badge-alto">Alto</span> — backend de triagem (filtro, ordenação), DB de imóveis recebidos (hoje está só offline no celular), autenticação OEMA, UI de painel com tabela interativa.</div>
+  </div>
+</div>
+
+<div class="idea-card">
+  <div class="idea-title">2. Laudo estruturado para auditoria: dados em JSON/CSV</div>
+  <div class="idea-subtitle">Importar direto em SIG / planilha</div>
+  <div class="idea-row">
+    <div class="idea-label">Problema:</div>
+    <div class="idea-text">Luana recebe PDF do CAR Campo com laudo bonito (visual), mas quando precisa agregar dados (ex.: "quantos hectares de desmatamento em toda a região?"), o PDF é inútil. Tem que reabrir cada SIG, recalcular manualmente.</div>
+  </div>
+  <div class="idea-row">
+    <div class="idea-label">Solução:</div>
+    <div class="idea-text">Exportar também em JSON (estrutura: imovel.id, produtor, sobreposicoes[] com {tipo, ha, percentual, severidade}, creditoScore, etc.) e CSV (uma linha por imóvel + colunas de sobreposição). Luana importa no Excel/Power BI, faz agregação, gera dashboard de região ("Desmatamento: 1.500 ha total, 23% dos imóveis").</div>
+  </div>
+  <div class="idea-row">
+    <div class="idea-label">Impacto:</div>
+    <div class="idea-text">Luana tem visibilidade estratégica de região (quais municipios têm mais crítico, qual tipo de sobreposição é mais comum). Facilita relatório para secretária/MMA.</div>
+  </div>
+  <div class="idea-row">
+    <div class="idea-label">Esforço:</div>
+    <div class="idea-text"><span class="badge badge-baixo">Baixo</span> — estende export.ts com buildJSON() e buildCSV(), reutiliza dados já estruturados em overlay.ts.</div>
+  </div>
+</div>
+
+<div class="idea-card">
+  <div class="idea-title">3. Validação rápida: botão "Aceitar" / "Pedir retificação" + anotações</div>
+  <div class="idea-subtitle">Workflow assíncrono com produtor</div>
+  <div class="idea-row">
+    <div class="idea-label">Problema:</div>
+    <div class="idea-text">Luana vê imóvel, acha OK, quer aprovr. Hoje envia por e-mail genérico para produtor ("CAR aprovado") sem feedback estruturado. Se quer pedir ajuste, escreve texto livre que o produtor ná sabe se é crítico ou sugestão.</div>
+  </div>
+  <div class="idea-row">
+    <div class="idea-label">Solução:</div>
+    <div class="idea-text">Aba "Validação" no painel da Luana: botão "Aceitar" (status = aprovado, gera laudo final automático), "Pedir retificação" (abre formulário com motivos checkboxed: "Reduzir desmatamento declarado", "Revisar divisa com vizinho", etc., texto livre opcional). Envia notificação automática ao produtor via SMS/app push. Produtor vê feedback estruturado, corrrige, reenvia.</div>
+  </div>
+  <div class="idea-row">
+    <div class="idea-label">Impacto:</div>
+    <div class="idea-text">Luana aprova/rejeita em segundos, sem e-mails longos. Produtor entende o que corrigir. Ciclo cai de semanas para dias.</div>
+  </div>
+  <div class="idea-row">
+    <div class="idea-label">Esforço:</div>
+    <div class="idea-text"><span class="badge badge-alto">Alto</span> — autenticação e persistência de validação, notificação push, workflow assíncrono, UI de validação com checkboxes.</div>
+  </div>
+</div>
+
+<div class="idea-card">
+  <div class="idea-title">4. Rastreamento de estado: rascunho → enviado → sob análise → aprovado → rejeitado</div>
+  <div class="idea-subtitle">Transparência no processo</div>
+  <div class="idea-row">
+    <div class="idea-label">Problema:</div>
+    <div class="idea-text">Seu Raimundo envia o CAR e não sabe se chegou, se está na fila de Luana ou se foi rejeitado. Luana também não tem visibilidade de quantos estão "sob análise" há semanas.</div>
+  </div>
+  <div class="idea-row">
+    <div class="idea-label">Solução:</div>
+    <div class="idea-text">Estado do imóvel com timestamp: "Enviado em 26/06/2026 14:30" → "Sob análise desde 26/06" → "Aprovado em 27/06" ou "Retificação solicitada em 27/06, aguardando resposta produtor". Timeline visual na tela do produtor. Luana vê quantos por estado num KPI ("15 rascunhos, 23 sob análise, 8 aguardando retificação").</div>
+  </div>
+  <div class="idea-row">
+    <div class="idea-label">Impacto:</div>
+    <div class="idea-text">Seu Raimundo não fica ansioso (sabe que chegou). Luana tem visibilidade de gargalo (se tem 50 "sob análise", sabe que precisa de reforço).</div>
+  </div>
+  <div class="idea-row">
+    <div class="idea-label">Esforço:</div>
+    <div class="idea-text"><span class="badge badge-medio">Médio</span> — modelo de estado em tipos.ts, persistência de histórico de estados, UI de timeline.</div>
+  </div>
+</div>
+
+<div class="idea-card">
+  <div class="idea-title">5. Sugestão automática: detectar desenho suspeito (grande diferença declarado vs. calculado)</div>
+  <div class="idea-subtitle">Alertar antes que Luana veja</div>
+  <div class="idea-row">
+    <div class="idea-label">Problema:</div>
+    <div class="idea-text">Seu Raimundo declare "50 ha" mas desenha "120 ha" (intencional ou erro de GPS). Luana não vê red flag automático, valida, depois descobrem inconsistência. Retrabalho.</div>
+  </div>
+  <div class="idea-row">
+    <div class="idea-label">Solução:</div>
+    <div class="idea-text">Na tela de revisão, app calcula diferença (area_calculada - area_declarada) / area_declarada. Se > 10%, mostra banner amarelo: "Atenção: você declarou 50 ha mas o desenho tem 120 ha (diferença 140%). Revisar antes de enviar?". Mesma validação rodar no backend quando recebe, marca com ⚠ "Discrepância de área" no painel da Luana.</div>
+  </div>
+  <div class="idea-row">
+    <div class="idea-label">Impacto:</div>
+    <div class="idea-text">Seu Raimundo detecta erro próprio antes de enviar. Luana não perde tempo com óbvios. Reduz fraude involuntária.</div>
+  </div>
+  <div class="idea-row">
+    <div class="idea-label">Esforço:</div>
+    <div class="idea-text"><span class="badge badge-baixo">Baixo</span> — cálculo simples em RevisaoScreen, UI de aviso, campo em Imovel.warnings[].</div>
+  </div>
+</div>
+
+<div class="idea-card">
+  <div class="idea-title">6. Histórico de retificações: "Versão 1, versão 2, versão 3..."</div>
+  <div class="idea-subtitle">Rastrear evolução do desenho</div>
+  <div class="idea-row">
+    <div class="idea-label">Problema:</div>
+    <div class="idea-text">Seu Raimundo retifica 3 vezes (pede Luana 1ª vez, corrige, pede novamente, etc.). Luana vê última versão, mas não tem histórico de como evoluiu. Se precisa auditar, não sabe se desenho foi sempre consistente.</div>
+  </div>
+  <div class="idea-row">
+    <div class="idea-label">Solução:</div>
+    <div class="idea-text">Armazenar histórico: cada envio = nova versão com timestamp. Luana vê "Versão 1 (26/06 14:30): Desmatamento 15%" → "Versão 2 (27/06 09:15): Desmatamento 8% (corrigido após meu aviso)". Se padrão suspeito (muda a cada vez), flag para auditoria manual.</div>
+  </div>
+  <div class="idea-row">
+    <div class="idea-label">Impacto:</div>
+    <div class="idea-text">Luana vê intenção do produtor. Desenho que evoluiu naturalmente vs. desenho que muda radicalmente = dois casos diferentes. Reduz suspeita injusta.</div>
+  </div>
+  <div class="idea-row">
+    <div class="idea-label">Esforço:</div>
+    <div class="idea-text"><span class="badge badge-medio">Médio</span> — versioning de Imovel (store.ts), UI de histórico com linha do tempo, comparação entre versões.</div>
+  </div>
+</div>
+
+<!-- ===== ROADMAP ===== -->
+<h1 class="section-break">Roadmap em fases</h1>
+
+<p class="lead">Combinando as duas trilhas, o roadmap priorizado segue uma sequência: MVP já existente, próximas fases (curto prazo) e futuro (longo prazo / parcerias).</p>
+
+<div class="roadmap-phase">
+  <div class="phase-title">Fase 0: MVP atual (junho/2026) — FEITO</div>
+  <div class="phase-items">
+    <div class="phase-item">
+      <div class="phase-marker">✓</div>
+      <div class="phase-text"><strong>Captura GPS + demarcação:</strong> caminhada real ou simulação, vértices, geometria</div>
+    </div>
+    <div class="phase-item">
+      <div class="phase-marker">✓</div>
+      <div class="phase-text"><strong>Cálculo geodésico:</strong> área (ha), perímetro (m), validação topológica</div>
+    </div>
+    <div class="phase-item">
+      <div class="phase-marker">✓</div>
+      <div class="phase-text"><strong>Sobreposição com 7 camadas:</strong> WFS + fallback offline, severidade, mensagens pt-br</div>
+    </div>
+    <div class="phase-item">
+      <div class="phase-marker">✓</div>
+      <div class="phase-text"><strong>Aptidão a crédito:</strong> score Pronaf/Pronampe/Custeio/Investimento</div>
+    </div>
+    <div class="phase-item">
+      <div class="phase-marker">✓</div>
+      <div class="phase-text"><strong>Exportação:</strong> GeoJSON, PDF croqui, compartilhar</div>
+    </div>
+    <div class="phase-item">
+      <div class="phase-marker">✓</div>
+      <div class="phase-text"><strong>Multi-tela:</strong> Cadastro, Demarcação, Documentos, Revisão, Validação (analista)</div>
+    </div>
+    <div class="phase-item">
+      <div class="phase-marker">✓</div>
+      <div class="phase-text"><strong>Persistência + Autenticação:</strong> offline-first (AsyncStorage), login mock (gov.br), matrícula OEMA</div>
+    </div>
+  </div>
+</div>
+
+<div class="roadmap-phase">
+  <div class="phase-title">Fase 1: UX para Raimundo (2–3 jornadas) — PRÓXIMO</div>
+  <div class="phase-items">
+    <div class="phase-item">
+      <div class="phase-marker">→</div>
+      <div class="phase-text"><strong>Linguagem do Código Florestal traduzida:</strong> quando APP aparece, diz "Preservação Permanente de rio (você não pode usar)" | Esforço: Médio</div>
+    </div>
+    <div class="phase-item">
+      <div class="phase-marker">→</div>
+      <div class="phase-text"><strong>Comparação declarado vs. calculado:</strong> "Você disse 50 ha, app calculou 49.5 ha — tudo OK" | Esforço: Baixo</div>
+    </div>
+    <div class="phase-item">
+      <div class="phase-marker">→</div>
+      <div class="phase-text"><strong>Modo offline-only:</strong> flag para não tentar WFS, só captura geometria | Esforço: Baixo</div>
+    </div>
+    <div class="phase-item">
+      <div class="phase-marker">→</div>
+      <div class="phase-text"><strong>Tutorial integrado:</strong> 1ª abertura, rota SORRISO_SOJA, avatar animado | Esforço: Médio</div>
+    </div>
+    <div class="phase-item">
+      <div class="phase-marker">→</div>
+      <div class="phase-text"><strong>FAQ no app:</strong> "O que é módulo fiscal?", "Quando retificar?", etc. | Esforço: Baixo</div>
+    </div>
+  </div>
+</div>
+
+<div class="roadmap-phase">
+  <div class="phase-title">Fase 2: Triagem básica de Luana (3–4 jornadas) — PRÓXIMO</div>
+  <div class="phase-items">
+    <div class="phase-item">
+      <div class="phase-marker">→</div>
+      <div class="phase-text"><strong>Painel de triagem:</strong> lista imóveis por severidade de sobreposição | Esforço: Alto</div>
+    </div>
+    <div class="phase-item">
+      <div class="phase-marker">→</div>
+      <div class="phase-text"><strong>Estado rastreável:</strong> rascunho → enviado → sob análise → aprovado/retificação | Esforço: Médio</div>
+    </div>
+    <div class="phase-item">
+      <div class="phase-marker">→</div>
+      <div class="phase-text"><strong>Detecção de discrepância:</strong> aviso se area_calculada - area_declarada &gt; 10% | Esforço: Baixo</div>
+    </div>
+    <div class="phase-item">
+      <div class="phase-marker">→</div>
+      <div class="phase-text"><strong>Exportar JSON/CSV:</strong> para importar em Excel/Power BI | Esforço: Baixo</div>
+    </div>
+  </div>
+</div>
+
+<div class="roadmap-phase">
+  <div class="phase-title">Fase 3: Workflow iterativo (4–5 jornadas) — MID TERM</div>
+  <div class="phase-items">
+    <div class="phase-item">
+      <div class="phase-marker">→</div>
+      <div class="phase-text"><strong>Validação com feedback:</strong> "Aceitar" / "Pedir retificação" + motivos checkboxed | Esforço: Alto</div>
+    </div>
+    <div class="phase-item">
+      <div class="phase-marker">→</div>
+      <div class="phase-text"><strong>Notificação push:</strong> produtor recebe aviso de retificação no celular | Esforço: Médio</div>
+    </div>
+    <div class="phase-item">
+      <div class="phase-marker">→</div>
+      <div class="phase-text"><strong>Histórico de versões:</strong> produtor retifica 3x, Luana vê evolução | Esforço: Médio</div>
+    </div>
+  </div>
+</div>
+
+<div class="roadmap-phase">
+  <div class="phase-title">Fase 4: Prova de campo (3–4 jornadas) — FUTURE</div>
+  <div class="phase-items">
+    <div class="phase-item">
+      <div class="phase-marker">→</div>
+      <div class="phase-text"><strong>Captura de fotos georreferenciadas:</strong> norte, sul, leste, oeste + geotag automático | Esforço: Alto</div>
+    </div>
+    <div class="phase-item">
+      <div class="phase-marker">→</div>
+      <div class="phase-text"><strong>Anotações de voz/texto:</strong> "Cerca de arame, Sr. João é vizinho" | Esforço: Médio</div>
+    </div>
+    <div class="phase-item">
+      <div class="phase-marker">→</div>
+      <div class="phase-text"><strong>Galeria + integração no PDF:</strong> fotos anexadas no laudo exportado | Esforço: Alto</div>
+    </div>
+  </div>
+</div>
+
+<div class="roadmap-phase">
+  <div class="phase-title">Fase 5: Inteligência e interop (FUTURE, dependências externas)</div>
+  <div class="phase-items">
+    <div class="phase-item">
+      <div class="phase-marker">→</div>
+      <div class="phase-text"><strong>DETER (alertas INPE em tempo quase-real):</strong> desmatamento/queimada não-annual | Pareceria INPE</div>
+    </div>
+    <div class="phase-item">
+      <div class="phase-marker">→</div>
+      <div class="phase-text"><strong>Integração com OGC API Features:</strong> dados estruturados para painel federal | Pareceria MMA</div>
+    </div>
+    <div class="phase-item">
+      <div class="phase-marker">→</div>
+      <div class="phase-text"><strong>Autenticação real gov.br + matrícula OEMA:</strong> hoje é mock, usar OIDC+PKCE | Pareceria ID BRASIL</div>
+    </div>
+    <div class="phase-item">
+      <div class="phase-marker">→</div>
+      <div class="phase-text"><strong>Tradução multilíngue:</strong> português, inglês, espanhol (reutilização em outros países) | Esforço: Médio</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Priorização ===== -->
+<h1 class="section-break">Priorização resumida</h1>
+
+<table>
+  <thead>
+    <tr>
+      <th>Fase</th>
+      <th>Beneficiário</th>
+      <th>Features principais</th>
+      <th>Estimado (jornadas)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><span class="badge badge-done">0 — Feito</span></td>
+      <td>Ambos</td>
+      <td>MVP: desenho, cálculo, sobreposição, crédito, exportação, multi-tela, auth, offline</td>
+      <td>~20</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-next">1 — Próximo</span></td>
+      <td>Raimundo</td>
+      <td>Linguagem clara, comparação declarado/calculado, offline-only, tutorial, FAQ</td>
+      <td>~8</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-next">2 — Próximo</span></td>
+      <td>Luana</td>
+      <td>Painel de triagem, rastreamento de estado, detecção de discrepância, export JSON/CSV</td>
+      <td>~10</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-future">3</span></td>
+      <td>Ambos</td>
+      <td>Workflow iterativo (validação + feedback), notificação push, histórico de versões</td>
+      <td>~9</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-future">4</span></td>
+      <td>Raimundo + Luana</td>
+      <td>Prova de campo (fotos georreferenciadas + anotações)</td>
+      <td>~8</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-future">5</span></td>
+      <td>Ecossistema</td>
+      <td>DETER, OGC API, gov.br real, multilíngue</td>
+      <td>~15 (+ parcerias)</td>
+    </tr>
+  </tbody>
+</table>
+
+<p style="margin-top: 16px; font-size: 10pt; color: #5d6b62;"><strong>Nota:</strong> Estimativas são orçamentárias (sem análise detalhada). Priorização leva em conta: impacto (reduz ciclo de retificação), complexidade técnica (de/médio/alto) e dependências (ex.: Fase 1 não bloqueia Fase 2).</p>
+
+<!-- ===== Metrics ===== -->
+<h1 class="section-break">Como medir sucesso</h1>
+
+<table>
+  <thead>
+    <tr>
+      <th>Métrica</th>
+      <th>Para Raimundo</th>
+      <th>Para Luana</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Tempo de conclusão</strong></td>
+      <td>Fase 0: ~15 min (desenho + revisão) | Fase 1: &lt; 10 min (educação + fluxo claro)</td>
+      <td>Fase 0: ~30 min por imóvel (verificação manual) | Fase 2: &lt; 5 min (triagem automática)</td>
+    </tr>
+    <tr>
+      <td><strong>Taxa de retificação</strong></td>
+      <td>Fase 0: ~40% (erros de desenho) | Fase 1: &lt; 15% (educação reduz erros)</td>
+      <td>Fase 0: ~40% (ciclo infinito) | Fase 2: &lt; 15% (feedback claro)</td>
+    </tr>
+    <tr>
+      <td><strong>Satisfação (NPS)</strong></td>
+      <td>Fase 0: ~60 (funciona, mas confuso) | Fase 1: &gt; 80 (claro + educado)</td>
+      <td>Fase 0: ~50 (muito trabalhoso) | Fase 2: &gt; 75 (agilizado)</td>
+    </tr>
+    <tr>
+      <td><strong>Abandon rate</strong></td>
+      <td>Fase 0: ~25% (desistem no meio) | Fase 1: &lt; 5% (tutorial + FAQ)</td>
+      <td>Fase 0: N/A | Fase 2: reduz atraso de análise</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ===== Próximas sessões ===== -->
+<h1 class="section-break">Próximas sessões recomendadas</h1>
+
+<ul>
+  <li><strong>Validação com usuários (1ª semana de julho):</strong> Conversar com Seu Raimundo (produtor real) e Luana (OEMA) para priorizar entre Fase 1 e 2. Podem validar mensagens (linguagem clara realmente funciona?) e workflow de retificação.</li>
+
+  <li><strong>Confirmação de WFS (imediato):</strong> Antes de levar a campo, testar endpoints ao vivo (GetCapabilities) com INPE, IBAMA, FUNAI, ICMBio para garantir que `typeName` está certo.</li>
+
+  <li><strong>Análise de crédito rural (próximas 2 semanas):</strong> Revisar regras de Pronaf/Pronampe com BC/MAPA para certificar que `credito.ts` está alinhado com critérios de 2026.</li>
+
+  <li><strong>Roadmap de comunidade (julho/agosto):</strong> Publicar no GitHub, convidar OEMAs estaduais (São Paulo, Goiás, Mato Grosso) para contribuir. Cada estado pode adicionar camadas próprias (zoneamento, defesa civil, etc.).</li>
+</ul>
+
+<footer>
+  <strong>CAR Campo — Roadmap por persona</strong><br/>
+  Desafio 2 do haCARthon (Bem Público Digital)<br/>
+  Versão 1.0 | junho de 2026<br/>
+  <br/>
+  Duas trilhas, um app. Raimundo desenha. Luana valida. Crédito flui. CAR evolui.
+</footer>
+
+</body>
+</html>

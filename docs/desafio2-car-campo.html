@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CAR Campo × Desafio 2 do haCARthon — Bem Público Digital</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      font-family: 'Segoe UI', 'Trebuchet MS', Arial, Helvetica, sans-serif;
+      font-size: 11pt;
+      line-height: 1.6;
+      color: #1d2b22;
+      background: #ffffff;
+    }
+
+    body {
+      padding: 20mm;
+    }
+
+    @page {
+      size: A4 portrait;
+      margin: 15mm;
+    }
+
+    @media print {
+      body { padding: 0; }
+      a { color: #1b6b3a; text-decoration: none; }
+    }
+
+    h1 {
+      color: #1b6b3a;
+      font-size: 22pt;
+      font-weight: 600;
+      border-bottom: 3px solid #1b6b3a;
+      padding-bottom: 10px;
+      margin: 24px 0 16px 0;
+      page-break-after: avoid;
+    }
+
+    h1.title-main {
+      text-align: center;
+      border: none;
+      margin-top: 60px;
+      margin-bottom: 8px;
+      font-size: 26pt;
+    }
+
+    h1.subtitle {
+      text-align: center;
+      border: none;
+      color: #5d6b62;
+      font-size: 14pt;
+      font-weight: 400;
+      margin-top: 4px;
+      margin-bottom: 40px;
+    }
+
+    h2 {
+      color: #1b6b3a;
+      font-size: 13pt;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 20px;
+      margin-bottom: 10px;
+      page-break-after: avoid;
+    }
+
+    h3 {
+      color: #2e9e57;
+      font-size: 11pt;
+      font-weight: 600;
+      margin-top: 12px;
+      margin-bottom: 8px;
+      page-break-after: avoid;
+    }
+
+    p {
+      margin-bottom: 10px;
+      text-align: justify;
+    }
+
+    p.lead {
+      font-size: 12pt;
+      color: #1b6b3a;
+      font-weight: 500;
+      margin-bottom: 16px;
+    }
+
+    ul, ol {
+      margin-left: 20px;
+      margin-bottom: 12px;
+    }
+
+    li {
+      margin-bottom: 6px;
+    }
+
+    .cover {
+      text-align: center;
+      padding-top: 80px;
+      page-break-after: always;
+    }
+
+    .cover-header {
+      color: #1b6b3a;
+      font-size: 13pt;
+      font-weight: 600;
+      margin-bottom: 20px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .cover-title {
+      font-size: 28pt;
+      font-weight: 700;
+      color: #1b6b3a;
+      margin-bottom: 16px;
+      line-height: 1.3;
+    }
+
+    .cover-subtitle {
+      font-size: 14pt;
+      color: #5d6b62;
+      margin-bottom: 60px;
+      line-height: 1.5;
+    }
+
+    .cover-meta {
+      margin-top: 120px;
+      font-size: 10pt;
+      color: #5d6b62;
+      line-height: 1.8;
+    }
+
+    .box-contexto {
+      background: #eef7f0;
+      border-left: 4px solid #1b6b3a;
+      padding: 12px 16px;
+      margin: 12px 0;
+      border-radius: 4px;
+      font-size: 10pt;
+    }
+
+    .box-contexto strong {
+      color: #1b6b3a;
+    }
+
+    .diagram-box {
+      background: #eef7f0;
+      border: 1px solid #1b6b3a;
+      padding: 16px;
+      margin: 16px 0;
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      font-size: 9pt;
+      line-height: 1.8;
+      color: #1d2b22;
+    }
+
+    .diagram-step {
+      margin-bottom: 8px;
+      display: flex;
+      align-items: flex-start;
+    }
+
+    .diagram-arrow {
+      color: #1b6b3a;
+      font-weight: bold;
+      margin: 0 8px;
+      flex-shrink: 0;
+    }
+
+    .diagram-text {
+      flex: 1;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0;
+      font-size: 10pt;
+    }
+
+    th {
+      background: #1b6b3a;
+      color: #fff;
+      padding: 8px 10px;
+      text-align: left;
+      font-weight: 600;
+    }
+
+    td {
+      padding: 8px 10px;
+      border-bottom: 1px solid #d9e4dc;
+    }
+
+    tr:nth-child(even) td {
+      background: #eef7f0;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 9pt;
+      font-weight: 600;
+      background: #1b6b3a;
+      color: #fff;
+    }
+
+    .badge-ok {
+      background: #1b6b3a;
+    }
+
+    .badge-pending {
+      background: #8a5a13;
+      color: #fff;
+    }
+
+    .badge-future {
+      background: #5d6b62;
+      color: #fff;
+    }
+
+    .section-break {
+      page-break-before: always;
+    }
+
+    footer {
+      margin-top: 24px;
+      border-top: 1px solid #d9e4dc;
+      padding-top: 8px;
+      font-size: 9pt;
+      color: #5d6b62;
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    .signature {
+      text-align: center;
+      margin-top: 40px;
+      font-size: 9pt;
+      color: #5d6b62;
+    }
+
+  </style>
+</head>
+<body>
+
+<!-- ===== CAPA ===== -->
+<div class="cover">
+  <div class="cover-header">haCARthon · Desafio 2 · Solução 4</div>
+  <div class="cover-title">CAR Campo</div>
+  <div class="cover-subtitle">App de desenho georreferenciado pelo celular<br/>para regularização ambiental e acesso a crédito rural</div>
+  <div class="cover-meta">
+    Versão 1.0 | junho de 2026<br/>
+    Bem Público Digital · Código Aberto<br/>
+    Produção: haCARthon (MGI · FBDS · ENAP · Impact Hub)<br/>
+    Doador: NICFI
+  </div>
+</div>
+
+<!-- ===== O haCARthon ===== -->
+<h1>O haCARthon: CAR como Bem Público Digital</h1>
+
+<p class="lead">O haCARthon é um hackathon de arquitetura aberta promovido por MGI, FBDS, ENAP e Impact Hub Brasil, com financiamento NICFI, que objetiva tornar o Cadastro Ambiental Rural (CAR) um bem público digital — modular, escalável, reutilizável por outros países e em código aberto.</p>
+
+<h2>Contexto legal do CAR</h2>
+
+<p>O Cadastro Ambiental Rural (Lei 12.651/2012, Decreto 7.830/2012) é pré-requisito para acesso a:</p>
+<ul>
+  <li><strong>Crédito rural</strong> (Pronaf, Pronampe, Custeio, Investimento)</li>
+  <li><strong>Regularização ambiental</strong> (Plano de Recuperação de Áreas Degradadas — PRA, Serviços Ambientais — PSA)</li>
+  <li><strong>Certificações</strong> (CRA — Cota de Reserva Ambiental)</li>
+  <li><strong>Benefícios tributários e programas especiais</strong> (descontos, seguro agrícola)</li>
+</ul>
+
+<p>Hoje, o CAR cobre <strong>8,2 milhões de imóveis rurais</strong> em uma área superior a <strong>7 milhões de km²</strong> (dados de abril/2026). O ciclo típico é: produtor preenche → OEMA (órgão estadual) analisa e valida → integração federal → liberação de benefícios.</p>
+
+<div class="box-contexto">
+  <strong>Desafio de escala:</strong> Com volumes tão grandes, é crítico que produtores consigam entrar o CAR com pouco atrito (educação, ferramenta acessível) e que analistas de órgãos ambientais tenham ferramentas que agilizem a triagem e reduzam o ciclo de retificações infinitas.
+</div>
+
+<!-- ===== Desafio 2 ===== -->
+<h1 class="section-break">O Desafio 2: Melhorar acesso a dados geoespaciais</h1>
+
+<h2>Enunciado oficial</h2>
+
+<p><strong>"Melhorar o acesso a dados geoespaciais do CAR"</strong>: atualizar informações de uso e cobertura do solo, feições naturais (hidrografia, APP, Reserva Legal) e áreas de uso restritivo (Terra Indígena, Unidade de Conservação, embargo ambiental, desmatamento, queimada).</p>
+
+<p>O desafio lista entre exemplos de solução:</p>
+<ul>
+  <li><strong>Sistemas que permitam desenho georreferenciado dos imóveis rurais a partir de tecnologias acessíveis</strong> (fotos, celulares, drones)</li>
+  <li>Simplificar acesso a bases de dados ambientais (mapas, APIs)</li>
+  <li>Ferramentas que acelerem triagem e validação de analistas</li>
+</ul>
+
+<div class="box-contexto">
+  <strong>Por que isso importa:</strong> Um produtor de pequeno/médio porte muitas vezes não sabe o perímetro exato da sua terra (não há marcação física clara, divisa com vizinho é antiga) e teme investir em levantamento topográfico profissional. Um app que desenha com o celular + GPS, mostra o que é protegido/embargado e estima crédito viável resolve 80% do atrito inicial.
+</div>
+
+<!-- ===== Mapeamento de Solução ===== -->
+<h1 class="section-break">CAR Campo responde ao Desafio 2</h1>
+
+<h2>Exemplo oficial → Implementação no CAR Campo</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th style="width: 35%">Exemplo de Solução (Desafio 2)</th>
+      <th style="width: 35%">O que o CAR Campo faz</th>
+      <th style="width: 30%">Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Desenho georreferenciado via celular</strong></td>
+      <td>Produtor caminha a divisa do imóvel com GPS ativo (ou "Simula caminhada" offline); app marca vértices a cada 5 m; fecha o polígono automaticamente</td>
+      <td><span class="badge badge-ok">Implementado</span></td>
+    </tr>
+    <tr>
+      <td><strong>Uso de tecnologias acessíveis</strong> (fotos, celulares)</td>
+      <td>Smartphones comuns (Android/iOS); nenhum equipamento especial; modo offline "Simular caminhada" para treino/demo sem GPS real</td>
+      <td><span class="badge badge-ok">Implementado</span></td>
+    </tr>
+    <tr>
+      <td><strong>Área e perímetro acurados</strong></td>
+      <td>Cálculo geodésico (fórmula esférica WGS84) de área em hectares e perímetro em metros; não usa coordenadas em graus (impreciso)</td>
+      <td><span class="badge badge-ok">Implementado</span></td>
+    </tr>
+    <tr>
+      <td><strong>Validação contra mapas oficiais</strong></td>
+      <td>Motor de sobreposição (Turf.js) calcula interseção com camadas WFS oficiais: Terra Indígena (FUNAI), Unidade de Conservação (ICMBio), Embargo IBAMA, Desmatamento PRODES (INPE), Queimada (INPE), APP/Hidrografia</td>
+      <td><span class="badge badge-ok">Implementado</span></td>
+    </tr>
+    <tr>
+      <td><strong>Severidade e mensagens claras para produtor</strong></td>
+      <td>Cada sobreposição recebe severidade (crítico ⛔, alerta ⚠, info ℹ) com texto em português do dia a dia; nada de jargão jurídico</td>
+      <td><span class="badge badge-ok">Implementado</span></td>
+    </tr>
+    <tr>
+      <td><strong>Estimativa de elegibilidade a crédito</strong></td>
+      <td>Aplica regras de Pronaf/Pronampe/Custeio/Investimento; bloqueios por sobreposição crítica; score 0–100 (informativo, não oferta)</td>
+      <td><span class="badge badge-ok">Implementado</span></td>
+    </tr>
+    <tr>
+      <td><strong>Exportação de dados para órgão ambiental</strong></td>
+      <td>GeoJSON (RFC 7946, padrão internacional); PDF croqui + metadados; pronto para envio à CAR Geo API (backend OGC API Features)</td>
+      <td><span class="badge badge-ok">Implementado</span></td>
+    </tr>
+    <tr>
+      <td><strong>Funciona offline</strong></td>
+      <td>100% captura, cálculo e armazenamento no celular (AsyncStorage); sincroniza quando houver rede; nunca bloqueia UI</td>
+      <td><span class="badge badge-ok">Implementado</span></td>
+    </tr>
+    <tr>
+      <td><strong>Agiliza triagem de analista</strong> (não dito, mas essencial)</td>
+      <td>Analista vê laudo pronto (sobreposição, crédito) antes de auditar; não precisa refazer cálculos; reduz ciclo de retificações</td>
+      <td><span class="badge badge-ok">Implementado</span></td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ===== O que resolve ===== -->
+<h1 class="section-break">O que isso destrava</h1>
+
+<h2>Para Seu Raimundo (produtor rural)</h2>
+
+<div class="box-contexto">
+  <strong>Seu Raimundo</strong> é um produtor de pequeno/médio porte em Mato Grosso. Tem 50 ha, cultiva soja, depende da terra. Quer se regularizar, acessar crédito (Pronaf especial para agricultura familiar), evitar embargos e conflitos de divisa. Trava no "Código Florestal" (não entende), desconfia de plataformas digitais, se informa por vizinhos/sindicatos/WhatsApp.
+</div>
+
+<p class="lead">O CAR Campo destranca, para Seu Raimundo:</p>
+
+<ul>
+  <li><strong>Clareza sobre o perímetro:</strong> Caminhando com o celular, o app mostra exatamente quantos hectares tem o imóvel, sem pagar topógrafo (que custa R$ 2.000–5.000)</li>
+
+  <li><strong>Sinal de risco antes de enviar:</strong> "Seu desenho invade Terra Indígena" ou "Tem embargo IBAMA aqui" aparece na tela em linguagem clara, não em siglas jurídicas</li>
+
+  <li><strong>Confiança para conversar com banco e órgão:</strong> Gera laudo com números (50 ha, 12% em desmatamento), não é "achismo" — banco aprova crédito com mais segurança</li>
+
+  <li><strong>Estimativa de que linhas de crédito abrem:</strong> "Você é elegível a Pronaf, mas não a Pronampe por desmatamento" — orienta onde investir esforço</li>
+
+  <li><strong>Documentação pronta para o órgão:</strong> PDF + GeoJSON já estão prontos, não precisa pagar cartório ou consultor</li>
+
+  <li><strong>Atualizações contínuas offline:</strong> Se a rede cair, o app segue funcionando; sincroniza quando volta a conectar</li>
+</ul>
+
+<h2>Para a Luana (analista ambiental de OEMA)</h2>
+
+<div class="box-contexto">
+  <strong>Luana</strong> é analista ambiental de uma secretaria estadual de meio ambiente. Valida CAR, PRA, CRA. Sofre com ciclo infinito de retificações (produtor desenha mal, órgão pede revisar, volta errado novamente). Valoriza ferramentas que agilizem triagem. Tem centenas de imóveis na fila.
+</div>
+
+<p class="lead">O CAR Campo destranca, para a Luana:</p>
+
+<ul>
+  <li><strong>Triagem automática de risco:</strong> Ao receber um imóvel, ela vê imediatamente se há sobreposição crítica (TI, UC, embargo). Não precisa fazer manualmente em SIG pesado</li>
+
+  <li><strong>Dados geometricamente validados:</strong> O app já fecha o anel, descarta auto-interseção e marca pontos GPS duvidosos. Desenho ruins já são capturados antes de chegar no órgão</li>
+
+  <li><strong>Laudo estruturado:**** Sobreposição em hectares, percentual, severidade — estrutura de dados, não só imagem</li>
+
+  <li><strong>Redução de ciclo:**** Se o produtor vê "Invade TI" antes de enviar, ou corrige o desenho, ou esclarece com você via WhatsApp. Não sai do produtor já sabendo que vai volta</li>
+
+  <li><strong>Prova de campo:**** Foto georreferenciada anexada mostra o que o produtor viu (divisa com vizinho, cerca, APP com água). Ela cruza com o desenho</li>
+
+  <li><strong>Integração futura com painel:**** Os dados em GeoJSON/API permitem que ela veja painel agregado (quantas retificações por região, qual severidade mais comum, etc.)</li>
+</ul>
+
+<!-- ===== Bem Público Digital ===== -->
+<h1 class="section-break">Visão: Bem Público Digital</h1>
+
+<p class="lead">O CAR Campo é desenvolvido em <strong>código aberto</strong> (repositório público, MIT/UNLICENSED a decidir). O objetivo é que qualquer OEMA, município, associação de produtores ou até outro país possa:</p>
+
+<ul>
+  <li><strong>Usar livremente</strong> — sem licença cara, sem lock-in de fornecedor</li>
+  <li><strong>Clonar e adaptar</strong> — traduzir para outra língua, ajustar cores, integrar com sistema estadual</li>
+  <li><strong>Contribuir melhorias</strong> — comunidade de desenvolvedores agrega features</li>
+  <li><strong>Entender como funciona</strong> — código legível, testes 100%, documentação técnica</li>
+</ul>
+
+<p>Assim, o CAR deixa de ser uma plataforma centralizada e vira um ecossistema: cada estado pode servir seus produtores com seu próprio app, mas todos trocam dados (GeoJSON, API OGC) de forma interoperável.</p>
+
+<div class="box-contexto">
+  <strong>Precedente:</strong> OpenStreetMap (cartografia), INPE TerraBrasilis (imagens de satélite), IBAMA SISCOM (bases ambientais) — todas públicas, abertas, reutilizáveis.
+</div>
+
+<!-- ===== Fluxo ===== -->
+<h1 class="section-break">Fluxo de dados: Da caminhada ao laudo</h1>
+
+<div class="diagram-box">
+  <div class="diagram-step">
+    <strong style="color: #1b6b3a;">1. CAMINHAR</strong><br/>
+    <div style="margin-left: 60px;">Seu Raimundo sai com o celular, percorre a divisa do imóvel</div>
+  </div>
+  <div class="diagram-arrow">↓</div>
+
+  <div class="diagram-step">
+    <strong style="color: #1b6b3a;">2. CAPTURAR GPS</strong><br/>
+    <div style="margin-left: 60px;">App marca vértice a cada 5 m; descarta fixes ruins; fecha o polígono automaticamente</div>
+  </div>
+  <div class="diagram-arrow">↓</div>
+
+  <div class="diagram-step">
+    <strong style="color: #1b6b3a;">3. CALCULAR GEODÉSICO</strong><br/>
+    <div style="margin-left: 60px;">Área em hectares (fórmula esférica), perímetro em metros — nunca em graus</div>
+  </div>
+  <div class="diagram-arrow">↓</div>
+
+  <div class="diagram-step">
+    <strong style="color: #1b6b3a;">4. VALIDAR TOPOLOGIA</strong><br/>
+    <div style="margin-left: 60px;">Anel fechado? Mínimo 3 vértices? Sem auto-interseção? Se falhar, bloqueia envio</div>
+  </div>
+  <div class="diagram-arrow">↓</div>
+
+  <div class="diagram-step">
+    <strong style="color: #1b6b3a;">5. CHECAR SOBREPOSIÇÃO</strong><br/>
+    <div style="margin-left: 60px;">Cruza com WFS de TI, UC, embargo, PRODES, queimada, APP. Calcula ha e % de invasão</div>
+  </div>
+  <div class="diagram-arrow">↓</div>
+
+  <div class="diagram-step">
+    <strong style="color: #1b6b3a;">6. INDICAR SEVERIDADE</strong><br/>
+    <div style="margin-left: 60px;">Crítico (TI, UC, embargo) bloqueia; Alerta (desmatamento &gt; 20%, queimada) avisa; Info (APP) registra</div>
+  </div>
+  <div class="diagram-arrow">↓</div>
+
+  <div class="diagram-step">
+    <strong style="color: #1b6b3a;">7. ESTIMAR CRÉDITO</strong><br/>
+    <div style="margin-left: 60px;">Pronaf/Pronampe/Custeio/Investimento — bloqueados por crítico, limitados por alerta</div>
+  </div>
+  <div class="diagram-arrow">↓</div>
+
+  <div class="diagram-step">
+    <strong style="color: #1b6b3a;">8. EXPORTAR + ENVIAR</strong><br/>
+    <div style="margin-left: 60px;">GeoJSON RFC 7946 + PDF croqui → CAR Geo API (se online) ou fila offline → sincroniza depois</div>
+  </div>
+  <div class="diagram-arrow">↓</div>
+
+  <div class="diagram-step">
+    <strong style="color: #1b6b3a;">9. RECEBER LAUDO ESTRUTURADO</strong><br/>
+    <div style="margin-left: 60px;">Luana vê: perímetro válido, sobreposição em ha/%, score de crédito → triagem rápida</div>
+  </div>
+</div>
+
+<p><strong>Toda a lógica (etapas 1–8) roda offline no celular do produtor.</strong> A internet é usada apenas para buscar WFS e enviar o resultado — e mesmo se cair, o app não trava: sincroniza depois.</p>
+
+<!-- ===== Status ===== -->
+<h1 class="section-break">Status e próximos passos</h1>
+
+<h2>Implementado (junho/2026)</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Feature</th>
+      <th>Descrição</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Captura GPS</strong></td>
+      <td>Vértices em tempo real, descarte de fixes ruins (acurácia &gt; 20 m), cleanup de bateria</td>
+    </tr>
+    <tr>
+      <td><strong>Cálculo geodésico</strong></td>
+      <td>Área (hectares), perímetro (metros), simplificação RDP</td>
+    </tr>
+    <tr>
+      <td><strong>Validação topológica</strong></td>
+      <td>Anel fechado, mínimo 3 vértices, sem auto-interseção, avisos de área/GPS duvidosos</td>
+    </tr>
+    <tr>
+      <td><strong>Sobreposição com 7 camadas</strong></td>
+      <td>TI, UC, embargo, PRODES, queimada, APP, CAR vizinho (WFS com fallback offline)</td>
+    </tr>
+    <tr>
+      <td><strong>Severidade dinâmica</strong></td>
+      <td>Crítico, alerta, info; escala conforme percentual (ex.: desmatamento &gt; 20% = crítico)</td>
+    </tr>
+    <tr>
+      <td><strong>Aptidão a crédito</strong></td>
+      <td>Score 0–100, elegibilidade Pronaf/Pronampe/Custeio/Investimento, disclaimer obrigatório</td>
+    </tr>
+    <tr>
+      <td><strong>Exportação</strong></td>
+      <td>GeoJSON RFC 7946, PDF croqui com SVG (offline-safe), compartilhar (WhatsApp, e-mail, AirDrop)</td>
+    </tr>
+    <tr>
+      <td><strong>Modo simulação</strong></td>
+      <td>Rotas de demo (SORRISO_SOJA) com avatar animado, ideal para treino/demo sem GPS real</td>
+    </tr>
+    <tr>
+      <td><strong>Documentos</strong></td>
+      <td>Anexar matrícula, CCIR, RG, foto divisa; foto georreferenciada com lat/lng</td>
+    </tr>
+    <tr>
+      <td><strong>Multi-perfil</strong></td>
+      <td>Produtor (fluxo simplificado) e analista (validação completa, dashboard)</td>
+    </tr>
+    <tr>
+      <td><strong>Autenticação</strong></td>
+      <td>Login gov.br (mock agora) e matrícula (OEMA); sessão sensível em expo-secure-store</td>
+    </tr>
+    <tr>
+      <td><strong>Persistência offline</strong></td>
+      <td>AsyncStorage (CRUD de imóveis, status rascunho/enviado), sincronização resiliente</td>
+    </tr>
+    <tr>
+      <td><strong>Testes</strong></td>
+      <td>Vitest, 100% cobertura de linhas, 114 testes, zero TypeScript errors</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>Próximos passos (priorizado)</h2>
+
+<ol>
+  <li><strong>Confirmar WFS oficiais ao vivo</strong> — testar GetCapabilities e typeName exato com INPE, IBAMA, FUNAI, ICMBio</li>
+  <li><strong>DETER em tempo quase-real</strong> — alertas INPE de desmatamento/queimada não-annual, não só PRODES</li>
+  <li><strong>Linguagem do Código Florestal traduzida</strong> — quando APP aparece, mostrar "Reserva Permanente de rio (30 m)" não só "APP"</li>
+  <li><strong>Triagem automática de sobreposição no painel da Luana</strong> — dashboard que ordena imóveis por risco (crítico primeiro)</li>
+  <li><strong>Integração com painel de gestão federal</strong> — dados em OGC API Features para ministérios consultarem (MMA, Agricultura)</li>
+  <li><strong>Tradução multilíngue</strong> — português, inglês, espanhol (reutilização em outros países)</li>
+  <li><strong>Compliance LGPD</strong> — auditoria de privacidade, mascaramento de PII em exports, criptografia em trânsito</li>
+</ol>
+
+<footer>
+  <strong>CAR Campo — haCARthon Desafio 2 Solução 4</strong><br/>
+  Bem Público Digital · Código Aberto<br/>
+  Versão 1.0 | junho de 2026<br/>
+  <br/>
+  MGI · FBDS · ENAP · Impact Hub Brasil | Doador: NICFI
+</footer>
+
+</body>
+</html>
