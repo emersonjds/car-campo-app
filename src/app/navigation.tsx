@@ -7,18 +7,21 @@ import { useAuth } from '../auth/AuthContext';
 export type Route =
   | { name: 'home' }
   | { name: 'validacao' }
+  | { name: 'visitas' }
   | { name: 'painel' }
   | { name: 'config' }
   | { name: 'cadastro'; imovelId?: string }
   | { name: 'demarcacao'; imovelId: string }
   | { name: 'documentos'; imovelId: string }
   | { name: 'revisao'; imovelId: string }
-  | { name: 'analise-ambiental'; imovelId: string };
+  | { name: 'analise-ambiental'; imovelId: string }
+  | { name: 'alteracao-detalhe'; imovelId: string }
+  | { name: 'conferencia-lab'; imovelId?: string };
 
 export type RouteName = Route['name'];
 
 /** Rotas que são "abas" de topo (mostram a barra inferior, sem botão voltar). */
-export const TAB_ROOTS: RouteName[] = ['home', 'validacao', 'painel', 'config'];
+export const TAB_ROOTS: RouteName[] = ['home', 'validacao', 'visitas', 'painel', 'config'];
 
 export function isTabRoot(name: RouteName): boolean {
   return TAB_ROOTS.includes(name);
@@ -45,13 +48,13 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const perfil = sessao?.perfil ?? null;
   const ready = !loading;
 
-  // A cada novo login (token muda), volta para a aba inicial (Imóveis) — evita
-  // cair na aba Perfil depois de sair e entrar de novo.
+  // A cada novo login (token muda), volta para a aba inicial do perfil — o produtor
+  // cai em "Imóveis"; o analista cai direto na "Triagem" (sem aba Imóveis).
   const prevToken = useRef<string | null>(null);
   useEffect(() => {
     const token = sessao?.token ?? null;
     if (token && token !== prevToken.current) {
-      setStack([{ name: 'home' }]);
+      setStack([{ name: sessao?.perfil === 'analista' ? 'validacao' : 'home' }]);
     }
     prevToken.current = token;
   }, [sessao]);
