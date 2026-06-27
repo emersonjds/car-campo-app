@@ -31,7 +31,8 @@ import { usePerimeterTracker } from '../hooks/usePerimeterTracker';
 import { Badge, PrimaryButton, SecondaryButton, StatBox } from '../ui';
 import { colors } from '../theme/colors';
 import { derivarAPP, appDentroDoImovel, type AppResultado } from '../lib/app';
-import { DEMO_HIDROGRAFIA } from '../lib/refLayers.demo';
+import { DEMO_HIDROGRAFIA, DEMO_CAMADAS } from '../lib/refLayers.demo';
+import { analisarAlteracaoImovel } from '../lib/alteracao';
 
 // ---------- tipos ----------
 
@@ -136,30 +137,6 @@ function ModeToggle({ mode, onChange }: { mode: Mode; onChange: (m: Mode) => voi
   );
 }
 
-function SpeedSelector({
-  speed,
-  onSelect,
-}: {
-  speed: 1 | 2 | 4;
-  onSelect: (s: 1 | 2 | 4) => void;
-}) {
-  return (
-    <View style={s.speedRow}>
-      <Text style={s.speedLabel}>Velocidade:</Text>
-      {([1, 2, 4] as const).map((v) => (
-        <TouchableOpacity
-          key={v}
-          style={[s.speedBtn, speed === v && s.speedBtnActive]}
-          onPress={() => onSelect(v)}
-          hitSlop={8}
-        >
-          <Text style={[s.speedBtnText, speed === v && s.speedBtnTextActive]}>{v}x</Text>
-        </TouchableOpacity>
-      ))}
-    </View>
-  );
-}
-
 // ---------- marcador do avatar com anel pulsante ----------
 
 function AvatarMarker({ coordinate, pulse }: { coordinate: LngLat; pulse: Animated.Value }) {
@@ -210,12 +187,13 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
   const activeAvatar: LngLat | null = mode === 'sim' ? sim.avatar : tracker.current;
 
   // ---------- efeito: carrega geometry existente ----------
+  // O produtor mede ÀS CEGAS: a tela não mostra o perímetro registrado nem o delta.
+  // A comparação com o registro acontece por baixo dos panos, no save (ver doSave).
   useEffect(() => {
     let alive = true;
     getImovel(imovelId).then((imovel) => {
       if (!alive || !imovel) return;
       setImovelLoaded(true);
-      // Se já houver geometry salva, poderia restaurar — neste stub apenas marcamos carregado
     });
     return () => {
       alive = false;
@@ -318,17 +296,33 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
     tracker.reset();
   }, [sim, tracker]);
 
-  const handleSave = useCallback(async () => {
-    if (activePoints.length < 3) return;
+  const doSave = useCallback(async () => {
     setSaving(true);
     try {
-      await updateImovel(imovelId, {
+      const updated = await updateImovel(imovelId, {
         geometry: {
           points: activePoints,
           area_ha: area,
           perimetro_m: perimeter,
         },
       });
+      // Por baixo dos panos: compara a medição com o registro anterior (snapshot
+      // automático do store) e, se divergir o bastante, grava um informe de visita
+      // para o analista. O produtor não vê nada disso — mediu às cegas.
+      if (updated) {
+        const alt = analisarAlteracaoImovel(updated, DEMO_CAMADAS, 'offline-demo');
+        if (alt?.relatorio.requerVisita) {
+          await updateImovel(imovelId, {
+            alertaDivergencia: {
+              detectadoEm: Date.now(),
+              delta_ha: alt.relatorio.delta_ha,
+              delta_pct: alt.relatorio.delta_pct,
+              severidade: alt.relatorio.severidade,
+              visto: false,
+            },
+          });
+        }
+      }
       navigate({ name: 'documentos', imovelId });
     } catch {
       Alert.alert('Erro', 'Não foi possível salvar a demarcação. Tente novamente.');
@@ -336,6 +330,11 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
       setSaving(false);
     }
   }, [activePoints, area, perimeter, imovelId, navigate]);
+
+  const handleSave = useCallback(() => {
+    if (activePoints.length < 3) return;
+    doSave();
+  }, [activePoints.length, doSave]);
 
   const handleGpsStart = useCallback(() => {
     tracker.start();
@@ -377,9 +376,6 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
         {DEMO_ROUTES.find((r) => r.id === selectedRouteId)?.fonte ??
           'Bases: SICAR/CAR · INCRA SIGEF · MapBiomas · INPE'}
       </Text>
-
-      {/* Controle de velocidade */}
-      <SpeedSelector speed={sim.speed as 1 | 2 | 4} onSelect={sim.setSpeed} />
 
       {/* Barra de progresso */}
       {sim.status !== 'idle' && (
@@ -710,42 +706,6 @@ const s = StyleSheet.create({
     color: colors.branco,
   },
 
-  // Seletor de velocidade
-  speedRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-    gap: 8,
-  },
-  speedLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.muted,
-    marginRight: 4,
-  },
-  speedBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 20,
-    backgroundColor: colors.verdeBg,
-    borderWidth: 1,
-    borderColor: colors.line,
-    minWidth: 44,
-    alignItems: 'center',
-  },
-  speedBtnActive: {
-    backgroundColor: colors.verde,
-    borderColor: colors.verde,
-  },
-  speedBtnText: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: colors.muted,
-  },
-  speedBtnTextActive: {
-    color: colors.branco,
-  },
-
   // Seletor de rota
   routeScroll: {
     marginBottom: 4,
@@ -842,11 +802,17 @@ const s = StyleSheet.create({
     flexDirection: 'row',
   },
   footer: {
-    padding: 14,
-    paddingBottom: 20,
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    paddingBottom: 34,
     backgroundColor: colors.branco,
     borderTopWidth: 1,
     borderTopColor: colors.line,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: -3 },
+    elevation: 12,
   },
   doneCue: {
     backgroundColor: '#e2f3e8',
@@ -973,4 +939,5 @@ const s = StyleSheet.create({
     marginTop: 6,
     lineHeight: 14,
   },
+
 });

@@ -38,7 +38,11 @@ export function HomeScreen() {
         ListEmptyComponent={
           <EmptyState
             title="Nenhum imóvel ainda"
-            hint="Toque em “Novo imóvel” para cadastrar e desenhar o perímetro caminhando — ou simulando a caminhada."
+            hint={
+              perfil === 'analista'
+                ? 'Os imóveis enviados pelos produtores aparecem aqui para validação e conferência de terreno.'
+                : 'Toque em “Novo imóvel” para cadastrar e desenhar o perímetro caminhando — ou simulando a caminhada.'
+            }
           />
         }
         renderItem={({ item }) => (
@@ -64,19 +68,24 @@ export function HomeScreen() {
               <Text style={s.meta}>{item.geometry.points.length} vértices</Text>
               <Text style={s.meta}>{item.documentos.length} docs</Text>
             </View>
+            {item.solicitacaoVisita && (
+              <Text style={s.confTag}>📍 Conferência de terreno solicitada</Text>
+            )}
           </TouchableOpacity>
         )}
       />
-      {/* Botão flutuante de novo imóvel (acima da barra de navegação). */}
-      <TouchableOpacity
-        style={s.fab}
-        activeOpacity={0.9}
-        onPress={() => navigate({ name: 'cadastro' })}
-        accessibilityRole="button"
-        accessibilityLabel="Novo imóvel"
-      >
-        <Text style={s.fabText}>＋ Novo imóvel</Text>
-      </TouchableOpacity>
+      {/* Botão flutuante de novo imóvel — só para o PRODUTOR (o analista não mede/cria). */}
+      {perfil !== 'analista' && (
+        <TouchableOpacity
+          style={s.fab}
+          activeOpacity={0.9}
+          onPress={() => navigate({ name: 'cadastro' })}
+          accessibilityRole="button"
+          accessibilityLabel="Novo imóvel"
+        >
+          <Text style={s.fabText}>＋ Novo imóvel</Text>
+        </TouchableOpacity>
+      )}
     </Screen>
   );
 }
@@ -89,6 +98,7 @@ const s = StyleSheet.create({
   cardSub: { fontSize: 13, color: colors.muted, marginTop: 4 },
   metaRow: { flexDirection: 'row', gap: 14, marginTop: 10 },
   meta: { fontSize: 12, fontWeight: '700', color: colors.verde },
+  confTag: { fontSize: 12, fontWeight: '800', color: colors.aviso, marginTop: 10 },
   fab: {
     position: 'absolute',
     right: 16,

@@ -526,8 +526,9 @@ const s = StyleSheet.create({
   // Rodapé
   rodape: {
     flexDirection: 'row',
-    padding: 16,
-    paddingBottom: 20,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 34,
     borderTopWidth: 1,
     borderTopColor: colors.line,
     backgroundColor: colors.branco,

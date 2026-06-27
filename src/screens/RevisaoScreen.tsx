@@ -10,6 +10,7 @@ import { getImovel, updateImovel } from '../lib/store';
 import { areaHectares, perimeterM, validatePerimeter } from '../lib/geo';
 import { submitPerimeter } from '../lib/api';
 import { analisarSobreposicoes } from '../lib/overlay';
+import { analisarAlteracaoImovel, decisaoSugerida } from '../lib/alteracao';
 import { DEMO_CAMADAS } from '../lib/refLayers.demo';
 import { exportGeoJSONFile, exportPDF, shareText } from '../lib/export';
 import {
@@ -21,7 +22,7 @@ import {
   StatBox,
 } from '../ui';
 import { colors } from '../theme/colors';
-import type { Imovel } from '../types';
+import type { Imovel, MotivoVisita, SolicitacaoVisita } from '../types';
 
 // ---------------------------------------------------------------------------
 // Utilitários internos
@@ -48,7 +49,7 @@ function maskCpfCnpj(value: string): string {
 }
 
 // Qual botão de ação está carregando agora
-type ActiveAction = 'geojson' | 'pdf' | 'share' | 'submit' | null;
+type ActiveAction = 'geojson' | 'pdf' | 'share' | 'submit' | 'visita' | null;
 
 // ---------------------------------------------------------------------------
 // Componente interno de linha de dado (label + valor)
@@ -183,6 +184,45 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
         : null,
     [imovel],
   );
+
+  // Comparação com o perímetro registrado anterior (delta de re-demarcação).
+  const alteracaoResumo = useMemo(
+    () => (imovel ? analisarAlteracaoImovel(imovel, DEMO_CAMADAS, 'offline-demo') : null),
+    [imovel],
+  );
+
+  // Produtor solicita a visita/conferência do técnico (proativa).
+  const handleSolicitarVisita = useCallback(() => {
+    if (!imovel) return;
+    const r = alteracaoResumo?.relatorio;
+    const pedir = (motivo: MotivoVisita, detalhe: string) =>
+      withAction('visita', async () => {
+        const sol: SolicitacaoVisita = { solicitadaEm: Date.now(), motivo, detalhe };
+        const updated = await updateImovel(imovel.id, { solicitacaoVisita: sol });
+        if (updated) setImovel(updated);
+        Alert.alert(
+          'Conferência solicitada',
+          'Sua solicitação entrou na fila de visitas do analista. Você será avisado quando a conferência for agendada.',
+        );
+      });
+    Alert.alert('Solicitar visita do técnico', 'Qual o motivo da conferência?', [
+      {
+        text: 'Conferir a nova medição',
+        onPress: () =>
+          pedir(
+            'medicao',
+            r
+              ? `Nova medição diverge do registro: ${r.delta_ha >= 0 ? '+' : ''}${r.delta_ha.toFixed(1)} ha (${r.delta_pct >= 0 ? '+' : ''}${r.delta_pct.toFixed(0)}%)${r.requerVisita ? ' — requer visita' : ''}.`
+              : 'Conferência da medição solicitada pelo produtor.',
+          ),
+      },
+      {
+        text: 'Conferir documentação',
+        onPress: () => pedir('documentacao', 'Conferência de documentação solicitada pelo produtor.'),
+      },
+      { text: 'Cancelar', style: 'cancel' },
+    ]);
+  }, [imovel, alteracaoResumo, withAction]);
 
   // ---- Estado: carregando ----
   if (loadingImovel) {
@@ -391,6 +431,68 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
           )}
         </Card>
 
+        {/* --- Comparação com registro anterior --- */}
+        {alteracaoResumo && (
+          <Card style={s.card}>
+            <SectionTitle>Comparação com registro anterior</SectionTitle>
+            {alteracaoResumo.relatorio.tipoAlteracao === 'microajuste' ? (
+              <Text style={s.cmpOk}>
+                ✓ Praticamente igual ao registro anterior — diferença dentro do ruído de GPS
+                {alteracaoResumo.baseline === 'demo' ? ' (baseline de demonstração)' : ''}.
+              </Text>
+            ) : (
+              <>
+                <View style={s.statsRow}>
+                  <StatBox label="Antes (ha)" value={alteracaoResumo.relatorio.areaAnterior_ha.toFixed(2)} />
+                  <View style={s.statGap} />
+                  <StatBox label="Agora (ha)" value={alteracaoResumo.relatorio.areaNova_ha.toFixed(2)} />
+                  <View style={s.statGap} />
+                  <StatBox
+                    label="Diferença"
+                    value={`${alteracaoResumo.relatorio.delta_ha >= 0 ? '+' : ''}${alteracaoResumo.relatorio.delta_ha.toFixed(2)}`}
+                  />
+                </View>
+                {(() => {
+                  const dec = decisaoSugerida(alteracaoResumo.relatorio.severidade);
+                  const tone =
+                    dec.tone === 'alerta' ? colors.alerta : dec.tone === 'aviso' ? colors.aviso : colors.verde;
+                  return (
+                    <View style={[s.cmpBanner, { borderColor: tone }]}>
+                      <Text style={[s.cmpBannerTitle, { color: tone }]}>{dec.titulo}</Text>
+                      <Text style={s.cmpBannerText}>{alteracaoResumo.relatorio.recomendacao}</Text>
+                    </View>
+                  );
+                })()}
+                <Text style={s.analiseNota}>
+                  {alteracaoResumo.baseline === 'demo'
+                    ? 'Comparado a um baseline de demonstração (sem registro anterior real). '
+                    : ''}
+                  Acréscimo não prova compra; valide com dados oficiais quando houver rede.
+                </Text>
+              </>
+            )}
+
+            {/* Solicitar visita/conferência do técnico (proativa do produtor) */}
+            {imovel.solicitacaoVisita ? (
+              <View style={s.visitaFeita}>
+                <Text style={s.visitaFeitaText}>
+                  ✓ Conferência solicitada (
+                  {imovel.solicitacaoVisita.motivo === 'medicao' ? 'nova medição' : 'documentação'}) — na fila
+                  do analista.
+                </Text>
+              </View>
+            ) : (
+              <View style={[s.btnRow, { marginTop: 12 }]}>
+                <PrimaryButton
+                  label={activeAction === 'visita' ? 'Solicitando…' : 'Solicitar visita do técnico'}
+                  onPress={handleSolicitarVisita}
+                  disabled={isBusy}
+                />
+              </View>
+            )}
+          </Card>
+        )}
+
         {/* --- Envio --- */}
         <View style={s.submitSection}>
           {!validation.ok ? (
@@ -596,4 +698,22 @@ const s = StyleSheet.create({
     lineHeight: 16,
     marginTop: 4,
   },
+
+  // Comparação com registro anterior
+  cmpOk: {
+    fontSize: 13,
+    color: colors.verde,
+    fontWeight: '700',
+    lineHeight: 18,
+  },
+  cmpBanner: {
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 10,
+    marginTop: 10,
+  },
+  cmpBannerTitle: { fontSize: 13, fontWeight: '800' },
+  cmpBannerText: { fontSize: 12, color: colors.ink, marginTop: 4, lineHeight: 17 },
+  visitaFeita: { backgroundColor: '#e2f3e8', borderRadius: 10, padding: 10, marginTop: 12 },
+  visitaFeitaText: { fontSize: 13, color: colors.verde, fontWeight: '700', lineHeight: 18 },
 });
