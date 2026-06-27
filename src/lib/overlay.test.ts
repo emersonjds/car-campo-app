@@ -22,16 +22,7 @@
 //   (d) Desmatamento com sobreposição > 20% → severidade 'critico'
 //   (e) Camada sem interseção → não entra em sobreposicoes
 
-// Stubs de tipo para o runner de teste (jest e vitest injetam esses globais).
-// ⚠️  NÃO instale um runner aqui sem confirmar com o time — veja o comentário
-//     no topo do arquivo. Estes declare apenas satisfazem o tsc enquanto
-//     o runner não está configurado.
-/* eslint-disable @typescript-eslint/no-explicit-any */
-declare function describe(name: string, fn: () => void): void;
-declare function it(name: string, fn: () => void): void;
-declare const expect: any;
-/* eslint-enable @typescript-eslint/no-explicit-any */
-
+import { describe, it, expect } from 'vitest';
 import {
   analisarSobreposicoes,
   severidadePorTipo,
@@ -238,6 +229,264 @@ describe('severidadePorTipo', () => {
   it('unidade_conservacao → critico', () => expect(severidadePorTipo('unidade_conservacao')).toBe('critico'));
   it('embargo_ibama → critico', () => expect(severidadePorTipo('embargo_ibama')).toBe('critico'));
   it('desmatamento → alerta', () => expect(severidadePorTipo('desmatamento')).toBe('alerta'));
+  it('queimada → alerta', () => expect(severidadePorTipo('queimada')).toBe('alerta'));
   it('app_hidrografia → info', () => expect(severidadePorTipo('app_hidrografia')).toBe('info'));
   it('car_vizinho → info', () => expect(severidadePorTipo('car_vizinho')).toBe('info'));
+});
+
+// ---------------------------------------------------------------------------
+// Mensagens por tipo e ramos dinâmicos de severidade (cobertura de _mensagem)
+// ---------------------------------------------------------------------------
+
+describe('mensagens e severidade dinâmica', () => {
+  it('unidade_conservacao gera mensagem com ICMBio', () => {
+    const imóvel = _square(-55.95, -12.42, 0.01);
+    const uc = _camadaQuadrado(-55.95, -12.42, 0.005, 'unidade_conservacao');
+    const r = analisarSobreposicoes(imóvel, [uc]);
+    expect(r.sobreposicoes[0]!.severidade).toBe('critico');
+    expect(r.sobreposicoes[0]!.mensagem).toContain('ICMBio');
+  });
+
+  it('embargo_ibama gera mensagem de embargo', () => {
+    const imóvel = _square(-55.95, -12.42, 0.01);
+    const emb = _camadaQuadrado(-55.95, -12.42, 0.005, 'embargo_ibama');
+    const r = analisarSobreposicoes(imóvel, [emb]);
+    expect(r.sobreposicoes[0]!.mensagem).toContain('IBAMA');
+  });
+
+  it('terra_indigena gera mensagem com FUNAI', () => {
+    const imóvel = _square(-55.95, -12.42, 0.01);
+    const ti = _camadaQuadrado(-55.95, -12.42, 0.005, 'terra_indigena');
+    const r = analisarSobreposicoes(imóvel, [ti]);
+    expect(r.sobreposicoes[0]!.mensagem).toContain('FUNAI');
+  });
+
+  it('desmatamento ≤ 20% (não crítico) usa mensagem de alerta', () => {
+    // imóvel grande, camada cobrindo fração pequena (~5%)
+    const imóvel = _square(-55.95, -12.42, 0.02);
+    const desmat: CamadaRef = {
+      tipo: 'desmatamento',
+      nome: 'PRODES pequeno',
+      fonte: 'fixture',
+      rings: [[
+        [-55.97, -12.44],
+        [-55.964, -12.44],
+        [-55.964, -12.435],
+        [-55.97, -12.435],
+        [-55.97, -12.44],
+      ]],
+    };
+    const r = analisarSobreposicoes(imóvel, [desmat]);
+    expect(r.sobreposicoes).toHaveLength(1);
+    const s = r.sobreposicoes[0]!;
+    expect(s.percentual).toBeLessThanOrEqual(20);
+    expect(s.severidade).toBe('alerta');
+    expect(s.mensagem).toContain('desmatada legalmente');
+  });
+
+  it('queimada > 20% escala para crítico com mensagem específica', () => {
+    const imóvel = _square(-55.95, -12.42, 0.01);
+    const queimada: CamadaRef = {
+      tipo: 'queimada',
+      nome: 'AQ1km teste',
+      fonte: 'fixture',
+      rings: [[
+        [-55.97, -12.44],
+        [-55.95, -12.44],
+        [-55.95, -12.40],
+        [-55.97, -12.40],
+        [-55.97, -12.44],
+      ]],
+    };
+    const r = analisarSobreposicoes(imóvel, [queimada]);
+    const s = r.sobreposicoes[0]!;
+    expect(s.percentual).toBeGreaterThan(20);
+    expect(s.severidade).toBe('critico');
+    expect(s.mensagem).toContain('Percentual alto');
+    expect(r.ok).toBe(false);
+  });
+
+  it('queimada ≤ 20% permanece alerta', () => {
+    const imóvel = _square(-55.95, -12.42, 0.02);
+    const queimada: CamadaRef = {
+      tipo: 'queimada',
+      nome: 'AQ1km pequeno',
+      fonte: 'fixture',
+      rings: [[
+        [-55.97, -12.44],
+        [-55.964, -12.44],
+        [-55.964, -12.435],
+        [-55.97, -12.435],
+        [-55.97, -12.44],
+      ]],
+    };
+    const r = analisarSobreposicoes(imóvel, [queimada]);
+    const s = r.sobreposicoes[0]!;
+    expect(s.percentual).toBeLessThanOrEqual(20);
+    expect(s.severidade).toBe('alerta');
+    expect(s.mensagem).toContain('queima controlada');
+  });
+
+  it('app_hidrografia gera mensagem de APP', () => {
+    const imóvel = _square(-55.95, -12.42, 0.01);
+    const app = _camadaQuadrado(-55.95, -12.42, 0.005, 'app_hidrografia');
+    const r = analisarSobreposicoes(imóvel, [app]);
+    expect(r.sobreposicoes[0]!.mensagem).toContain('APP');
+  });
+
+  it('car_vizinho > 50% escala para alerta (conflito de limites)', () => {
+    const imóvel = _square(-55.95, -12.42, 0.01);
+    // camada cobre todo o imóvel → 100%
+    const car = _camadaQuadrado(-55.95, -12.42, 0.02, 'car_vizinho');
+    const r = analisarSobreposicoes(imóvel, [car]);
+    const s = r.sobreposicoes[0]!;
+    expect(s.percentual).toBeGreaterThan(50);
+    expect(s.severidade).toBe('alerta');
+    expect(s.mensagem).toContain('conflito de limites');
+    // alerta não bloqueia
+    expect(r.ok).toBe(true);
+  });
+
+  it('car_vizinho ≤ 50% permanece info', () => {
+    const imóvel = _square(-55.95, -12.42, 0.02);
+    const car: CamadaRef = {
+      tipo: 'car_vizinho',
+      nome: 'Fazenda vizinha',
+      fonte: 'fixture',
+      rings: [[
+        [-55.97, -12.44],
+        [-55.964, -12.44],
+        [-55.964, -12.435],
+        [-55.97, -12.435],
+        [-55.97, -12.44],
+      ]],
+    };
+    const r = analisarSobreposicoes(imóvel, [car]);
+    const s = r.sobreposicoes[0]!;
+    expect(s.percentual).toBeLessThanOrEqual(50);
+    expect(s.severidade).toBe('info');
+    expect(s.mensagem).toContain('georreferenciamento');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Holes, MultiPolygon (múltiplas partes), fechamento de anéis e incerteza
+// ---------------------------------------------------------------------------
+
+describe('topologia avançada de camadas', () => {
+  it('camada com buraco (hole) reduz a área de interseção', () => {
+    const imóvel = _square(-55.95, -12.42, 0.01);
+    const half = 0.02;
+    const lon = -55.95;
+    const lat = -12.42;
+    const holeHalf = 0.009;
+    // anel exterior grande, com um buraco central que cobre quase todo o imóvel
+    const comBuraco: CamadaRef = {
+      tipo: 'terra_indigena',
+      nome: 'TI com exclusão',
+      fonte: 'fixture',
+      rings: [
+        [
+          [lon - half, lat - half],
+          [lon + half, lat - half],
+          [lon + half, lat + half],
+          [lon - half, lat + half],
+          [lon - half, lat - half],
+        ],
+        [
+          [lon - holeHalf, lat - holeHalf],
+          [lon + holeHalf, lat - holeHalf],
+          [lon + holeHalf, lat + holeHalf],
+          [lon - holeHalf, lat + holeHalf],
+          [lon - holeHalf, lat - holeHalf],
+        ],
+      ],
+    };
+    const semBuraco = _camadaQuadrado(lon, lat, half, 'terra_indigena');
+    const comR = analisarSobreposicoes(imóvel, [comBuraco]);
+    const semR = analisarSobreposicoes(imóvel, [semBuraco]);
+    const areaCom = comR.sobreposicoes[0]?.area_ha ?? 0;
+    const areaSem = semR.sobreposicoes[0]!.area_ha;
+    expect(areaCom).toBeLessThan(areaSem);
+  });
+
+  it('MultiPolygon representado como múltiplas CamadaRef agrega cada parte', () => {
+    const imóvel = _square(-55.95, -12.42, 0.02);
+    // duas partes que tocam o imóvel em cantos opostos
+    const parte1 = _camadaQuadrado(-55.96, -12.43, 0.005, 'desmatamento');
+    const parte2 = _camadaQuadrado(-55.94, -12.41, 0.005, 'desmatamento');
+    const r = analisarSobreposicoes(imóvel, [parte1, parte2]);
+    expect(r.sobreposicoes.length).toBe(2);
+  });
+
+  it('camada com anéis vazios é ignorada (rings.length === 0)', () => {
+    const imóvel = _square(-55.95, -12.42, 0.01);
+    const vazia: CamadaRef = { tipo: 'terra_indigena', nome: 'x', fonte: 'y', rings: [] };
+    const r = analisarSobreposicoes(imóvel, [vazia]);
+    expect(r.sobreposicoes).toHaveLength(0);
+  });
+
+  it('anel de camada não-fechado é fechado internamente (sem lançar)', () => {
+    const imóvel = _square(-55.95, -12.42, 0.01);
+    const aberta: CamadaRef = {
+      tipo: 'embargo_ibama',
+      nome: 'aberta',
+      fonte: 'fixture',
+      rings: [[
+        [-55.955, -12.425],
+        [-55.945, -12.425],
+        [-55.945, -12.415],
+        [-55.955, -12.415],
+        // não fecha — _ensureClosedRings deve fechar
+      ]],
+    };
+    const r = analisarSobreposicoes(imóvel, [aberta]);
+    expect(r.sobreposicoes).toHaveLength(1);
+  });
+
+  it('imóvel já fechado (primeiro = último) não duplica vértice', () => {
+    const base = _square(-55.95, -12.42, 0.01);
+    const fechado = [...base, { ...base[0]! }];
+    const ti = _camadaQuadrado(-55.95, -12.42, 0.005, 'terra_indigena');
+    const r = analisarSobreposicoes(fechado, [ti]);
+    expect(r.sobreposicoes).toHaveLength(1);
+  });
+
+  it('camada com anel vazio é tolerada (geometria inválida ignorada)', () => {
+    const imóvel = _square(-55.95, -12.42, 0.01);
+    const invalida: CamadaRef = {
+      tipo: 'terra_indigena',
+      nome: 'anel vazio',
+      fonte: 'fixture',
+      rings: [[]],
+    };
+    const r = analisarSobreposicoes(imóvel, [invalida]);
+    expect(r.sobreposicoes).toHaveLength(0);
+  });
+
+  it('incertezaPosicional_m = pior accuracy dos vértices', () => {
+    const pts = _square(-55.95, -12.42, 0.01).map((p, i) => ({
+      ...p,
+      accuracy: i === 0 ? 18 : 5,
+    }));
+    const r = analisarSobreposicoes(pts, []);
+    expect(r.incertezaPosicional_m).toBe(18);
+  });
+
+  it('sem accuracy nos vértices → incertezaPosicional_m undefined', () => {
+    const r = analisarSobreposicoes(_square(-55.95, -12.42, 0.01), []);
+    expect(r.incertezaPosicional_m).toBeUndefined();
+  });
+
+  it('respeita fonteDados informado', () => {
+    const r = analisarSobreposicoes(_square(-55.95, -12.42, 0.01), [], 'cache');
+    expect(r.fonteDados).toBe('cache');
+  });
+
+  it('percentual nunca passa de 100 mesmo com camada muito maior', () => {
+    const imóvel = _square(-55.95, -12.42, 0.005);
+    const enorme = _camadaQuadrado(-55.95, -12.42, 0.05, 'app_hidrografia');
+    const r = analisarSobreposicoes(imóvel, [enorme]);
+    expect(r.sobreposicoes[0]!.percentual).toBeLessThanOrEqual(100);
+  });
 });
