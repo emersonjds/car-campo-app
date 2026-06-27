@@ -1,5 +1,6 @@
-// Wizard passo 3 — Documentos. Lista e adiciona anexos ao imóvel.
-// Documentos são opcionais: o produtor pode sempre avançar para a revisão.
+// Tela de Detalhe do Documento CAR — redesenho S1.
+// Mostra header CAR, métricas, abas, mapa SIRGAS 2000, checklist de conformidade
+// e preserva a gestão de anexos (câmera / galeria / arquivo).
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -11,24 +12,240 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import MapView, { Polygon } from 'react-native-maps';
+import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '../app/Screen';
-import { WizardSteps } from '../app/WizardSteps';
 import { useNav } from '../app/navigation';
 import { getImovel, updateImovel } from '../lib/store';
 import { deleteDocumentFile, pickDocument, pickFromLibrary, takePhoto } from '../lib/documents';
-import { Badge, EmptyState, PrimaryButton, SecondaryButton } from '../ui';
+import { exportPDF, shareText } from '../lib/export';
+import { Button, Card, EmptyState, StatusChip } from '../ui';
 import { colors } from '../theme/colors';
-import type { Documento, DocumentoTipo } from '../types';
+import type { Documento, DocumentoTipo, Imovel } from '../types';
 
 // ---------------------------------------------------------------------------
-// Rótulos e metadados de cada tipo de documento
+// Helpers
+// ---------------------------------------------------------------------------
+
+type Tab = 'dados' | 'dominio' | 'uso';
+type ChecklistStatus = 'ok' | 'aviso' | 'pendente';
+
+interface ChecklistEntry {
+  label: string;
+  detail?: string;
+  status: ChecklistStatus;
+}
+
+function chipProps(imovel: Imovel): { status: 'regularizado' | 'critico' | 'aviso'; label: string } {
+  const v = imovel.validacao?.status;
+  if (v === 'aprovado') return { status: 'regularizado', label: 'Validado' };
+  if (v === 'reprovado') return { status: 'critico', label: 'Reprovado' };
+  return { status: 'aviso', label: 'Pendente' };
+}
+
+function buildChecklist(imovel: Imovel): ChecklistEntry[] {
+  const ok = imovel.validacao?.status === 'aprovado';
+  const entries: ChecklistEntry[] = [
+    {
+      label: 'Reserva Legal averbada',
+      detail: 'Conforme Art. 12 da Lei 12.651',
+      status: ok ? 'ok' : 'pendente',
+    },
+    {
+      label: 'APP em conformidade',
+      detail: 'Área de Preservação Permanente',
+      status: ok ? 'ok' : 'pendente',
+    },
+    {
+      label: 'Georreferenciamento',
+      detail: imovel.status === 'enviado' ? 'Enviado ao SICAR' : 'Pendente de envio',
+      status: imovel.status === 'enviado' ? 'ok' : 'pendente',
+    },
+  ];
+  if (imovel.alertaDivergencia) {
+    const pct = imovel.alertaDivergencia.delta_pct.toFixed(2);
+    entries.push({
+      label: 'Sobreposição Parcial',
+      detail: `Aguardando análise (${pct}%)`,
+      status: 'aviso',
+    });
+  }
+  return entries;
+}
+
+function fmtDate(ts: number): string {
+  return new Date(ts).toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+function calcRegion(points: Array<{ latitude: number; longitude: number }>) {
+  if (points.length < 3) return null;
+  const lons = points.map((p) => p.longitude);
+  const lats = points.map((p) => p.latitude);
+  const minLat = Math.min(...lats);
+  const maxLat = Math.max(...lats);
+  const minLon = Math.min(...lons);
+  const maxLon = Math.max(...lons);
+  return {
+    latitude: (minLat + maxLat) / 2,
+    longitude: (minLon + maxLon) / 2,
+    latitudeDelta: Math.max(maxLat - minLat, 0.002) * 1.6,
+    longitudeDelta: Math.max(maxLon - minLon, 0.002) * 1.6,
+  };
+}
+
+function ehImagem(doc: Documento): boolean {
+  if (doc.mime) return doc.mime.startsWith('image/');
+  return /\.(jpg|jpeg|png|gif|webp|heic|bmp)$/i.test(doc.nome);
+}
+
+// ---------------------------------------------------------------------------
+// Sub-componentes locais
+// ---------------------------------------------------------------------------
+
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={s.infoRow}>
+      <Text style={s.infoLabel}>{label}</Text>
+      <Text style={s.infoValue}>{value}</Text>
+    </View>
+  );
+}
+
+function MetricCard({
+  label,
+  value,
+  sublabel,
+  valueColor,
+}: {
+  label: string;
+  value: string;
+  sublabel?: string;
+  valueColor?: string;
+}) {
+  return (
+    <View style={s.metricCard}>
+      <Text style={s.metricLabel}>{label}</Text>
+      <Text style={[s.metricValue, valueColor ? { color: valueColor } : undefined]}>{value}</Text>
+      {sublabel ? <Text style={s.metricSub}>{sublabel}</Text> : null}
+    </View>
+  );
+}
+
+function ChecklistRow({ item }: { item: ChecklistEntry }) {
+  const iconName =
+    item.status === 'ok'
+      ? ('checkmark-circle' as const)
+      : item.status === 'aviso'
+        ? ('warning' as const)
+        : ('time-outline' as const);
+  const iconColor =
+    item.status === 'ok' ? colors.primary : item.status === 'aviso' ? colors.aviso : colors.mutedText;
+  return (
+    <View style={s.checkRow}>
+      <Ionicons name={iconName} size={20} color={iconColor} />
+      <View style={s.checkBody}>
+        <Text style={[s.checkLabel, item.status === 'aviso' && { color: colors.critico }]}>
+          {item.label}
+        </Text>
+        {item.detail ? <Text style={s.checkDetail}>{item.detail}</Text> : null}
+      </View>
+    </View>
+  );
+}
+
+function TabDados({ imovel }: { imovel: Imovel }) {
+  const region = calcRegion(imovel.geometry.points);
+  return (
+    <View style={s.tabContent}>
+      <InfoRow label="Nome da Propriedade" value={imovel.imovel.nome} />
+      <InfoRow
+        label="Município"
+        value={[imovel.imovel.municipio, imovel.imovel.uf].filter(Boolean).join(' – ')}
+      />
+      {imovel.imovel.modulosFiscais != null && (
+        <InfoRow label="Módulos Fiscais" value={`${imovel.imovel.modulosFiscais} módulos`} />
+      )}
+      <InfoRow label="Proprietário Principal" value={imovel.produtor.nome} />
+
+      {region ? (
+        <>
+          <Text style={s.mapLabel}>Coordenadas SIRGAS 2000</Text>
+          <MapView
+            style={s.map}
+            region={region}
+            mapType="satellite"
+            scrollEnabled={false}
+            zoomEnabled={false}
+            rotateEnabled={false}
+            pitchEnabled={false}
+          >
+            <Polygon
+              coordinates={imovel.geometry.points.map((p) => ({
+                latitude: p.latitude,
+                longitude: p.longitude,
+              }))}
+              fillColor="rgba(45,90,39,0.3)"
+              strokeColor={colors.primary}
+              strokeWidth={2}
+            />
+          </MapView>
+        </>
+      ) : (
+        <Text style={s.tabEmpty}>Nenhum perímetro demarcado.</Text>
+      )}
+    </View>
+  );
+}
+
+function TabDominio({ imovel }: { imovel: Imovel }) {
+  const docsDom = imovel.documentos.filter(
+    (d) => d.tipo === 'matricula' || d.tipo === 'ccir',
+  );
+  return (
+    <View style={s.tabContent}>
+      {imovel.imovel.matricula ? (
+        <InfoRow label="Matrícula" value={imovel.imovel.matricula} />
+      ) : null}
+      {docsDom.length > 0 ? (
+        docsDom.map((doc) => (
+          <View key={doc.id} style={s.domDocRow}>
+            <Ionicons name="document-outline" size={18} color={colors.mutedText} />
+            <Text style={s.domDocLabel} numberOfLines={1}>
+              {doc.nome}
+            </Text>
+          </View>
+        ))
+      ) : (
+        <Text style={s.tabEmpty}>
+          {imovel.imovel.matricula
+            ? 'Nenhum documento de matrícula ou CCIR anexado.'
+            : 'Matrícula e CCIR não informados.'}
+        </Text>
+      )}
+    </View>
+  );
+}
+
+function TabUso() {
+  return (
+    <View style={s.tabContent}>
+      <Text style={s.tabEmpty}>Uso do solo não cadastrado neste imóvel.</Text>
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Metadados de tipo de documento (preservados do original)
 // ---------------------------------------------------------------------------
 
 type TipoMeta = {
   label: string;
   descricao: string;
   icone: string;
-  /** Quais ações oferecer no menu de escolha */
   acoes: ('camera' | 'galeria' | 'arquivo')[];
   geotag?: boolean;
 };
@@ -73,25 +290,7 @@ const TIPOS_META: Record<DocumentoTipo, TipoMeta> = {
   },
 };
 
-// Ordem de exibição dos botões de adicionar
 const ORDEM_TIPOS: DocumentoTipo[] = ['matricula', 'ccir', 'rg', 'car', 'foto-divisa', 'outro'];
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function ehImagem(doc: Documento): boolean {
-  if (doc.mime) return doc.mime.startsWith('image/');
-  return /\.(jpg|jpeg|png|gif|webp|heic|bmp)$/i.test(doc.nome);
-}
-
-function rotuloBadge(tipo: DocumentoTipo): string {
-  return TIPOS_META[tipo]?.label ?? tipo;
-}
-
-// ---------------------------------------------------------------------------
-// Subcomponentes
-// ---------------------------------------------------------------------------
 
 function BotaoTipo({
   meta,
@@ -143,28 +342,29 @@ function ItemDocumento({
   }
 
   return (
-    <View style={s.itemDoc} accessibilityLabel={`Documento: ${doc.nome}, tipo ${meta?.label ?? doc.tipo}`}>
-      {/* Miniatura ou ícone */}
+    <View
+      style={s.itemDoc}
+      accessibilityLabel={`Documento: ${doc.nome}, tipo ${meta?.label ?? doc.tipo}`}
+    >
       {imagem ? (
-        <Image source={{ uri: doc.uri }} style={s.thumb} resizeMode="cover" accessibilityLabel="" />
+        <Image
+          source={{ uri: doc.uri }}
+          style={s.thumb}
+          resizeMode="cover"
+          accessibilityLabel=""
+        />
       ) : (
         <View style={[s.thumb, s.thumbPdf]}>
           <Text style={s.thumbPdfIcone}>📄</Text>
         </View>
       )}
-
-      {/* Informações */}
       <View style={s.itemInfo}>
         <Text style={s.itemNome} numberOfLines={1}>
           {doc.nome}
         </Text>
-        <Badge tone="neutro">{rotuloBadge(doc.tipo)}</Badge>
-        {geotagged && (
-          <Text style={s.itemGeo}>📍 georreferenciada</Text>
-        )}
+        <Text style={s.itemTipo}>{meta?.label ?? doc.tipo}</Text>
+        {geotagged ? <Text style={s.itemGeo}>georreferenciada</Text> : null}
       </View>
-
-      {/* Botão remover */}
       <TouchableOpacity
         style={s.btnRemover}
         onPress={confirmarRemocao}
@@ -184,16 +384,22 @@ function ItemDocumento({
 
 export function DocumentosScreen({ imovelId }: { imovelId: string }) {
   const { navigate, goBack } = useNav();
+  const [imovel, setImovel] = useState<Imovel | null>(null);
   const [documentos, setDocumentos] = useState<Documento[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [sharingPdf, setSharingPdf] = useState(false);
+  const [sharingText, setSharingText] = useState(false);
+  const [activeTab, setActiveTab] = useState<Tab>('dados');
 
-  // Carrega lista de documentos já salvos no imóvel
   useEffect(() => {
     let ativo = true;
     getImovel(imovelId).then((im) => {
       if (!ativo) return;
-      if (im) setDocumentos(im.documentos);
+      if (im) {
+        setImovel(im);
+        setDocumentos(im.documentos);
+      }
       setLoading(false);
     });
     return () => {
@@ -201,13 +407,11 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
     };
   }, [imovelId]);
 
-  // Persiste a lista no store sempre que ela mudar
   async function salvarLista(nova: Documento[]): Promise<void> {
     setDocumentos(nova);
     await updateImovel(imovelId, { documentos: nova });
   }
 
-  // Adiciona um documento recém-capturado
   const adicionarDoc = useCallback(
     async (doc: Documento) => {
       await salvarLista([...documentos, doc]);
@@ -215,7 +419,6 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
     [documentos], // eslint-disable-line react-hooks/exhaustive-deps
   );
 
-  // Remove da lista e apaga o arquivo do sandbox
   const removerDoc = useCallback(
     async (doc: Documento) => {
       await deleteDocumentFile(doc);
@@ -224,7 +427,6 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
     [documentos], // eslint-disable-line react-hooks/exhaustive-deps
   );
 
-  // Ações de captura
   async function comCamera(tipo: DocumentoTipo, geotag: boolean) {
     setBusy(true);
     try {
@@ -255,12 +457,10 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
     }
   }
 
-  // Monta o Alert de escolha de ação para cada tipo
   function abrirMenu(tipo: DocumentoTipo) {
     if (busy) return;
     const meta = TIPOS_META[tipo];
     const botoes: { text: string; onPress: () => void }[] = [];
-
     if (meta.acoes.includes('camera')) {
       const rotulo = meta.geotag ? 'Tirar foto (com localização)' : 'Tirar foto';
       botoes.push({ text: rotulo, onPress: () => comCamera(tipo, !!meta.geotag) });
@@ -271,11 +471,34 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
     if (meta.acoes.includes('arquivo')) {
       botoes.push({ text: 'Escolher arquivo (PDF)', onPress: () => comArquivo(tipo) });
     }
-
     Alert.alert(meta.label, meta.descricao, [
       ...botoes.map((b) => ({ text: b.text, onPress: b.onPress })),
       { text: 'Cancelar', style: 'cancel' as const },
     ]);
+  }
+
+  async function handlePdf() {
+    if (!imovel) return;
+    setSharingPdf(true);
+    try {
+      await exportPDF(imovel);
+    } catch {
+      Alert.alert('Erro', 'Não foi possível gerar o PDF. Tente novamente.');
+    } finally {
+      setSharingPdf(false);
+    }
+  }
+
+  async function handleShare() {
+    if (!imovel) return;
+    setSharingText(true);
+    try {
+      await shareText(imovel);
+    } catch {
+      Alert.alert('Erro', 'Não foi possível compartilhar.');
+    } finally {
+      setSharingText(false);
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -284,30 +507,171 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
 
   if (loading) {
     return (
-      <Screen title="Documentos" subtitle="Anexos e fotos da divisa">
-        <WizardSteps active={2} />
+      <Screen title="Documentos" showBack>
         <View style={s.centralize}>
-          <ActivityIndicator color={colors.verde} size="large" />
+          <ActivityIndicator color={colors.primary} size="large" />
         </View>
       </Screen>
     );
   }
 
-  return (
-    <Screen title="Documentos" subtitle="Anexos e fotos da divisa">
-      <WizardSteps active={2} />
+  if (!imovel) {
+    return (
+      <Screen title="Documentos" showBack>
+        <EmptyState title="Imóvel não encontrado" />
+      </Screen>
+    );
+  }
 
+  const { status: chipStatus, label: chipLabel } = chipProps(imovel);
+  const checklist = buildChecklist(imovel);
+  const firstImageDoc = documentos.find(ehImagem);
+  const areaStr = `${imovel.geometry.area_ha.toFixed(2)} ha`;
+  const protoco = imovel.imovel.matricula
+    ? `Matrícula: ${imovel.imovel.matricula}`
+    : `ID: ${imovel.id.slice(0, 12)}`;
+  const tabs: { key: Tab; label: string }[] = [
+    { key: 'dados', label: 'Dados do Imóvel' },
+    { key: 'dominio', label: 'Domínio' },
+    { key: 'uso', label: 'Uso do Solo' },
+  ];
+
+  return (
+    <Screen title="Documentos" subtitle={imovel.imovel.nome}>
       <ScrollView
         style={s.scroll}
         contentContainerStyle={s.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Seção: botões de adicionar */}
+        {/* Breadcrumb + título + chip */}
+        <Text style={s.breadcrumb}>Documentos › CAR</Text>
+        <View style={s.titleRow}>
+          <Text style={s.titleCar} numberOfLines={2}>
+            Cadastro Ambiental Rural (CAR)
+          </Text>
+          <StatusChip status={chipStatus} label={chipLabel} />
+        </View>
+        <Text style={s.protoco}>{protoco}</Text>
+
+        {/* Botões de ação */}
+        <View style={s.actionRow}>
+          <Button
+            label="Compartilhar"
+            variant="outlined"
+            onPress={handleShare}
+            loading={sharingText}
+            disabled={sharingPdf}
+          />
+          <View style={s.actionSpacer} />
+          <Button
+            label="Baixar PDF"
+            variant="primary"
+            onPress={handlePdf}
+            loading={sharingPdf}
+            disabled={sharingText}
+          />
+        </View>
+
+        {/* VISUALIZAÇÃO */}
+        <Card style={s.secaoCard}>
+          <Text style={s.secaoLabel}>VISUALIZAÇÃO</Text>
+          {firstImageDoc ? (
+            <Image
+              source={{ uri: firstImageDoc.uri }}
+              style={s.preview}
+              resizeMode="contain"
+              accessibilityLabel="Pré-visualização do documento"
+            />
+          ) : (
+            <View style={s.previewPlaceholder}>
+              <Ionicons name="document-text-outline" size={40} color={colors.mutedText} />
+              <Text style={s.previewPlaceholderText}>
+                {documentos.length > 0
+                  ? 'Pré-visualização não disponível (PDF)'
+                  : 'Nenhum documento anexado'}
+              </Text>
+            </View>
+          )}
+          <Text style={s.previewMeta}>
+            {documentos.length}{' '}
+            {documentos.length !== 1 ? 'documentos' : 'documento'} · Atualizado em{' '}
+            {fmtDate(imovel.updatedAt)}
+          </Text>
+        </Card>
+
+        {/* HISTÓRICO DE VERSÕES */}
+        <Card style={s.secaoCard}>
+          <Text style={s.secaoLabel}>HISTÓRICO DE VERSÕES</Text>
+          {imovel.updatedAt !== imovel.createdAt && (
+            <View style={s.historicoItem}>
+              <View style={[s.historicoDot, { backgroundColor: colors.primary }]} />
+              <View>
+                <Text style={s.historicoLbl}>Atualização</Text>
+                <Text style={s.historicoData}>{fmtDate(imovel.updatedAt)}</Text>
+              </View>
+            </View>
+          )}
+          <View style={s.historicoItem}>
+            <View style={[s.historicoDot, { backgroundColor: colors.line }]} />
+            <View>
+              <Text style={s.historicoLbl}>Cadastro inicial</Text>
+              <Text style={s.historicoData}>{fmtDate(imovel.createdAt)}</Text>
+            </View>
+          </View>
+        </Card>
+
+        {/* Métricas */}
+        <View style={s.metricsRow}>
+          <MetricCard label="Área Total" value={areaStr} />
+          <View style={s.metricSpacer} />
+          <MetricCard
+            label="Reserva Legal"
+            value="—"
+            sublabel="Pendente"
+            valueColor={colors.secondary}
+          />
+        </View>
+        <MetricCard
+          label="APP"
+          value="—"
+          sublabel="Pendente"
+          valueColor={colors.tertiary}
+        />
+
+        {/* Abas */}
+        <View style={s.tabBar}>
+          {tabs.map(({ key, label }) => (
+            <TouchableOpacity
+              key={key}
+              style={[s.tab, activeTab === key && s.tabActive]}
+              onPress={() => setActiveTab(key)}
+              accessibilityRole="tab"
+            >
+              <Text style={[s.tabLabelText, activeTab === key && s.tabLabelActive]}>
+                {label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <Card style={s.tabCard}>
+          {activeTab === 'dados' && <TabDados imovel={imovel} />}
+          {activeTab === 'dominio' && <TabDominio imovel={imovel} />}
+          {activeTab === 'uso' && <TabUso />}
+        </Card>
+
+        {/* Checklist de conformidade */}
+        <Card style={s.secaoCard}>
+          <Text style={s.secaoLabel}>CHECKLIST DE CONFORMIDADE</Text>
+          {checklist.map((item, i) => (
+            <ChecklistRow key={i} item={item} />
+          ))}
+        </Card>
+
+        {/* Gerenciar documentos */}
         <Text style={s.secaoTitulo}>Adicionar documentos</Text>
         <Text style={s.secaoHint}>
           Toque em um tipo para adicionar. Todos os campos são opcionais.
         </Text>
-
         <View style={s.gridTipos}>
           {ORDEM_TIPOS.map((tipo) => (
             <BotaoTipo
@@ -318,24 +682,21 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
             />
           ))}
         </View>
-
         {busy && (
           <View style={s.busyRow}>
-            <ActivityIndicator color={colors.verde} />
+            <ActivityIndicator color={colors.primary} />
             <Text style={s.busyTexto}>Aguarde…</Text>
           </View>
         )}
 
-        {/* Seção: lista de documentos */}
-        <Text style={[s.secaoTitulo, { marginTop: 24 }]}>
+        <Text style={[s.secaoTitulo, { marginTop: 20 }]}>
           Documentos anexados{documentos.length > 0 ? ` (${documentos.length})` : ''}
         </Text>
-
         {documentos.length === 0 ? (
           <EmptyState
             title="Nenhum documento ainda"
             hint={
-              'Adicione a matrícula, o CCIR e fotos da divisa do imóvel.\n' +
+              'Adicione a matrícula, o CCIR e fotos da divisa.\n' +
               'Você pode avançar sem documentos e adicionar depois.'
             }
           />
@@ -346,23 +707,15 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
             ))}
           </View>
         )}
-
-        {/* Dica quando vazio para o rodapé */}
-        {documentos.length === 0 && (
-          <View style={s.dicaVazio}>
-            <Text style={s.dicaVazioTexto}>
-              Dica: fotos da divisa com localização ajudam a confirmar o perímetro desenhado.
-            </Text>
-          </View>
-        )}
       </ScrollView>
 
-      {/* Rodapé fixo */}
+      {/* Rodapé */}
       <View style={s.rodape}>
-        <SecondaryButton label="Voltar" onPress={goBack} />
-        <View style={s.rodapeEspaco} />
-        <PrimaryButton
-          label="Avançar"
+        <Button label="Voltar" variant="secondary" onPress={goBack} />
+        <View style={s.actionSpacer} />
+        <Button
+          label="Revisão"
+          variant="primary"
           onPress={() => navigate({ name: 'revisao', imovelId })}
         />
       </View>
@@ -375,41 +728,140 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
 // ---------------------------------------------------------------------------
 
 const s = StyleSheet.create({
-  centralize: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 8,
-  },
+  centralize: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  scroll: { flex: 1 },
+  scrollContent: { padding: 16, paddingBottom: 8 },
 
-  // Seções
+  // Header CAR
+  breadcrumb: { fontSize: 12, color: colors.mutedText, marginBottom: 6 },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 10,
+    marginBottom: 4,
+  },
+  titleCar: {
+    flex: 1,
+    fontSize: 22,
+    fontWeight: '800',
+    color: colors.inkText,
+    lineHeight: 28,
+  },
+  protoco: { fontSize: 12, color: colors.mutedText, marginBottom: 14 },
+
+  // Ações
+  actionRow: { flexDirection: 'row', marginBottom: 16 },
+  actionSpacer: { width: 10 },
+
+  // Seção genérica
+  secaoCard: { marginBottom: 12 },
+  secaoLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.mutedText,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 12,
+  },
   secaoTitulo: {
     fontSize: 15,
     fontWeight: '800',
-    color: colors.ink,
+    color: colors.inkText,
     marginBottom: 4,
+    marginTop: 16,
   },
-  secaoHint: {
-    fontSize: 13,
-    color: colors.muted,
-    marginBottom: 12,
-    lineHeight: 18,
-  },
+  secaoHint: { fontSize: 13, color: colors.mutedText, marginBottom: 12, lineHeight: 18 },
 
-  // Grid de tipos (2 por linha)
-  gridTipos: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+  // Visualização
+  preview: { width: '100%', height: 180, borderRadius: 10, backgroundColor: colors.verdeBg },
+  previewPlaceholder: {
+    height: 140,
+    backgroundColor: colors.neutral,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: 10,
   },
+  previewPlaceholderText: { fontSize: 13, color: colors.mutedText, textAlign: 'center' },
+  previewMeta: { fontSize: 11, color: colors.mutedText, marginTop: 8, textAlign: 'center' },
+
+  // Histórico
+  historicoItem: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
+  historicoDot: { width: 10, height: 10, borderRadius: 5 },
+  historicoLbl: { fontSize: 14, fontWeight: '700', color: colors.inkText },
+  historicoData: { fontSize: 12, color: colors.mutedText, marginTop: 1 },
+
+  // Métricas
+  metricsRow: { flexDirection: 'row', marginBottom: 10 },
+  metricSpacer: { width: 10 },
+  metricCard: {
+    flex: 1,
+    backgroundColor: colors.verdeBg,
+    borderRadius: 12,
+    padding: 14,
+  },
+  metricLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.mutedText,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: 2,
+  },
+  metricValue: { fontSize: 26, fontWeight: '800', color: colors.inkText },
+  metricSub: { fontSize: 11, color: colors.mutedText, marginTop: 2 },
+
+  // Tabs
+  tabBar: {
+    flexDirection: 'row',
+    marginTop: 14,
+    marginBottom: 0,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.line,
+  },
+  tab: { flex: 1, paddingVertical: 10, alignItems: 'center' },
+  tabActive: {
+    borderBottomWidth: 2,
+    borderBottomColor: colors.primary,
+    marginBottom: -1,
+  },
+  tabLabelText: { fontSize: 13, fontWeight: '600', color: colors.mutedText },
+  tabLabelActive: { color: colors.primary, fontWeight: '800' },
+  tabCard: { borderTopLeftRadius: 0, borderTopRightRadius: 0, marginBottom: 12 },
+  tabContent: { gap: 12 },
+  tabEmpty: { fontSize: 13, color: colors.mutedText, fontStyle: 'italic', textAlign: 'center', paddingVertical: 12 },
+
+  // Aba Dados — InfoRow
+  infoRow: { gap: 2 },
+  infoLabel: { fontSize: 11, fontWeight: '700', color: colors.mutedText, textTransform: 'uppercase', letterSpacing: 0.5 },
+  infoValue: { fontSize: 15, fontWeight: '600', color: colors.inkText },
+
+  // Mapa (dentro de TabDados)
+  mapLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.mutedText,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginTop: 4,
+    marginBottom: 6,
+  },
+  map: { height: 180, borderRadius: 12, overflow: 'hidden' },
+
+  // Aba Domínio
+  domDocRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  domDocLabel: { flex: 1, fontSize: 13, color: colors.inkText },
+
+  // Checklist
+  checkRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 12 },
+  checkBody: { flex: 1 },
+  checkLabel: { fontSize: 14, fontWeight: '700', color: colors.inkText },
+  checkDetail: { fontSize: 12, color: colors.mutedText, marginTop: 1 },
+
+  // Grid de tipos de documento
+  gridTipos: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   tipoBtn: {
-    // ~metade da largura menos o gap e o padding
     width: '47%',
     backgroundColor: colors.branco,
     borderRadius: 14,
@@ -419,41 +871,17 @@ const s = StyleSheet.create({
     minHeight: 88,
     justifyContent: 'center',
   },
-  tipoBtnDisabled: {
-    opacity: 0.5,
-  },
-  tipoBtnIcone: {
-    fontSize: 22,
-    marginBottom: 4,
-  },
-  tipoBtnLabel: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: colors.ink,
-    marginBottom: 2,
-  },
-  tipoBtnDesc: {
-    fontSize: 11,
-    color: colors.muted,
-    lineHeight: 15,
-  },
+  tipoBtnDisabled: { opacity: 0.5 },
+  tipoBtnIcone: { fontSize: 22, marginBottom: 4 },
+  tipoBtnLabel: { fontSize: 13, fontWeight: '800', color: colors.inkText, marginBottom: 2 },
+  tipoBtnDesc: { fontSize: 11, color: colors.mutedText, lineHeight: 15 },
 
-  // Indicador de operação em andamento
-  busyRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 12,
-  },
-  busyTexto: {
-    fontSize: 13,
-    color: colors.muted,
-  },
+  // Busy
+  busyRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12 },
+  busyTexto: { fontSize: 13, color: colors.mutedText },
 
   // Lista de documentos
-  listaDoc: {
-    gap: 10,
-  },
+  listaDoc: { gap: 10 },
   itemDoc: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -464,33 +892,13 @@ const s = StyleSheet.create({
     padding: 10,
     gap: 10,
   },
-  thumb: {
-    width: 56,
-    height: 56,
-    borderRadius: 10,
-    backgroundColor: colors.verdeBg,
-  },
-  thumbPdf: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  thumbPdfIcone: {
-    fontSize: 28,
-  },
-  itemInfo: {
-    flex: 1,
-    gap: 4,
-  },
-  itemNome: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.ink,
-  },
-  itemGeo: {
-    fontSize: 11,
-    color: colors.verdeClaro,
-    marginTop: 2,
-  },
+  thumb: { width: 56, height: 56, borderRadius: 10, backgroundColor: colors.verdeBg },
+  thumbPdf: { alignItems: 'center', justifyContent: 'center' },
+  thumbPdfIcone: { fontSize: 28 },
+  itemInfo: { flex: 1, gap: 3 },
+  itemNome: { fontSize: 13, fontWeight: '700', color: colors.inkText },
+  itemTipo: { fontSize: 11, color: colors.mutedText },
+  itemGeo: { fontSize: 11, color: colors.verdeClaro },
 
   // Botão remover
   btnRemover: {
@@ -501,27 +909,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  btnRemoverTexto: {
-    fontSize: 14,
-    color: colors.alerta,
-    fontWeight: '800',
-  },
-
-  // Dica quando vazio
-  dicaVazio: {
-    marginTop: 12,
-    backgroundColor: colors.verdeBg,
-    borderRadius: 12,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: colors.line,
-  },
-  dicaVazioTexto: {
-    fontSize: 13,
-    color: colors.muted,
-    lineHeight: 19,
-    textAlign: 'center',
-  },
+  btnRemoverTexto: { fontSize: 14, color: colors.critico, fontWeight: '800' },
 
   // Rodapé
   rodape: {
@@ -532,8 +920,5 @@ const s = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.line,
     backgroundColor: colors.branco,
-  },
-  rodapeEspaco: {
-    width: 10,
   },
 });
