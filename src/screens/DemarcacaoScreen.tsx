@@ -367,6 +367,8 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
   // Seletor de rota só antes de iniciar (colapsa durante/depois)
   const showRoutePanel = mode === 'sim' && sim.status === 'idle';
   const showProgress = mode === 'sim' && (sim.status === 'walking' || sim.status === 'paused');
+  // Camadas ambientais de demonstração (rio/nascente + APP) — só na rota Sorriso.
+  const showEnvLayers = mode === 'sim' && selectedRouteId === DEMO_ROUTES[0]!.id;
 
   // ---------- JSX ----------
 
@@ -466,6 +468,20 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
         {/* HUD: controles de mapa (coluna direita) */}
         <MapControls mapRef={mapRef} regionRef={currentRegionRef} onCenter={handleCenterMap} />
 
+        {/* HUD: legenda das camadas ambientais (explica a linha azul + APP) */}
+        {showEnvLayers && (
+          <View style={s.legend}>
+            <View style={s.legendItem}>
+              <View style={[s.legendLine, { backgroundColor: '#2579c7' }]} />
+              <Text style={s.legendText}>Rio / nascente</Text>
+            </View>
+            <View style={s.legendItem}>
+              <View style={[s.legendSquare, { backgroundColor: 'rgba(138,90,19,0.18)', borderColor: 'rgba(138,90,19,0.65)' }]} />
+              <Text style={s.legendText}>APP (preservação)</Text>
+            </View>
+          </View>
+        )}
+
         {/* HUD: linha de progresso (fina, topo do mapa, só durante caminhada) */}
         {showProgress && (
           <View style={s.progressWrap}>
@@ -476,26 +492,6 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
             <Text style={s.progressPct}>
               {sim.status === 'paused' ? 'Pausado ' : ''}{Math.round(sim.progress * 100)}%
             </Text>
-          </View>
-        )}
-
-        {/* HUD: card de APP ao vivo */}
-        {appResultado !== null && (
-          <View style={s.appCard}>
-            <View style={s.appCardRow}>
-              <Text style={s.appCardLabel}>APP no desenho</Text>
-              <Text style={s.appCardValor}>
-                {appResultado.app_ha.toFixed(2)} ha ({appResultado.porcentagem.toFixed(1)}%)
-              </Text>
-            </View>
-            {appResultado.feicoes.length > 0
-              ? appResultado.feicoes.map((f, i) => (
-                  <Text key={i} style={s.appFeicao}>
-                    {f.tipo === 'nascente' ? 'Nascente' : 'Margem'}: {f.ha.toFixed(2)} ha
-                  </Text>
-                ))
-              : <Text style={s.appZero}>Nenhuma APP detectada</Text>
-            }
           </View>
         )}
 
@@ -551,19 +547,6 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
         )}
 
         <View style={s.footerBtns}>
-          {canSave && (
-            <>
-              <Button
-                label="Finalizar Perimetro"
-                variant="outlined"
-                onPress={handleSave}
-                disabled={saving}
-                loading={saving}
-                style={s.footerBtn}
-              />
-              <View style={s.btnGap} />
-            </>
-          )}
           <Button
             label={primaryLabel}
             variant="primary"
@@ -571,6 +554,16 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
             disabled={primaryDisabled}
             style={s.footerBtn}
           />
+          {canSave && (
+            <Button
+              label="Finalizar Perimetro"
+              variant="outlined"
+              onPress={handleSave}
+              disabled={saving}
+              loading={saving}
+              style={[s.footerBtn, s.footerBtnSecond]}
+            />
+          )}
         </View>
       </View>
     </Screen>
@@ -827,20 +820,37 @@ const s = StyleSheet.create({
   },
   doneCueText: { color: colors.verde, fontWeight: '700', fontSize: 12, lineHeight: 17, textAlign: 'center' },
 
+  // HUD: legenda das camadas ambientais (rio/nascente + APP)
+  legend: {
+    position: 'absolute',
+    bottom: 14,
+    left: 10,
+    backgroundColor: 'rgba(249,248,246,0.92)',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    gap: 5,
+  },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  legendLine: { width: 16, height: 3, borderRadius: 2 },
+  legendSquare: { width: 12, height: 12, borderRadius: 3, borderWidth: 1 },
+  legendText: { fontSize: 11, fontWeight: '700', color: colors.inkText },
+
   // ── Rodapé sólido (rota + status + botões) ──────────────────────────────────
   footer: {
     paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: 30, // folga pro home indicator — botão não cortado
+    paddingBottom: 44, // folga pro home indicator (~34px) — botão não cortado
     backgroundColor: colors.neutral,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.line,
   },
   routeRow: { marginBottom: 12 },
   statusLine: { fontSize: 13, fontWeight: '700', marginBottom: 10 },
-  footerBtns: { flexDirection: 'row' },
-  footerBtn: { flex: 1 },
-  btnGap: { width: 10 },
+  // Botões empilhados e compactos (anula o flex:1 das variantes; altura menor).
+  footerBtns: {},
+  footerBtn: { flexGrow: 0, minHeight: 46, paddingVertical: 10 },
+  footerBtnSecond: { marginTop: 8 },
 
   // ── Step badge na app-bar ────────────────────────────────────────────────────
   stepBadge: {
