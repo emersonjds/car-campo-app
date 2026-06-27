@@ -11,13 +11,13 @@ import React, {
 import {
   Alert,
   Animated,
-  Dimensions,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import MapView, { Circle, Marker, Polygon, Polyline } from 'react-native-maps';
 
 import { Screen } from '../app/Screen';
@@ -28,8 +28,9 @@ import { getImovel, updateImovel } from '../lib/store';
 import { DEMO_ROUTES } from '../sim/routes';
 import { useSimulatedWalk } from '../sim/useSimulatedWalk';
 import { usePerimeterTracker } from '../hooks/usePerimeterTracker';
-import { Badge, PrimaryButton, SecondaryButton, StatBox } from '../ui';
+import { Badge, Button } from '../ui';
 import { colors } from '../theme/colors';
+import { text } from '../theme/typography';
 import { derivarAPP, appDentroDoImovel, type AppResultado } from '../lib/app';
 import { DEMO_HIDROGRAFIA, DEMO_CAMADAS } from '../lib/refLayers.demo';
 import { analisarAlteracaoImovel } from '../lib/alteracao';
@@ -46,24 +47,21 @@ function validatePerimeterLocal(points: LngLat[]): Array<{ msg: string; tone: 'a
   const issues: Array<{ msg: string; tone: 'aviso' | 'ok' }> = [];
   if (points.length === 0) return issues;
   if (points.length < 3) {
-    issues.push({ msg: `Faltam ${3 - points.length} vértice(s) para fechar o polígono`, tone: 'aviso' });
+    issues.push({ msg: `Faltam ${3 - points.length} vertice(s) para fechar o poligono`, tone: 'aviso' });
     return issues;
   }
   const area = areaHectares(points);
   if (area < 0.05) {
-    issues.push({ msg: `Área muito pequena (${(area * 10000).toFixed(0)} m²) — verifique os pontos`, tone: 'aviso' });
+    issues.push({ msg: `Area muito pequena (${(area * 10000).toFixed(0)} m²) — verifique os pontos`, tone: 'aviso' });
   } else if (area > 2500) {
-    issues.push({ msg: `Área acima de 2.500 ha — confirme os vértices`, tone: 'aviso' });
+    issues.push({ msg: `Area acima de 2.500 ha — confirme os vertices`, tone: 'aviso' });
   } else {
-    issues.push({ msg: `Polígono válido (${area.toFixed(2)} ha)`, tone: 'ok' });
+    issues.push({ msg: `Poligono valido (${area.toFixed(2)} ha)`, tone: 'ok' });
   }
   return issues;
 }
 
-// ---------- constantes de layout ----------
-
-const SCREEN_HEIGHT = Dimensions.get('window').height;
-const MAP_HEIGHT = Math.max(200, Math.floor(SCREEN_HEIGHT * 0.32));
+// ---------- constantes ----------
 
 const DEFAULT_REGION = {
   latitude: DEMO_ROUTES[0]!.vertices[0]!.latitude,
@@ -74,15 +72,9 @@ const DEFAULT_REGION = {
 
 // ---------- camadas estáticas de hidrografia e APP ----------
 // Computadas uma vez no carregamento do módulo — DEMO_HIDROGRAFIA é imutável.
-// derivarAPP é puro JS offline (turf/buffer) e nunca lança exceção.
 
-/** Polígonos de APP derivados da hidrografia de demo (faixas e raios do Código Florestal). */
 const APP_CAMADAS_DEMO = derivarAPP(DEMO_HIDROGRAFIA);
 
-/**
- * Feições de hidrografia convertidas para render no react-native-maps.
- * Nascente → center {lat,lon}; Rio → coords[] (anel exterior do polígono fino).
- */
 const HIDRO_FEATURES = DEMO_HIDROGRAFIA.map((feat) => {
   const isNascente = feat.nome.toLowerCase().includes('nascente');
   const ring = feat.rings[0] ?? [];
@@ -101,7 +93,6 @@ const HIDRO_FEATURES = DEMO_HIDROGRAFIA.map((feat) => {
   }
 });
 
-/** Anéis exteriores dos polígonos de APP convertidos para react-native-maps. */
 const APP_POLY_COORDS = APP_CAMADAS_DEMO.map((feat) => {
   const ring = feat.rings[0] ?? [];
   return ring.map((coord) => ({
@@ -110,7 +101,7 @@ const APP_POLY_COORDS = APP_CAMADAS_DEMO.map((feat) => {
   }));
 });
 
-// ---------- sub-componentes ----------
+// ---------- sub-componentes do HUD ----------
 
 function ModeToggle({ mode, onChange }: { mode: Mode; onChange: (m: Mode) => void }) {
   return (
@@ -120,43 +111,119 @@ function ModeToggle({ mode, onChange }: { mode: Mode; onChange: (m: Mode) => voi
         onPress={() => onChange('gps')}
         activeOpacity={0.8}
       >
-        <Text style={[s.modeBtnText, mode === 'gps' && s.modeBtnTextActive]}>
-          GPS real
-        </Text>
+        <Text style={[s.modeBtnText, mode === 'gps' && s.modeBtnTextActive]}>GPS real</Text>
       </TouchableOpacity>
       <TouchableOpacity
         style={[s.modeBtn, mode === 'sim' && s.modeBtnActive]}
         onPress={() => onChange('sim')}
         activeOpacity={0.8}
       >
-        <Text style={[s.modeBtnText, mode === 'sim' && s.modeBtnTextActive]}>
-          Simular caminhada
-        </Text>
+        <Text style={[s.modeBtnText, mode === 'sim' && s.modeBtnTextActive]}>Simular caminhada</Text>
       </TouchableOpacity>
     </View>
   );
 }
 
-// ---------- marcador do avatar com anel pulsante ----------
-
 function AvatarMarker({ coordinate, pulse }: { coordinate: LngLat; pulse: Animated.Value }) {
   const ringScale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 2.6] });
   const ringOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.7, 0] });
-
   return (
     <Marker coordinate={toLatLng(coordinate)} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges>
       <View style={s.avatarWrap}>
-        <Animated.View
-          style={[
-            s.avatarRing,
-            { transform: [{ scale: ringScale }], opacity: ringOpacity },
-          ]}
-        />
+        <Animated.View style={[s.avatarRing, { transform: [{ scale: ringScale }], opacity: ringOpacity }]} />
         <View style={s.avatarDot}>
           <Text style={s.avatarEmoji}>🚶</Text>
         </View>
       </View>
     </Marker>
+  );
+}
+
+/** Card de área/perímetro flutuante no topo do mapa (mockup P2). */
+function AreaHUD({ area, perimeter, hasPoints }: { area: number; perimeter: number; hasPoints: boolean }) {
+  return (
+    <View style={s.areaCard}>
+      <Text style={s.areaCardLabel}>AREA ATUAL</Text>
+      <View style={s.areaCardRow}>
+        <Text style={s.areaValue} numberOfLines={1}>
+          {hasPoints ? area.toFixed(1) : '--'}
+          <Text style={s.areaUnit}> ha</Text>
+        </Text>
+        <View style={s.perimeterBlock}>
+          <Text style={s.perimeterLabel}>Perimetro</Text>
+          <Text style={s.perimeterValue}>
+            {hasPoints ? `${Math.round(perimeter).toLocaleString('pt-BR')} m` : '--'}
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+/** Chips de sensor: Precisão GPS + Acelerômetro (mockup P2). */
+function SensorChips({ accuracy }: { accuracy: number | null | undefined }) {
+  const accLabel = accuracy != null ? `${accuracy.toFixed(1)} m` : '-- m';
+  return (
+    <View style={s.chipsRow}>
+      <View style={s.sensorChip}>
+        <View style={[s.sensorIcon, { backgroundColor: colors.primary }]}>
+          <Ionicons name="locate" size={18} color={colors.branco} />
+        </View>
+        <View>
+          <Text style={s.sensorLabel}>Precisao GPS</Text>
+          <Text style={s.sensorValue}>{accLabel}</Text>
+        </View>
+      </View>
+      {/* ponytail: acelerômetro não exposto pelo tracker; placeholder estático coerente com mockup */}
+      <View style={s.sensorChip}>
+        <View style={[s.sensorIcon, { backgroundColor: colors.secondary }]}>
+          <Ionicons name="phone-portrait-outline" size={18} color={colors.branco} />
+        </View>
+        <View>
+          <Text style={s.sensorLabel}>Acelerometro</Text>
+          <Text style={s.sensorValue}>Estavel</Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+type RegionLike = { latitude: number; longitude: number; latitudeDelta: number; longitudeDelta: number };
+
+/** Controles de zoom, centralizar e camadas (mockup P2 — coluna direita do mapa). */
+function MapControls({
+  mapRef,
+  regionRef,
+  onCenter,
+}: {
+  mapRef: React.RefObject<MapView | null>;
+  regionRef: React.MutableRefObject<RegionLike>;
+  onCenter: () => void;
+}) {
+  const zoom = (factor: number) => {
+    const r = regionRef.current;
+    mapRef.current?.animateToRegion(
+      { ...r, latitudeDelta: r.latitudeDelta * factor, longitudeDelta: r.longitudeDelta * factor },
+      250,
+    );
+  };
+
+  return (
+    <View style={s.mapControls}>
+      <TouchableOpacity style={s.mapBtn} onPress={() => zoom(0.5)} activeOpacity={0.8}>
+        <Ionicons name="add" size={22} color={colors.inkText} />
+      </TouchableOpacity>
+      <TouchableOpacity style={s.mapBtn} onPress={() => zoom(2)} activeOpacity={0.8}>
+        <Ionicons name="remove" size={22} color={colors.inkText} />
+      </TouchableOpacity>
+      <TouchableOpacity style={s.mapBtn} onPress={onCenter} activeOpacity={0.8}>
+        <Ionicons name="navigate-circle-outline" size={22} color={colors.inkText} />
+      </TouchableOpacity>
+      {/* ponytail: toggle de camadas — visual apenas, sem lógica nova de mapa */}
+      <TouchableOpacity style={s.mapBtn} activeOpacity={0.8}>
+        <Ionicons name="layers-outline" size={22} color={colors.inkText} />
+      </TouchableOpacity>
+    </View>
   );
 }
 
@@ -177,6 +244,8 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
   // Referência do mapa para animateToRegion
   const mapRef = useRef<MapView>(null);
   const lastRegionUpdateRef = useRef(0);
+  // ponytail: região atual rastreada pelo onRegionChangeComplete para os botões de zoom
+  const currentRegionRef = useRef<RegionLike>(DEFAULT_REGION);
 
   // Animação de pulso do avatar
   const pulseAnim = useRef(new Animated.Value(0)).current;
@@ -188,16 +257,13 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
 
   // ---------- efeito: carrega geometry existente ----------
   // O produtor mede ÀS CEGAS: a tela não mostra o perímetro registrado nem o delta.
-  // A comparação com o registro acontece por baixo dos panos, no save (ver doSave).
   useEffect(() => {
     let alive = true;
     getImovel(imovelId).then((imovel) => {
       if (!alive || !imovel) return;
       setImovelLoaded(true);
     });
-    return () => {
-      alive = false;
-    };
+    return () => { alive = false; };
   }, [imovelId]);
 
   // ---------- efeito: animação de pulso ----------
@@ -212,7 +278,6 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
       );
       pulseRef.current = anim;
       anim.start();
-      // Para a animação ao desmontar/ocultar o avatar (evita leak na thread nativa).
       return () => anim.stop();
     }
     pulseRef.current?.stop();
@@ -238,8 +303,6 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
   }, [activeAvatar]);
 
   // ---------- APP: cálculo ao vivo com debounce ----------
-  // Roda sobre a geometria simplificada (RDP) para performance.
-  // Só calcula com >= 3 pontos. Cleanup de timer garantido no retorno do effect.
   useEffect(() => {
     if (activePoints.length < 3) {
       setAppResultado(null);
@@ -261,10 +324,7 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
 
   // Trail estático: só recalcula quando um vértice é marcado (não a cada tick de 30fps).
   const trailBase = useMemo(() => activePoints.map(toLatLng), [activePoints]);
-
-  // Último vértice marcado — ponto de origem do segmento vivo (O(1), sem useMemo).
   const lastTrailPt = trailBase.length > 0 ? trailBase[trailBase.length - 1] : undefined;
-
   const polygonCoords = useMemo(() => {
     if (activePoints.length < 3) return null;
     return activePoints.map(toLatLng);
@@ -291,11 +351,6 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
     sim.start(selectedRouteId);
   }, [sim, selectedRouteId]);
 
-  const handleClear = useCallback(() => {
-    sim.reset();
-    tracker.reset();
-  }, [sim, tracker]);
-
   const doSave = useCallback(async () => {
     setSaving(true);
     try {
@@ -306,9 +361,7 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
           perimetro_m: perimeter,
         },
       });
-      // Por baixo dos panos: compara a medição com o registro anterior (snapshot
-      // automático do store) e, se divergir o bastante, grava um informe de visita
-      // para o analista. O produtor não vê nada disso — mediu às cegas.
+      // Por baixo dos panos: compara com o registro anterior e, se divergir, grava informe.
       if (updated) {
         const alt = analisarAlteracaoImovel(updated, DEMO_CAMADAS, 'offline-demo');
         if (alt?.relatorio.requerVisita) {
@@ -325,7 +378,7 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
       }
       navigate({ name: 'documentos', imovelId });
     } catch {
-      Alert.alert('Erro', 'Não foi possível salvar a demarcação. Tente novamente.');
+      Alert.alert('Erro', 'Nao foi possivel salvar a demarcacao. Tente novamente.');
     } finally {
       setSaving(false);
     }
@@ -340,12 +393,61 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
     tracker.start();
   }, [tracker]);
 
-  // ---------- render do painel de controle ----------
+  const handleCenterMap = useCallback(() => {
+    const target = activeAvatar ?? (activePoints.length > 0 ? activePoints[activePoints.length - 1] : null);
+    if (!target || !mapRef.current) return;
+    mapRef.current.animateToRegion(
+      { latitude: target.latitude, longitude: target.longitude, latitudeDelta: 0.006, longitudeDelta: 0.006 },
+      400,
+    );
+  }, [activeAvatar, activePoints]);
+
+  // ---------- ação principal ("Marcar Ponto") ----------
+
+  const canSave = activePoints.length >= 3;
+
+  let primaryLabel: string;
+  let primaryPress: () => void;
+  let primaryDisabled: boolean | undefined;
+
+  if (mode === 'gps') {
+    if (tracker.status === 'tracking') {
+      primaryLabel = 'Marcar Ponto';
+      primaryPress = tracker.addManualPoint;
+    } else if (tracker.status === 'requesting') {
+      primaryLabel = 'Aguardando GPS...';
+      primaryPress = () => {};
+      primaryDisabled = true;
+    } else if (tracker.status === 'paused') {
+      primaryLabel = 'Retomar GPS';
+      primaryPress = handleGpsStart;
+    } else {
+      primaryLabel = 'Iniciar GPS';
+      primaryPress = handleGpsStart;
+    }
+  } else {
+    // sim
+    if (sim.status === 'idle') {
+      primaryLabel = 'Iniciar Simulacao';
+      primaryPress = handleSimStart;
+    } else if (sim.status === 'walking') {
+      primaryLabel = 'Pausar';
+      primaryPress = sim.pause;
+    } else if (sim.status === 'paused') {
+      primaryLabel = 'Retomar';
+      primaryPress = sim.resume;
+    } else {
+      // done — "Finalizar Perimetro" (outlined) cuida do save; aqui fica o recomecar
+      primaryLabel = 'Recomecar';
+      primaryPress = handleSimStart;
+    }
+  }
+
+  // ---------- painéis de modo (tira de controle abaixo do mapa) ----------
 
   const simPanel = (
     <View>
-      {/* Seletor de rota */}
-      <Text style={s.panelLabel}>Rota de demonstração (área real)</Text>
+      <Text style={s.stripLabel}>Rota de demonstracao</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.routeScroll}>
         {DEMO_ROUTES.map((route) => {
           const active = selectedRouteId === route.id;
@@ -356,28 +458,16 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
               onPress={() => setSelectedRouteId(route.id)}
               disabled={sim.status === 'walking'}
             >
-              <Text
-                style={[s.routeChipText, active && s.routeChipTextActive]}
-                numberOfLines={2}
-              >
+              <Text style={[s.routeChipText, active && s.routeChipTextActive]} numberOfLines={2}>
                 {route.nome}
               </Text>
-              <Text
-                style={[s.routeChipBioma, active && s.routeChipTextActive]}
-                numberOfLines={1}
-              >
-                🌿 {route.bioma}
+              <Text style={[s.routeChipBioma, active && s.routeChipTextActive]} numberOfLines={1}>
+                {route.bioma}
               </Text>
             </TouchableOpacity>
           );
         })}
       </ScrollView>
-      <Text style={s.routeFonte}>
-        {DEMO_ROUTES.find((r) => r.id === selectedRouteId)?.fonte ??
-          'Bases: SICAR/CAR · INCRA SIGEF · MapBiomas · INPE'}
-      </Text>
-
-      {/* Barra de progresso */}
       {sim.status !== 'idle' && (
         <>
           <View style={s.progressBar}>
@@ -386,14 +476,13 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
           </View>
           <Text style={s.progressText}>
             {sim.status === 'walking'
-              ? `Caminhando… ${Math.round(sim.progress * 100)}%`
+              ? `Caminhando... ${Math.round(sim.progress * 100)}%`
               : sim.status === 'paused'
                 ? `Pausado em ${Math.round(sim.progress * 100)}%`
-                : 'Caminhada concluída'}
+                : 'Caminhada concluida'}
           </Text>
         </>
       )}
-      {/* O botão de iniciar/pausar/avançar fica no rodapé fixo (sempre visível). */}
     </View>
   );
 
@@ -402,71 +491,15 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
       {tracker.status === 'denied' && (
         <Badge tone="aviso">Permissao de localizacao negada. Verifique as configuracoes.</Badge>
       )}
-      <Text style={s.gpsHint}>
-        {tracker.status === 'tracking'
-          ? 'Caminhe rente à divisa. Use “Marcar canto” nas quinas.'
-          : 'Toque em “Iniciar caminhada” no rodapé e ande pelo perímetro do imóvel.'}
-      </Text>
+      {tracker.status !== 'denied' && (
+        <Text style={s.gpsHint}>
+          {tracker.status === 'tracking'
+            ? 'Caminhe rente a divisa. Use "Marcar Ponto" nas quinas.'
+            : 'Toque em "Iniciar GPS" abaixo e ande pelo perimetro do imovel.'}
+        </Text>
+      )}
     </View>
   );
-
-  // ---------- ação principal do rodapé (sempre visível, depende do modo/estado) ----------
-
-  type FooterAction = {
-    label: string;
-    onPress: () => void;
-    disabled?: boolean;
-    loading?: boolean;
-  };
-
-  let footerPrimary: FooterAction;
-  let footerSecondary: FooterAction;
-
-  const canSave = activePoints.length >= 3;
-  const saveAction: FooterAction = {
-    label: 'Salvar e avancar →',
-    onPress: handleSave,
-    loading: saving,
-  };
-  const limparAction: FooterAction = {
-    label: 'Limpar',
-    onPress: handleClear,
-    disabled: activePoints.length === 0 && sim.status === 'idle' && tracker.status === 'idle',
-  };
-
-  if (mode === 'sim') {
-    if (sim.status === 'idle') {
-      footerPrimary = { label: '▶  Iniciar simulacao', onPress: handleSimStart };
-      footerSecondary = limparAction;
-    } else if (sim.status === 'walking') {
-      footerPrimary = { label: '⏸  Pausar', onPress: sim.pause };
-      footerSecondary = { label: '↺ Recomecar', onPress: handleSimStart };
-    } else if (sim.status === 'paused') {
-      // "Retomar" SEMPRE disponível — nunca deixar o usuário sem caminho para continuar.
-      // Se já há >= 3 vértices, "Salvar" ocupa o secundário; senão, "Recomecar".
-      footerPrimary = { label: '▶  Retomar', onPress: sim.resume };
-      footerSecondary = canSave ? saveAction : { label: '↺ Recomecar', onPress: handleSimStart };
-    } else {
-      // done
-      footerPrimary = canSave ? saveAction : { label: '↺ Recomecar', onPress: handleSimStart };
-      footerSecondary = { label: '↺ Recomecar', onPress: handleSimStart };
-    }
-  } else {
-    // GPS real
-    if (tracker.status === 'tracking') {
-      footerPrimary = { label: '＋ Marcar canto', onPress: tracker.addManualPoint };
-      footerSecondary = { label: '⏸ Pausar', onPress: tracker.pause };
-    } else if (tracker.status === 'requesting') {
-      footerPrimary = { label: 'Aguardando GPS…', onPress: () => {}, disabled: true };
-      footerSecondary = limparAction;
-    } else if (canSave) {
-      footerPrimary = saveAction;
-      footerSecondary = { label: 'Retomar GPS', onPress: tracker.start };
-    } else {
-      footerPrimary = { label: 'Iniciar caminhada', onPress: handleGpsStart };
-      footerSecondary = limparAction;
-    }
-  }
 
   // ---------- JSX principal ----------
 
@@ -483,144 +516,142 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
     >
       <WizardSteps active={1} />
 
-      {/* Mapa */}
-      <MapView
-        ref={mapRef}
-        style={{ height: MAP_HEIGHT }}
-        initialRegion={DEFAULT_REGION}
-        mapType="satellite"
-        showsUserLocation={mode === 'gps'}
-        showsCompass
-        showsScale
-      >
-        {/* Hidrografia e APP — só relevantes na rota SORRISO_SOJA (fixtures são localizadas) */}
-        {mode === 'sim' && selectedRouteId === DEMO_ROUTES[0]!.id && (
-          <>
-            {/* APP derivada — polígonos âmbar translúcidos (Código Florestal) */}
-            {APP_POLY_COORDS.map((coords, i) =>
-              coords.length >= 3 ? (
-                <Polygon
-                  key={`app-${i}`}
-                  coordinates={coords}
-                  strokeColor="rgba(138,90,19,0.65)"
-                  fillColor="rgba(138,90,19,0.14)"
-                  strokeWidth={1.5}
-                />
-              ) : null,
-            )}
+      {/* Mapa + HUD overlay — ocupa todo o espaço restante */}
+      <View style={s.mapContainer}>
+        <MapView
+          ref={mapRef}
+          style={StyleSheet.absoluteFill}
+          initialRegion={DEFAULT_REGION}
+          mapType="satellite"
+          showsUserLocation={mode === 'gps'}
+          showsCompass
+          showsScale
+          onRegionChangeComplete={(r) => { currentRegionRef.current = r; }}
+        >
+          {/* Hidrografia e APP — só na rota SORRISO_SOJA (fixtures localizadas) */}
+          {mode === 'sim' && selectedRouteId === DEMO_ROUTES[0]!.id && (
+            <>
+              {APP_POLY_COORDS.map((coords, i) =>
+                coords.length >= 3 ? (
+                  <Polygon
+                    key={`app-${i}`}
+                    coordinates={coords}
+                    strokeColor="rgba(138,90,19,0.65)"
+                    fillColor="rgba(138,90,19,0.14)"
+                    strokeWidth={1.5}
+                  />
+                ) : null,
+              )}
+              {HIDRO_FEATURES.map((feat, i) =>
+                feat.isNascente ? (
+                  <Circle
+                    key={`hidro-${i}`}
+                    center={feat.center}
+                    radius={20}
+                    fillColor="rgba(37,121,199,0.45)"
+                    strokeColor="#2579c7"
+                    strokeWidth={2}
+                  />
+                ) : (
+                  <Polyline
+                    key={`hidro-${i}`}
+                    coordinates={feat.coords}
+                    strokeColor="#2579c7"
+                    strokeWidth={3}
+                  />
+                ),
+              )}
+            </>
+          )}
 
-            {/* Hidrografia — rio (Polyline azul) e nascente (Circle azul) */}
-            {HIDRO_FEATURES.map((feat, i) =>
-              feat.isNascente ? (
-                <Circle
-                  key={`hidro-${i}`}
-                  center={feat.center}
-                  radius={20}
-                  fillColor="rgba(37,121,199,0.45)"
-                  strokeColor="#2579c7"
-                  strokeWidth={2}
-                />
-              ) : (
-                <Polyline
-                  key={`hidro-${i}`}
-                  coordinates={feat.coords}
-                  strokeColor="#2579c7"
-                  strokeWidth={3}
-                />
-              ),
-            )}
-          </>
-        )}
+          {/* Trail estático: vértice a vértice */}
+          {trailBase.length > 1 && (
+            <Polyline
+              coordinates={trailBase}
+              strokeColor={colors.verdeClaro}
+              strokeWidth={3}
+              lineDashPattern={[8, 4]}
+            />
+          )}
 
-        {/* Trail estático: vértice a vértice — não muda a cada tick de 30fps */}
-        {trailBase.length > 1 && (
-          <Polyline
-            coordinates={trailBase}
-            strokeColor={colors.verdeClaro}
-            strokeWidth={3}
-            lineDashPattern={[8, 4]}
-          />
-        )}
+          {/* Segmento vivo: último vértice → avatar */}
+          {activeAvatar !== null && lastTrailPt !== undefined && (
+            <Polyline
+              coordinates={[lastTrailPt, toLatLng(activeAvatar)]}
+              strokeColor={colors.verdeClaro}
+              strokeWidth={3}
+              lineDashPattern={[8, 4]}
+            />
+          )}
 
-        {/* Segmento vivo: último vértice → avatar (apenas 2 pontos pela bridge, 30fps) */}
-        {activeAvatar !== null && lastTrailPt !== undefined && (
-          <Polyline
-            coordinates={[lastTrailPt, toLatLng(activeAvatar)]}
-            strokeColor={colors.verdeClaro}
-            strokeWidth={3}
-            lineDashPattern={[8, 4]}
-          />
-        )}
+          {/* Polígono quando há vértices suficientes */}
+          {polygonCoords && (
+            <Polygon
+              coordinates={polygonCoords}
+              strokeColor={colors.verde}
+              fillColor="rgba(27,107,58,0.18)"
+              strokeWidth={2}
+            />
+          )}
 
-        {/* Poligono quando ha vertices suficientes */}
-        {polygonCoords && (
-          <Polygon
-            coordinates={polygonCoords}
-            strokeColor={colors.verde}
-            fillColor="rgba(27,107,58,0.18)"
-            strokeWidth={2}
-          />
-        )}
+          {/* Vértices */}
+          {activePoints.map((p, i) => (
+            <Marker
+              key={`v-${i}`}
+              coordinate={toLatLng(p)}
+              anchor={{ x: 0.5, y: 0.5 }}
+              tracksViewChanges={false}
+            >
+              <View style={s.vertexDot}>
+                <Text style={s.vertexLabel}>{i + 1}</Text>
+              </View>
+            </Marker>
+          ))}
 
-        {/* Marcadores dos vertices */}
-        {activePoints.map((p, i) => (
-          <Marker
-            key={`v-${i}`}
-            coordinate={toLatLng(p)}
-            anchor={{ x: 0.5, y: 0.5 }}
-            tracksViewChanges={false}
-          >
-            <View style={s.vertexDot}>
-              <Text style={s.vertexLabel}>{i + 1}</Text>
-            </View>
-          </Marker>
-        ))}
+          {/* Avatar animado */}
+          {activeAvatar && <AvatarMarker coordinate={activeAvatar} pulse={pulseAnim} />}
+        </MapView>
 
-        {/* Avatar animado */}
-        {activeAvatar && (
-          <AvatarMarker coordinate={activeAvatar} pulse={pulseAnim} />
-        )}
-      </MapView>
+        {/* HUD: card de área (canto superior) */}
+        <AreaHUD area={area} perimeter={perimeter} hasPoints={activePoints.length >= 3} />
 
-      {/* Painel inferior */}
-      <ScrollView
-        style={s.panel}
-        contentContainerStyle={s.panelContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        <ModeToggle mode={mode} onChange={handleModeChange} />
+        {/* HUD: chips de sensor (abaixo do card) */}
+        <SensorChips accuracy={mode === 'gps' ? tracker.current?.accuracy : null} />
 
-        {/* Controles do modo ativo */}
-        <View style={s.section}>{mode === 'sim' ? simPanel : gpsPanel}</View>
+        {/* HUD: controles de mapa (coluna direita) */}
+        <MapControls mapRef={mapRef} regionRef={currentRegionRef} onCenter={handleCenterMap} />
 
-        {/* Stats */}
-        <View style={s.statsRow}>
-          <StatBox
-            label="Area (ha)"
-            value={activePoints.length >= 3 ? area.toFixed(2) : '--'}
-          />
-          <View style={s.statsGap} />
-          <StatBox
-            label="Perimetro (m)"
-            value={activePoints.length >= 2 ? Math.round(perimeter).toString() : '--'}
-          />
-          <View style={s.statsGap} />
-          <StatBox label="Vertices" value={activePoints.length.toString()} />
-        </View>
-
-        {/* Badges de validacao */}
+        {/* HUD: badge de validação flutuante (base do mapa) */}
         {validations.length > 0 && (
-          <View style={s.badgeRow}>
+          <View style={s.hudBadges}>
             {validations.map((v, i) => (
-              <Badge key={i} tone={v.tone}>
-                {v.msg}
-              </Badge>
+              <Badge key={i} tone={v.tone}>{v.msg}</Badge>
             ))}
           </View>
         )}
 
-        {/* Card de APP ao vivo — aparece apos >= 3 vertices + debounce de 500 ms */}
+        {/* HUD: cue de conclusão */}
+        {mode === 'sim' && sim.status === 'done' && activePoints.length >= 3 && (
+          <View style={s.doneCue}>
+            <Text style={s.doneCueText}>
+              Caminhada concluida — {activePoints.length} vertices, {area.toFixed(2)} ha.
+              Toque em "Finalizar Perimetro" abaixo.
+            </Text>
+          </View>
+        )}
+      </View>
+
+      {/* Tira de controles: modo + painel ativo + card de APP */}
+      <ScrollView
+        style={s.controlStrip}
+        contentContainerStyle={s.controlStripContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <ModeToggle mode={mode} onChange={handleModeChange} />
+        <View style={s.stripPanel}>{mode === 'sim' ? simPanel : gpsPanel}</View>
+
+        {/* Card de APP ao vivo */}
         {appResultado !== null && (
           <View style={s.appCard}>
             <View style={s.appCardHeader}>
@@ -643,34 +674,26 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
             </Text>
           </View>
         )}
-
-        {/* Aviso de conclusao da caminhada simulada */}
-        {mode === 'sim' && sim.status === 'done' && activePoints.length >= 3 && (
-          <View style={s.doneCue}>
-            <Text style={s.doneCueText}>
-              ✓ Caminhada concluida — {activePoints.length} vertices, {area.toFixed(2)} ha.
-              Toque em "Salvar e avancar" abaixo para ir aos documentos.
-            </Text>
-          </View>
-        )}
       </ScrollView>
 
-      {/* Rodape fixo: a acao principal fica SEMPRE visivel, conforme o modo/estado */}
+      {/* Rodapé fixo: Finalizar Perímetro (outlined) + Marcar Ponto (primary verde) */}
       <View style={s.footer}>
-        <View style={s.actionRow}>
-          <SecondaryButton
-            label={footerSecondary.label}
-            onPress={footerSecondary.onPress}
-            disabled={footerSecondary.disabled}
-          />
-          <View style={s.btnGap} />
-          <PrimaryButton
-            label={footerPrimary.label}
-            onPress={footerPrimary.onPress}
-            disabled={footerPrimary.disabled}
-            loading={footerPrimary.loading}
-          />
-        </View>
+        <Button
+          label="Finalizar Perimetro"
+          variant="outlined"
+          onPress={handleSave}
+          disabled={!canSave || saving}
+          loading={saving}
+          style={s.footerBtn}
+        />
+        <View style={s.btnGap} />
+        <Button
+          label={primaryLabel}
+          variant="primary"
+          onPress={primaryPress}
+          disabled={primaryDisabled}
+          style={s.footerBtn}
+        />
       </View>
     </Screen>
   );
@@ -679,6 +702,181 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
 // ---------- estilos ----------
 
 const s = StyleSheet.create({
+
+  // ── Mapa ────────────────────────────────────────────────────────────────────
+
+  mapContainer: {
+    flex: 1,
+    minHeight: 260,
+  },
+
+  // HUD: card de área (topo, sobreposto ao mapa)
+  areaCard: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    right: 68, // margem para os botões de mapa à direita
+    backgroundColor: 'rgba(249,248,246,0.94)',
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.13,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 5,
+  },
+  areaCardLabel: {
+    ...text.label,
+    color: colors.mutedText,
+    marginBottom: 2,
+  },
+  areaCardRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+  },
+  areaValue: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: colors.inkText,
+    lineHeight: 38,
+  },
+  areaUnit: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.inkText,
+  },
+  perimeterBlock: {
+    alignItems: 'flex-end',
+    paddingBottom: 2,
+  },
+  perimeterLabel: {
+    ...text.caption,
+    color: colors.mutedText,
+  },
+  perimeterValue: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.inkText,
+  },
+
+  // HUD: chips de sensor (abaixo do card de área)
+  chipsRow: {
+    position: 'absolute',
+    top: 110, // below areaCard (top:12 + ~86px card height + 12px gap)
+    left: 12,
+    right: 68,
+    flexDirection: 'row',
+    gap: 8,
+  },
+  sensorChip: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: 'rgba(249,248,246,0.94)',
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.10,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 4,
+  },
+  sensorIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sensorLabel: {
+    ...text.caption,
+    color: colors.mutedText,
+  },
+  sensorValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.inkText,
+  },
+
+  // HUD: controles de mapa (coluna direita)
+  mapControls: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    gap: 6,
+  },
+  mapBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: 'rgba(249,248,246,0.94)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.10,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 4,
+  },
+
+  // HUD: badges de validação (base do mapa)
+  hudBadges: {
+    position: 'absolute',
+    bottom: 12,
+    left: 12,
+    right: 12,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+
+  // HUD: cue de conclusão
+  doneCue: {
+    position: 'absolute',
+    bottom: 40,
+    left: 12,
+    right: 12,
+    backgroundColor: 'rgba(226,243,232,0.96)',
+    borderRadius: 12,
+    padding: 10,
+  },
+  doneCueText: {
+    color: colors.verde,
+    fontWeight: '700',
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: 'center',
+  },
+
+  // ── Tira de controles ───────────────────────────────────────────────────────
+
+  controlStrip: {
+    maxHeight: 180,
+    backgroundColor: colors.branco,
+    borderTopWidth: 1,
+    borderTopColor: colors.line,
+  },
+  controlStripContent: {
+    paddingHorizontal: 14,
+    paddingTop: 10,
+    paddingBottom: 8,
+  },
+  stripPanel: {
+    marginTop: 2,
+  },
+  stripLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.muted,
+    marginBottom: 5,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
+
   // Modo toggle
   modeRow: {
     flexDirection: 'row',
@@ -687,18 +885,18 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.line,
     overflow: 'hidden',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   modeBtn: {
     flex: 1,
-    paddingVertical: 10,
+    paddingVertical: 9,
     alignItems: 'center',
   },
   modeBtnActive: {
     backgroundColor: colors.verde,
   },
   modeBtnText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
     color: colors.muted,
   },
@@ -706,31 +904,19 @@ const s = StyleSheet.create({
     color: colors.branco,
   },
 
-  // Seletor de rota
+  // Sim panel
   routeScroll: {
     marginBottom: 4,
   },
   routeChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
     borderRadius: 10,
     backgroundColor: colors.verdeBg,
     borderWidth: 1,
     borderColor: colors.line,
     marginRight: 8,
-    maxWidth: 220,
-  },
-  routeChipBioma: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.verde,
-    marginTop: 3,
-  },
-  routeFonte: {
-    fontSize: 11,
-    color: colors.muted,
-    marginBottom: 10,
-    fontStyle: 'italic',
+    maxWidth: 200,
   },
   routeChipActive: {
     backgroundColor: colors.verdeClaro,
@@ -744,15 +930,20 @@ const s = StyleSheet.create({
   routeChipTextActive: {
     color: colors.branco,
   },
-
-  // Barra de progresso
+  routeChipBioma: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.verde,
+    marginTop: 2,
+  },
   progressBar: {
     flexDirection: 'row',
-    height: 4,
+    height: 3,
     borderRadius: 2,
     backgroundColor: colors.line,
     overflow: 'hidden',
-    marginBottom: 10,
+    marginTop: 6,
+    marginBottom: 4,
   },
   progressFill: {
     backgroundColor: colors.verdeClaro,
@@ -761,50 +952,67 @@ const s = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: colors.verde,
-    marginBottom: 4,
   },
   gpsHint: {
     fontSize: 13,
     color: colors.muted,
     lineHeight: 18,
+    paddingVertical: 4,
   },
 
-  // Painel inferior
-  panel: {
-    flex: 1,
-    backgroundColor: colors.branco,
+  // Card de APP (na tira de controles)
+  appCard: {
+    backgroundColor: '#fdf6e3',
+    borderRadius: 10,
+    padding: 10,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#d4a843',
   },
-  panelContent: {
-    padding: 14,
-    paddingBottom: 28,
-  },
-  panelLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.muted,
-    marginBottom: 6,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-  },
-  section: {
-    marginBottom: 12,
-  },
-
-  // Botoes
-  btnRow: {
+  appCardHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 4,
   },
-  btnGap: {
-    width: 10,
+  appCardLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.aviso,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    flex: 1,
   },
-  actionRow: {
-    flexDirection: 'row',
+  appCardValor: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: colors.aviso,
   },
+  appFeicao: {
+    fontSize: 12,
+    color: colors.muted,
+    marginBottom: 2,
+    paddingLeft: 6,
+  },
+  appZero: {
+    fontSize: 12,
+    color: colors.verde,
+    fontStyle: 'italic',
+  },
+  appDisclaimer: {
+    fontSize: 10,
+    color: colors.muted,
+    fontStyle: 'italic',
+    marginTop: 4,
+  },
+
+  // ── Rodapé ──────────────────────────────────────────────────────────────────
+
   footer: {
+    flexDirection: 'row',
     paddingHorizontal: 14,
-    paddingTop: 12,
-    paddingBottom: 34,
+    paddingTop: 10,
+    paddingBottom: 28,
     backgroundColor: colors.branco,
     borderTopWidth: 1,
     borderTopColor: colors.line,
@@ -814,37 +1022,15 @@ const s = StyleSheet.create({
     shadowOffset: { width: 0, height: -3 },
     elevation: 12,
   },
-  doneCue: {
-    backgroundColor: '#e2f3e8',
-    borderRadius: 10,
-    padding: 12,
-    marginTop: 8,
+  footerBtn: {
+    flex: 1,
   },
-  doneCueText: {
-    color: colors.verde,
-    fontWeight: '700',
-    fontSize: 13,
-    lineHeight: 18,
+  btnGap: {
+    width: 10,
   },
 
-  // Stats
-  statsRow: {
-    flexDirection: 'row',
-    marginBottom: 10,
-  },
-  statsGap: {
-    width: 8,
-  },
+  // ── Avatar no mapa ───────────────────────────────────────────────────────────
 
-  // Badges
-  badgeRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginBottom: 4,
-  },
-
-  // Avatar no mapa
   avatarWrap: {
     width: 44,
     height: 44,
@@ -876,7 +1062,8 @@ const s = StyleSheet.create({
     lineHeight: 22,
   },
 
-  // Vértices no mapa
+  // ── Vértices no mapa ─────────────────────────────────────────────────────────
+
   vertexDot: {
     width: 24,
     height: 24,
@@ -892,52 +1079,4 @@ const s = StyleSheet.create({
     fontWeight: '800',
     color: colors.branco,
   },
-
-  // Card de APP ao vivo
-  appCard: {
-    backgroundColor: '#fdf6e3',
-    borderRadius: 10,
-    padding: 12,
-    marginTop: 10,
-    borderWidth: 1,
-    borderColor: '#d4a843',
-  },
-  appCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  appCardLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.aviso,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    flex: 1,
-  },
-  appCardValor: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: colors.aviso,
-  },
-  appFeicao: {
-    fontSize: 12,
-    color: colors.muted,
-    marginBottom: 2,
-    paddingLeft: 6,
-  },
-  appZero: {
-    fontSize: 12,
-    color: colors.verde,
-    fontStyle: 'italic',
-  },
-  appDisclaimer: {
-    fontSize: 10,
-    color: colors.muted,
-    fontStyle: 'italic',
-    marginTop: 6,
-    lineHeight: 14,
-  },
-
 });
