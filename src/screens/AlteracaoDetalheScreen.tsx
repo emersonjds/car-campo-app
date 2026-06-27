@@ -1,48 +1,36 @@
-// Detalhe da alteração de perímetro (ANALISTA).
-// Mini-mapa antes × depois, "o que mudou" (camadas tocadas), recomendação e
-// ações de aceite (Reprovar / Agendar visita / Aprovar). Acessível de Validação,
-// Painel (fila de visitas) e Revisão.
+// Análise de Confrontação — visão do PRODUTOR (P3).
+// Reutiliza a lógica de lib/alteracao.ts + lib/delta.ts e apresenta
+// o resultado no layout do mockup design/produtor/03-analise-confrontacao.png.
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Dimensions, ScrollView, StyleSheet, Text, View } from 'react-native';
-import MapView, { Polygon, Polyline } from 'react-native-maps';
+import {
+  ActivityIndicator,
+  Dimensions,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import MapView, { Polygon } from 'react-native-maps';
+import { Ionicons } from '@expo/vector-icons';
 
 import { Screen } from '../app/Screen';
-import { useNav } from '../app/navigation';
-import { PrimaryButton, SecondaryButton } from '../ui';
+import { Card } from '../ui';
 import { colors } from '../theme/colors';
-import { getImovel, updateImovel } from '../lib/store';
-import { analisarAlteracaoImovel, decisaoSugerida, type AlteracaoImovel } from '../lib/alteracao';
+import { text } from '../theme/typography';
+import { getImovel } from '../lib/store';
+import { analisarAlteracaoImovel, type AlteracaoImovel } from '../lib/alteracao';
 import { DEMO_CAMADAS } from '../lib/refLayers.demo';
-import type { CamadaTipo, Sobreposicao } from '../lib/overlay';
 import type { LngLat } from '../lib/geo';
-import type { Imovel, ValidacaoStatus } from '../types';
+import type { Imovel } from '../types';
 
-const SCREEN_HEIGHT = Dimensions.get('window').height;
-const MAP_HEIGHT = Math.max(200, Math.floor(SCREEN_HEIGHT * 0.30));
-
+const MAP_HEIGHT = Math.max(240, Math.floor(Dimensions.get('window').height * 0.40));
 const toLatLng = (p: LngLat) => ({ latitude: p.latitude, longitude: p.longitude });
 
-function tipoLabel(tipo: CamadaTipo): string {
-  switch (tipo) {
-    case 'terra_indigena':      return 'Terra Indígena';
-    case 'unidade_conservacao': return 'Unidade de Conservação';
-    case 'embargo_ibama':       return 'Embargo IBAMA';
-    case 'desmatamento':        return 'Desmatamento';
-    case 'queimada':            return 'Queimada';
-    case 'app_hidrografia':     return 'APP / rio';
-    case 'hidrografia':         return 'Hidrografia';
-    case 'car_vizinho':         return 'CAR vizinho';
-  }
-}
-
-const toneColor = { ok: colors.verde, aviso: colors.aviso, alerta: colors.alerta } as const;
-const toneBg = { ok: '#e2f3e8', aviso: '#fdf4e3', alerta: '#fce8e7' } as const;
-
 export function AlteracaoDetalheScreen({ imovelId }: { imovelId: string }) {
-  const { goBack } = useNav();
   const [imovel, setImovel] = useState<Imovel | null>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [showDadosGoverno, setShowDadosGoverno] = useState(false);
 
   const load = useCallback(() => {
     let alive = true;
@@ -52,9 +40,7 @@ export function AlteracaoDetalheScreen({ imovelId }: { imovelId: string }) {
       setImovel(im);
       setLoading(false);
     });
-    return () => {
-      alive = false;
-    };
+    return () => { alive = false; };
   }, [imovelId]);
   useEffect(() => load(), [load]);
 
@@ -63,35 +49,11 @@ export function AlteracaoDetalheScreen({ imovelId }: { imovelId: string }) {
     [imovel],
   );
 
-  const concordancia = useMemo(() => {
-    if (!alteracao) return null;
-    const r = alteracao.relatorio;
-    const uniao = r.areaNova_ha + r.suprimido_ha;
-    if (uniao <= 0) return null;
-    return (Math.max(0, r.areaNova_ha - r.acrescido_ha) / uniao) * 100;
-  }, [alteracao]);
-
-  const decidir = useCallback(
-    async (status: ValidacaoStatus) => {
-      if (!imovel) return;
-      setSaving(true);
-      try {
-        await updateImovel(imovel.id, {
-          validacao: { status, analista: 'Analista', updatedAt: Date.now() },
-        });
-        goBack();
-      } finally {
-        setSaving(false);
-      }
-    },
-    [imovel, goBack],
-  );
-
   if (loading) {
     return (
-      <Screen title="Alteração de perímetro" subtitle="Carregando…">
+      <Screen title="Análise de Confrontação">
         <View style={s.center}>
-          <ActivityIndicator color={colors.verde} />
+          <ActivityIndicator color={colors.primary} />
         </View>
       </Screen>
     );
@@ -99,10 +61,10 @@ export function AlteracaoDetalheScreen({ imovelId }: { imovelId: string }) {
 
   if (!imovel || !alteracao) {
     return (
-      <Screen title="Alteração de perímetro" subtitle={imovel?.imovel.nome ?? ''}>
+      <Screen title="Análise de Confrontação" subtitle={imovel?.imovel.nome ?? ''}>
         <View style={s.center}>
           <Text style={s.semAlt}>
-            Sem alteração de perímetro detectada para este imóvel — não há registro anterior comparável.
+            Sem alteração de perímetro detectada — não há registro anterior comparável.
           </Text>
         </View>
       </Screen>
@@ -110,10 +72,10 @@ export function AlteracaoDetalheScreen({ imovelId }: { imovelId: string }) {
   }
 
   const r = alteracao.relatorio;
-  const dec = decisaoSugerida(r.severidade);
-  const anteriorCoords = alteracao.anteriorPoints.map(toLatLng);
+  const isCritico = r.severidade === 'critico';
+  const isAlto = r.severidade === 'alto';
   const novoCoords = imovel.geometry.points.map(toLatLng);
-  const camadas: Sobreposicao[] = r.sobreposicoesAcrescido;
+  const anteriorCoords = alteracao.anteriorPoints.map(toLatLng);
   const region = {
     latitude: imovel.geometry.points[0]!.latitude,
     longitude: imovel.geometry.points[0]!.longitude,
@@ -121,173 +83,237 @@ export function AlteracaoDetalheScreen({ imovelId }: { imovelId: string }) {
     longitudeDelta: 0.012,
   };
 
+  // Banner visível apenas em critico/alto (não polui telas normais)
+  const bannerText = isCritico
+    ? 'STATUS: CRÍTICO – DIVERGÊNCIA DE ÁREA'
+    : isAlto
+    ? 'STATUS: ALTO – ALTERAÇÃO SIGNIFICATIVA'
+    : null;
+  const bannerColor = isCritico ? colors.critico : colors.aviso;
+
   return (
-    <Screen title="Alteração de perímetro" subtitle={imovel.imovel.nome || 'Imóvel sem nome'}>
-      <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
-        {/* Mini-mapa antes × depois */}
-        <MapView style={{ height: MAP_HEIGHT, borderRadius: 12 }} initialRegion={region} mapType="satellite">
-          {anteriorCoords.length >= 3 && (
-            <Polygon
-              coordinates={anteriorCoords}
-              strokeColor="#ffffff"
-              fillColor="rgba(255,255,255,0.06)"
-              strokeWidth={2}
-              lineDashPattern={[8, 5]}
-            />
-          )}
+    <Screen title="Análise de Confrontação" subtitle={imovel.imovel.nome || 'Imóvel sem nome'}>
+      {/* Mapa topo — full-bleed, sem padding lateral */}
+      <View style={s.mapContainer}>
+        <MapView
+          style={StyleSheet.absoluteFill}
+          initialRegion={region}
+          mapType="terrain"
+        >
+          {/* Perímetro do produtor — azul (tertiary), conforme A1 */}
           {novoCoords.length >= 3 && (
             <Polygon
               coordinates={novoCoords}
-              strokeColor={colors.verde}
-              fillColor="rgba(27,107,58,0.18)"
+              strokeColor={colors.tertiary}
+              fillColor="rgba(0,168,232,0.15)"
               strokeWidth={2}
             />
           )}
-          {novoCoords.length > 1 && (
-            <Polyline coordinates={novoCoords} strokeColor={colors.verdeClaro} strokeWidth={2} />
+          {/* Dados Governo (baseline CAR) — vermelho sem preenchimento, conforme A1 */}
+          {showDadosGoverno && anteriorCoords.length >= 3 && (
+            <Polygon
+              coordinates={anteriorCoords}
+              strokeColor={colors.critico}
+              fillColor="rgba(163,48,42,0.08)"
+              strokeWidth={2}
+            />
           )}
         </MapView>
-        <View style={s.legendRow}>
-          <Legend cor="#ffffff" dashed label={alteracao.baseline === 'real' ? 'Registro anterior' : 'Baseline (demo)'} />
-          <Legend cor={colors.verde} label="Demarcação atual" />
-        </View>
 
-        {/* Banner de decisão sugerida */}
-        <View style={[s.banner, { backgroundColor: toneBg[dec.tone], borderColor: toneColor[dec.tone] }]}>
-          <Text style={[s.bannerTitulo, { color: toneColor[dec.tone] }]}>
-            {dec.titulo}
+        {/* Banner de status sobrepostos ao mapa */}
+        {bannerText !== null && (
+          <View style={[s.statusBanner, { borderColor: bannerColor }]}>
+            <Ionicons name="alert-circle-outline" size={15} color={bannerColor} />
+            <Text style={[s.statusBannerText, { color: bannerColor }]}>{bannerText}</Text>
+          </View>
+        )}
+
+        {/* Toggle "Dados Governo" — canto inferior esquerdo do mapa */}
+        <TouchableOpacity
+          style={s.toggleRow}
+          onPress={() => setShowDadosGoverno((v) => !v)}
+          activeOpacity={0.8}
+        >
+          <View style={[s.checkbox, showDadosGoverno && s.checkboxOn]}>
+            {showDadosGoverno && <Ionicons name="checkmark" size={11} color={colors.branco} />}
+          </View>
+          <Text style={s.toggleLabel}>Dados Governo</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Conteúdo rolável */}
+      <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
+        <Text style={s.headline}>Análise de Confrontação</Text>
+        <Text style={s.headlineSub}>
+          Relatório gerado automaticamente via análise geoespacial multitemporal.
+        </Text>
+
+        {/* Área Produtor */}
+        <Card>
+          <Text style={s.areaLabel}>ÁREA PRODUTOR</Text>
+          <View style={s.areaRow}>
+            <Text style={[s.areaValue, { color: colors.primary }]}>
+              {r.areaNova_ha.toFixed(1)}
+            </Text>
+            <Text style={s.areaUnit}> ha</Text>
+          </View>
+          <View style={s.precisionRow}>
+            <Ionicons name="shield-checkmark-outline" size={14} color={colors.tertiary} />
+            <Text style={s.precisionText}>Surveying L2 Precision</Text>
+          </View>
+        </Card>
+
+        {/* Área Governo */}
+        <Card>
+          <Text style={s.areaLabel}>ÁREA GOVERNO</Text>
+          <View style={s.areaRow}>
+            <Text style={s.areaValue}>{r.areaAnterior_ha.toFixed(1)}</Text>
+            <Text style={s.areaUnit}> ha</Text>
+          </View>
+          <Text style={s.baselineNote}>
+            {alteracao.baseline === 'real' ? 'Registro oficial do CAR' : 'Baseline de referência (demo)'}
           </Text>
-          <Text style={s.bannerDetalhe}>{dec.detalhe}</Text>
-          {dec.prazo && <Text style={[s.bannerPrazo, { color: toneColor[dec.tone] }]}>Prazo sugerido: {dec.prazo}</Text>}
-          <Text style={s.bannerFonte}>Recomendação do algoritmo · severidade {r.severidade}</Text>
-        </View>
+        </Card>
 
-        {/* ANTES × AGORA × DIFERENÇA */}
-        <View style={s.card}>
-          <Text style={s.cardTitle}>Antes × Agora × Diferença</Text>
-          <View style={s.tripleRow}>
-            <Triple label="Antes" value={`${r.areaAnterior_ha.toFixed(2)} ha`} />
-            <Triple label="Agora" value={`${r.areaNova_ha.toFixed(2)} ha`} />
-            <Triple
-              label="Diferença"
+        {/* Métricas de delta */}
+        <Card>
+          <Text style={s.sectionLabel}>DIFERENÇA DETECTADA</Text>
+          <View style={s.metricsRow}>
+            <DeltaCol
+              label="DIFERENÇA"
               value={`${r.delta_ha >= 0 ? '+' : ''}${r.delta_ha.toFixed(2)} ha`}
               sub={`${r.delta_pct >= 0 ? '+' : ''}${r.delta_pct.toFixed(1)}%`}
-              highlight
+              valueColor={isCritico ? colors.critico : isAlto ? colors.aviso : colors.inkText}
+            />
+            <DeltaCol
+              label="ACRESCIDO"
+              value={`${r.acrescido_ha.toFixed(2)} ha`}
+              valueColor={colors.acrescido}
+            />
+            <DeltaCol
+              label="SUPRIMIDO"
+              value={`${r.suprimido_ha.toFixed(2)} ha`}
+              valueColor={colors.suprimido}
             />
           </View>
-          {concordancia != null && (
-            <Text style={s.concordancia}>
-              Concordância (IoU): <Text style={s.concordanciaVal}>{concordancia.toFixed(0)}%</Text>
-              {'   ·   '}Tipo: {r.tipoAlteracao}
-            </Text>
-          )}
           {r.incertezaGPS_m != null && (
             <Text style={s.incerteza}>
               Incerteza GPS ~{r.incertezaGPS_m.toFixed(0)} m — variações menores que ~{(2 * r.incertezaGPS_m).toFixed(0)} m podem ser ruído.
             </Text>
           )}
-        </View>
-
-        {/* O que mudou — camadas tocadas pelo acréscimo */}
-        <View style={s.card}>
-          <Text style={s.cardTitle}>O que mudou no acréscimo</Text>
-          {camadas.length > 0 ? (
-            camadas.map((sb, i) => (
-              <View key={i} style={s.camadaRow}>
-                <Text style={s.camadaText}>
-                  <Text style={{ fontWeight: '800' }}>{tipoLabel(sb.tipo)}</Text> — {sb.area_ha.toFixed(2)} ha ({sb.percentual.toFixed(1)}%) · {sb.severidade}
-                </Text>
-              </View>
-            ))
-          ) : (
-            <Text style={s.semCamada}>✓ O acréscimo não toca TI/UC, embargo, desmate, queimada ou APP (demo).</Text>
-          )}
-        </View>
+        </Card>
 
         {/* Recomendação */}
-        <View style={s.card}>
-          <Text style={s.cardTitle}>Recomendação</Text>
+        <Card>
+          <Text style={s.sectionLabel}>RECOMENDAÇÃO</Text>
           <Text style={s.recomendacao}>{r.recomendacao}</Text>
-        </View>
+        </Card>
 
-        {/* Limites honestos */}
         <Text style={s.disclaimer}>
-          {alteracao.baseline === 'demo'
-            ? 'Comparação contra baseline de demonstração (sem registro anterior real). '
-            : ''}
-          Acréscimo não prova compra; sobreposição não prova invasão. Camadas offline — valide com dados oficiais (IBAMA/INCRA/FUNAI/ICMBio) quando houver rede.
+          {alteracao.baseline === 'demo' ? 'Comparação contra baseline de demonstração. ' : ''}
+          Camadas offline — valide com dados oficiais quando houver rede.
         </Text>
       </ScrollView>
-
-      {/* Ações de aceite do analista */}
-      <View style={s.footer}>
-        <View style={s.footerRow}>
-          <SecondaryButton label="Reprovar" onPress={() => decidir('reprovado')} disabled={saving} />
-          <View style={{ width: 8 }} />
-          <SecondaryButton label="Agendar visita" onPress={() => decidir('pendente')} disabled={saving} />
-          <View style={{ width: 8 }} />
-          <PrimaryButton label="Aprovar" onPress={() => decidir('aprovado')} loading={saving} />
-        </View>
-      </View>
     </Screen>
   );
 }
 
-function Legend({ cor, label, dashed }: { cor: string; label: string; dashed?: boolean }) {
+// ─── Coluna de métrica de delta ───────────────────────────────────────────────
+
+function DeltaCol({
+  label,
+  value,
+  sub,
+  valueColor,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  valueColor?: string;
+}) {
   return (
-    <View style={s.legendItem}>
-      <View style={[s.swatch, { borderColor: cor, backgroundColor: dashed ? 'transparent' : `${cor}33` }, dashed && s.swatchDashed]} />
-      <Text style={s.legendText}>{label}</Text>
+    <View style={s.deltaCol}>
+      <Text style={s.deltaColLabel}>{label}</Text>
+      <Text style={[s.deltaColValue, valueColor ? { color: valueColor } : null]}>{value}</Text>
+      {sub ? <Text style={s.deltaColSub}>{sub}</Text> : null}
     </View>
   );
 }
 
-function Triple({ label, value, sub, highlight }: { label: string; value: string; sub?: string; highlight?: boolean }) {
-  return (
-    <View style={s.triple}>
-      <Text style={s.tripleLabel}>{label}</Text>
-      <Text style={[s.tripleValue, highlight && { color: colors.verde }]}>{value}</Text>
-      {sub && <Text style={s.tripleSub}>{sub}</Text>}
-    </View>
-  );
-}
+// ─── Estilos ─────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  content: { padding: 14, paddingBottom: 24 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  semAlt: { fontSize: 14, color: colors.muted, textAlign: 'center', lineHeight: 20 },
+  semAlt: { ...text.body, color: colors.mutedText, textAlign: 'center' },
 
-  legendRow: { flexDirection: 'row', gap: 16, marginTop: 8, marginBottom: 4 },
-  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  swatch: { width: 18, height: 12, borderWidth: 2, borderRadius: 2 },
-  swatchDashed: { borderStyle: 'dashed' },
-  legendText: { fontSize: 12, color: colors.muted, fontWeight: '600' },
+  // Mapa
+  mapContainer: { height: MAP_HEIGHT },
 
-  banner: { borderRadius: 12, borderWidth: 1, padding: 14, marginTop: 10, marginBottom: 12 },
-  bannerTitulo: { fontSize: 16, fontWeight: '800' },
-  bannerDetalhe: { fontSize: 13, color: colors.ink, marginTop: 4, lineHeight: 18 },
-  bannerPrazo: { fontSize: 13, fontWeight: '800', marginTop: 6 },
-  bannerFonte: { fontSize: 11, color: colors.muted, marginTop: 6, fontStyle: 'italic' },
+  statusBanner: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    right: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 99,
+    borderWidth: 1.5,
+    backgroundColor: 'rgba(255,255,255,0.93)',
+  },
+  statusBannerText: { ...text.label, flex: 1, fontSize: 11 },
 
-  card: { backgroundColor: colors.verdeBg, borderRadius: 12, borderWidth: 1, borderColor: colors.line, padding: 14, marginBottom: 12 },
-  cardTitle: { fontSize: 13, fontWeight: '800', color: colors.ink, marginBottom: 10 },
+  toggleRow: {
+    position: 'absolute',
+    bottom: 12,
+    left: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(255,255,255,0.93)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  checkbox: {
+    width: 18,
+    height: 18,
+    borderRadius: 3,
+    borderWidth: 1.5,
+    borderColor: colors.critico,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxOn: { backgroundColor: colors.critico, borderColor: colors.critico },
+  toggleLabel: { fontSize: 13, fontWeight: '600', color: colors.inkText },
 
-  tripleRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  triple: { flex: 1, alignItems: 'center' },
-  tripleLabel: { fontSize: 11, color: colors.muted, fontWeight: '700', textTransform: 'uppercase' },
-  tripleValue: { fontSize: 16, fontWeight: '800', color: colors.ink, marginTop: 3 },
-  tripleSub: { fontSize: 11, color: colors.muted, marginTop: 1 },
-  concordancia: { fontSize: 13, color: colors.ink, marginTop: 12 },
-  concordanciaVal: { fontWeight: '800', color: colors.verde },
-  incerteza: { fontSize: 11, color: colors.muted, marginTop: 6, fontStyle: 'italic', lineHeight: 15 },
+  // Conteúdo
+  content:     { padding: 16, paddingBottom: 32, gap: 12 },
+  headline:    { ...text.headline, color: colors.primary, marginBottom: 2 },
+  headlineSub: { ...text.body, color: colors.mutedText, marginBottom: 4 },
 
-  camadaRow: { marginBottom: 6 },
-  camadaText: { fontSize: 13, color: colors.ink, lineHeight: 17 },
-  semCamada: { fontSize: 13, color: colors.verde, fontWeight: '700' },
+  // Cards de área
+  areaLabel:    { ...text.label, color: colors.mutedText, marginBottom: 4 },
+  areaRow:      { flexDirection: 'row', alignItems: 'flex-end' },
+  areaValue:    { fontSize: 40, fontWeight: '800', color: colors.inkText, lineHeight: 46 },
+  areaUnit:     { fontSize: 18, fontWeight: '600', color: colors.mutedText, paddingBottom: 5 },
+  precisionRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6 },
+  precisionText:{ fontSize: 13, fontWeight: '600', color: colors.tertiary },
+  baselineNote: { ...text.caption, color: colors.mutedText, marginTop: 6 },
 
-  recomendacao: { fontSize: 13, color: colors.ink, lineHeight: 19 },
-  disclaimer: { fontSize: 10, color: colors.muted, fontStyle: 'italic', lineHeight: 14, marginTop: 2 },
+  // Card de diferença
+  sectionLabel:  { ...text.label, color: colors.mutedText, marginBottom: 10 },
+  metricsRow:    { flexDirection: 'row', justifyContent: 'space-between' },
+  deltaCol:      { flex: 1, alignItems: 'center' },
+  deltaColLabel: { ...text.label, color: colors.mutedText, fontSize: 10 },
+  deltaColValue: { fontSize: 16, fontWeight: '800', color: colors.inkText, marginTop: 3 },
+  deltaColSub:   { ...text.caption, color: colors.mutedText, marginTop: 1 },
+  incerteza:     { ...text.caption, color: colors.mutedText, fontStyle: 'italic', lineHeight: 15, marginTop: 8 },
 
-  footer: { padding: 12, paddingBottom: 18, backgroundColor: colors.branco, borderTopWidth: 1, borderTopColor: colors.line },
-  footerRow: { flexDirection: 'row', alignItems: 'center' },
+  recomendacao: { ...text.body, color: colors.inkText, lineHeight: 22 },
+  disclaimer:   { ...text.caption, color: colors.mutedText, fontStyle: 'italic', lineHeight: 15 },
 });
