@@ -19,9 +19,10 @@ export function CadastroScreen({ imovelId }: { imovelId?: string }) {
 
   const [loaded, setLoaded] = useState(false);
   const [existing, setExisting] = useState<Imovel | null>(null);
-  const [nome, setNome] = useState('');
-  const [municipio, setMunicipio] = useState('');
-  const [uf, setUf] = useState('');
+  // ponytail: pré-preenchido com dados de demo (sobrescrito ao editar um imóvel existente).
+  const [nome, setNome] = useState('Sítio Boa Esperança');
+  const [municipio, setMunicipio] = useState('Sorriso');
+  const [uf, setUf] = useState('MT');
   const [matricula, setMatricula] = useState('');
   const [modulos, setModulos] = useState('');
   const [produtorNome, setProdutorNome] = useState('');
