@@ -8,6 +8,7 @@ import { colors } from '../theme/colors';
 import { listImoveis, updateImovel } from '../lib/store';
 import { validatePerimeter } from '../lib/geo';
 import { analisarSobreposicoes, type AnaliseAmbiental, type CamadaTipo } from '../lib/overlay';
+import { analisarAlteracaoImovel, decisaoSugerida, type AlteracaoImovel } from '../lib/alteracao';
 import { DEMO_CAMADAS } from '../lib/refLayers.demo';
 import type { Imovel, ValidacaoStatus } from '../types';
 
@@ -25,10 +26,14 @@ function tipoLabel(tipo: CamadaTipo): string {
   }
 }
 
+const altColor = { ok: colors.verde, aviso: colors.aviso, alerta: colors.alerta } as const;
+const altBg = { ok: '#e2f3e8', aviso: '#fdf4e3', alerta: '#fce8e7' } as const;
+
 export function ValidacaoScreen() {
   const { navigate } = useNav();
   const [imoveis, setImoveis] = useState<Imovel[]>([]);
   const [analises, setAnalises] = useState<Record<string, AnaliseAmbiental>>({});
+  const [alteracoes, setAlteracoes] = useState<Record<string, AlteracaoImovel>>({});
 
   const load = useCallback(() => {
     let alive = true;
@@ -37,6 +42,7 @@ export function ValidacaoScreen() {
       setImoveis(list);
       // Análise offline síncrona com DEMO_CAMADAS — triagem instantânea sem rede.
       const rec: Record<string, AnaliseAmbiental> = {};
+      const alt: Record<string, AlteracaoImovel> = {};
       for (const im of list) {
         if (im.geometry.points.length >= 3) {
           rec[im.id] = analisarSobreposicoes(
@@ -44,9 +50,13 @@ export function ValidacaoScreen() {
             DEMO_CAMADAS,
             'offline-demo',
           );
+          // Delta de re-demarcação (anterior × atual) para o alerta de visita.
+          const a = analisarAlteracaoImovel(im, DEMO_CAMADAS, 'offline-demo');
+          if (a) alt[im.id] = a;
         }
       }
       setAnalises(rec);
+      setAlteracoes(alt);
     });
     return () => {
       alive = false;
@@ -67,8 +77,21 @@ export function ValidacaoScreen() {
     [load],
   );
 
+  // Abre o imóvel e marca o informe de divergência como visto (some o selo "novo").
+  const abrirImovel = useCallback(
+    (im: Imovel) => {
+      if (im.alertaDivergencia && !im.alertaDivergencia.visto) {
+        updateImovel(im.id, {
+          alertaDivergencia: { ...im.alertaDivergencia, visto: true },
+        }).then(load);
+      }
+      navigate({ name: 'revisao', imovelId: im.id });
+    },
+    [navigate, load],
+  );
+
   return (
-    <Screen title="Validação" subtitle="Análise geométrica dos imóveis" showBack={false}>
+    <Screen title="Triagem" subtitle="Imóveis recebidos · analisar e validar" showBack={false}>
       <FlatList
         data={imoveis}
         keyExtractor={(i) => i.id}
@@ -84,19 +107,54 @@ export function ValidacaoScreen() {
           const st = item.validacao?.status;
           const analise = analises[item.id];
           const temCritico =
-            analise != null &&
-            analise.sobreposicoes.some((x) => x.severidade === 'critico');
-          const sobreposicoesLabel =
-            analise && analise.sobreposicoes.length > 0
-              ? analise.sobreposicoes.map((x) => tipoLabel(x.tipo)).join(', ')
-              : null;
+            analise?.sobreposicoes.some((x) => x.severidade === 'critico') ?? false;
+          const alt = alteracoes[item.id];
+          const altVisita = alt?.relatorio.requerVisita ? alt : null;
+          const decAlt = altVisita ? decisaoSugerida(altVisita.relatorio.severidade) : null;
+
+          // Badge NOVO vem de alertaDivergencia (único campo com flag `visto`).
+          const alertaNovo = item.alertaDivergencia != null && !item.alertaDivergencia.visto;
+
+          // Cores do alerta unificado: derivam de decAlt quando disponível.
+          const alertaBg = decAlt ? altBg[decAlt.tone] : '#fce8e7';
+          const alertaBorderColor = decAlt ? altColor[decAlt.tone] : colors.alerta;
+          const alertaTextColor = decAlt ? altColor[decAlt.tone] : colors.alerta;
+
+          // Título e sub do alerta — altVisita tem precedência (mais detalhado).
+          const alertaTitulo = altVisita
+            ? `Alteração detectada — ${decAlt?.titulo.toLowerCase() ?? 'requer análise'}`
+            : 'Divergência detectada — visita necessária';
+          const alertaSub = altVisita
+            ? `${altVisita.relatorio.delta_ha >= 0 ? '+' : ''}${altVisita.relatorio.delta_ha.toFixed(1)} ha (${altVisita.relatorio.delta_pct >= 0 ? '+' : ''}${altVisita.relatorio.delta_pct.toFixed(0)}%) · toque para detalhes →`
+            : item.alertaDivergencia
+            ? `${item.alertaDivergencia.delta_ha >= 0 ? '+' : ''}${item.alertaDivergencia.delta_ha.toFixed(1)} ha · toque para ver →`
+            : '';
 
           return (
             <View style={s.card}>
-              <TouchableOpacity
-                activeOpacity={0.85}
-                onPress={() => navigate({ name: 'revisao', imovelId: item.id })}
-              >
+              {/* Alerta unificado de topo — altVisita suprime alertaDivergencia (mesmo fato, mais rico) */}
+              {(altVisita != null || item.alertaDivergencia != null) && (
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  style={[s.alerta, { backgroundColor: alertaBg, borderColor: alertaBorderColor }]}
+                  onPress={() =>
+                    altVisita
+                      ? navigate({ name: 'alteracao-detalhe', imovelId: item.id })
+                      : abrirImovel(item)
+                  }
+                >
+                  <View style={s.alertaHead}>
+                    {alertaNovo && <Text style={s.alertaNovoBadge}>NOVO</Text>}
+                    <Text style={[s.alertaTitulo, { color: alertaTextColor }]} numberOfLines={2}>
+                      {alertaTitulo}
+                    </Text>
+                  </View>
+                  {alertaSub.length > 0 && <Text style={s.alertaSub}>{alertaSub}</Text>}
+                </TouchableOpacity>
+              )}
+
+              {/* Corpo — toque abre o imóvel na tela de revisão */}
+              <TouchableOpacity activeOpacity={0.85} onPress={() => abrirImovel(item)}>
                 <View style={s.head}>
                   <Text style={s.titulo} numberOfLines={1}>
                     {item.imovel.nome || 'Imóvel sem nome'}
@@ -132,37 +190,66 @@ export function ValidacaoScreen() {
                   </Text>
                 ))}
 
-                {/* Triagem ambiental do analista */}
-                {sobreposicoesLabel != null ? (
-                  <View
-                    style={[
-                      s.overlayBadge,
-                      temCritico ? s.overlayBadgeCritico : s.overlayBadgeAviso,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        s.overlayBadgeText,
-                        { color: temCritico ? colors.alerta : colors.aviso },
-                      ]}
-                    >
-                      {temCritico ? '⛔' : '⚠'} Sobreposição: {sobreposicoesLabel}
+                {/* Sobreposição como chips coloridos por severidade, não string corrida */}
+                {analise && analise.sobreposicoes.length > 0 ? (
+                  <View style={s.chips}>
+                    <Text style={[s.chipsIcone, { color: temCritico ? colors.alerta : colors.aviso }]}>
+                      {temCritico ? '⛔' : '⚠'}
                     </Text>
+                    {analise.sobreposicoes.map((x, idx) => (
+                      <View
+                        key={idx}
+                        style={[s.chip, x.severidade === 'critico' ? s.chipCritico : s.chipAviso]}
+                      >
+                        <Text
+                          style={[
+                            s.chipText,
+                            { color: x.severidade === 'critico' ? colors.alerta : colors.aviso },
+                          ]}
+                        >
+                          {tipoLabel(x.tipo)}
+                        </Text>
+                      </View>
+                    ))}
                   </View>
                 ) : analise != null ? (
                   <Text style={s.overlayClear}>✓ Sem sobreposição ambiental (demo)</Text>
                 ) : null}
+
+                {/* Conferência solicitada: chip inline, não banner */}
+                {item.solicitacaoVisita && (
+                  <View style={s.confChip}>
+                    <Text style={s.confChipText}>
+                      📍 Conf. solicitada pelo produtor
+                      {item.solicitacaoVisita.motivo === 'documentacao' ? ' (doc.)' : ' (nova medição)'}
+                    </Text>
+                  </View>
+                )}
               </TouchableOpacity>
 
-              {/* Laudo ambiental completo */}
-              <TouchableOpacity
-                style={s.laudoBtn}
-                activeOpacity={0.8}
-                onPress={() => navigate({ name: 'analise-ambiental', imovelId: item.id })}
-              >
-                <Text style={s.laudoBtnText}>Ver laudo ambiental completo</Text>
-              </TouchableOpacity>
+              {/* Divisor */}
+              <View style={s.divider} />
 
+              {/* Ações secundárias — menores, em linha, foco baixo */}
+              <View style={s.secundarias}>
+                <TouchableOpacity
+                  style={s.secundariaBtn}
+                  activeOpacity={0.8}
+                  onPress={() => navigate({ name: 'conferencia-lab', imovelId: item.id })}
+                >
+                  <Text style={s.secundariaBtnText}>Nova medição →</Text>
+                </TouchableOpacity>
+                <View style={s.secundariaSep} />
+                <TouchableOpacity
+                  style={s.secundariaBtn}
+                  activeOpacity={0.8}
+                  onPress={() => navigate({ name: 'analise-ambiental', imovelId: item.id })}
+                >
+                  <Text style={s.secundariaBtnText}>Ver laudo →</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Decisão principal — foco visual máximo */}
               <View style={s.actions}>
                 <SecondaryButton label="Reprovar" onPress={() => setValidacao(item, 'reprovado')} />
                 <View style={{ width: 10 }} />
@@ -198,50 +285,59 @@ const s = StyleSheet.create({
   titulo: { flex: 1, fontSize: 16, fontWeight: '800', color: colors.ink },
   sub: { fontSize: 12, color: colors.muted, marginTop: 4 },
   ok: { fontSize: 13, color: colors.verde, fontWeight: '700', marginTop: 8 },
-  problema: {
-    fontSize: 13,
-    color: colors.alerta,
-    fontWeight: '700',
-    marginTop: 8,
-    lineHeight: 18,
-  },
+  problema: { fontSize: 13, color: colors.alerta, fontWeight: '700', marginTop: 8, lineHeight: 18 },
   aviso: { fontSize: 12, color: colors.aviso, marginTop: 4, lineHeight: 17 },
+  overlayClear: { fontSize: 12, color: colors.verde, fontWeight: '700', marginTop: 8 },
+  actions: { flexDirection: 'row', marginTop: 12 },
 
-  // Triagem ambiental
-  overlayBadge: {
+  // Alerta unificado de topo (altVisita suprime alertaDivergencia — mesmo fato)
+  alerta: {
+    borderRadius: 10,
+    borderWidth: 1,
+    padding: 10,
+    marginBottom: 12,
+  },
+  alertaHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  alertaNovoBadge: {
+    fontSize: 10,
+    fontWeight: '900',
+    color: colors.branco,
+    backgroundColor: colors.alerta,
+    borderRadius: 5,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    overflow: 'hidden',
+  },
+  alertaTitulo: { flex: 1, fontSize: 13, fontWeight: '800', lineHeight: 17 },
+  alertaSub: { fontSize: 11, color: colors.muted, marginTop: 3, lineHeight: 15 },
+
+  // Chips de sobreposição ambiental
+  chips: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6, marginTop: 8 },
+  chipsIcone: { fontSize: 13, fontWeight: '700' },
+  chip: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1 },
+  chipCritico: { backgroundColor: '#fce8e7', borderColor: colors.alerta },
+  chipAviso: { backgroundColor: '#fdf4e3', borderColor: '#c07a1a' },
+  chipText: { fontSize: 11, fontWeight: '800' },
+
+  // Conferência solicitada — chip inline, não banner
+  confChip: {
+    alignSelf: 'flex-start',
     marginTop: 8,
+    backgroundColor: '#fdf4e3',
+    borderWidth: 1,
+    borderColor: '#c07a1a',
     borderRadius: 8,
     paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderWidth: 1,
+    paddingVertical: 5,
   },
-  overlayBadgeCritico: {
-    backgroundColor: '#fce8e7',
-    borderColor: colors.alerta,
-  },
-  overlayBadgeAviso: {
-    backgroundColor: '#fdf4e3',
-    borderColor: '#c07a1a',
-  },
-  overlayBadgeText: { fontSize: 12, fontWeight: '700', lineHeight: 17 },
-  overlayClear: {
-    fontSize: 12,
-    color: colors.verde,
-    fontWeight: '700',
-    marginTop: 8,
-  },
+  confChipText: { fontSize: 11, fontWeight: '700', color: colors.aviso },
 
-  // Botão de laudo
-  laudoBtn: {
-    marginTop: 12,
-    paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: colors.verdeBg,
-    borderWidth: 1,
-    borderColor: colors.line,
-    alignItems: 'center',
-  },
-  laudoBtnText: { fontSize: 13, fontWeight: '700', color: colors.verde },
+  // Divisor visual entre corpo e ações
+  divider: { height: 1, backgroundColor: colors.line, marginVertical: 12 },
 
-  actions: { flexDirection: 'row', marginTop: 12 },
+  // Ações secundárias — linha única, menor destaque visual
+  secundarias: { flexDirection: 'row', marginBottom: 4 },
+  secundariaBtn: { flex: 1, minHeight: 44, justifyContent: 'center', alignItems: 'center' },
+  secundariaBtnText: { fontSize: 13, fontWeight: '700', color: colors.verde },
+  secundariaSep: { width: 1, backgroundColor: colors.line, marginVertical: 4 },
 });

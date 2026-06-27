@@ -1,14 +1,21 @@
-// Aba "Painel" (analista) — visão geral dos imóveis cadastrados no aparelho.
+// Aba "Painel" (analista) — dashboard de números. A fila de visitas em si vive na
+// aba "Visitas"; aqui ficam só os indicadores (a métrica "Requer visita" leva até lá).
 import { useEffect, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Screen } from '../app/Screen';
+import { useNav } from '../app/navigation';
 import { Card, SectionTitle } from '../ui';
 import { colors } from '../theme/colors';
 import { listImoveis } from '../lib/store';
 import { validatePerimeter } from '../lib/geo';
+import { analisarAlteracaoImovel } from '../lib/alteracao';
+import { analisarSobreposicoes } from '../lib/overlay';
+import { gerarPainelAvisos } from '../lib/conferencia';
+import { DEMO_CAMADAS } from '../lib/refLayers.demo';
 import type { Imovel } from '../types';
 
 export function PainelScreen() {
+  const { switchTab } = useNav();
   const [imoveis, setImoveis] = useState<Imovel[]>([]);
 
   useEffect(() => {
@@ -19,27 +26,45 @@ export function PainelScreen() {
     const total = imoveis.length;
     const areaTotal = imoveis.reduce((acc, i) => acc + (i.geometry.area_ha || 0), 0);
     const enviados = imoveis.filter((i) => i.status === 'enviado').length;
-    const rascunhos = total - enviados;
     const aprovados = imoveis.filter((i) => i.validacao?.status === 'aprovado').length;
     const reprovados = imoveis.filter((i) => i.validacao?.status === 'reprovado').length;
-    // Pendente = sem validação OU com problema geométrico não resolvido.
-    const comProblema = imoveis.filter(
-      (i) => !validatePerimeter(i.geometry.points).ok,
-    ).length;
+    const comProblema = imoveis.filter((i) => !validatePerimeter(i.geometry.points).ok).length;
     const pendentes = total - aprovados - reprovados;
     const docsTotal = imoveis.reduce((acc, i) => acc + i.documentos.length, 0);
-    return { total, areaTotal, enviados, rascunhos, aprovados, reprovados, pendentes, comProblema, docsTotal };
+
+    // Requer visita: mesma regra da aba Visitas (avisos de campo ou pedido do produtor),
+    // ignorando os já decididos.
+    let requerVisita = 0;
+    for (const im of imoveis) {
+      if (im.geometry.points.length < 3) continue;
+      if (im.validacao?.status === 'aprovado') continue;
+      const analise = analisarSobreposicoes(im.geometry.points, DEMO_CAMADAS, 'offline-demo');
+      const alt = analisarAlteracaoImovel(im, DEMO_CAMADAS, 'offline-demo');
+      const painel = gerarPainelAvisos(im.geometry.points, analise, alt?.relatorio ?? null);
+      if (painel.requerVisita || im.solicitacaoVisita != null) requerVisita++;
+    }
+
+    return { total, areaTotal, enviados, aprovados, reprovados, pendentes, comProblema, docsTotal, requerVisita };
   }, [imoveis]);
 
   return (
-    <Screen title="Painel" subtitle="Visão geral dos imóveis" showBack={false}>
+    <Screen title="Painel" subtitle="Visão geral da carteira" showBack={false}>
       <ScrollView contentContainerStyle={s.content}>
         <View style={s.grid}>
-          <Metric value={String(m.total)} label="Imóveis" tone="verde" />
-          <Metric value={`${m.areaTotal.toFixed(1)}`} label="Hectares (total)" tone="verde" />
-          <Metric value={String(m.enviados)} label="Enviados" tone="ok" />
-          <Metric value={String(m.rascunhos)} label="Rascunhos" tone="aviso" />
+          <Metric value={String(m.total)} label="Imóveis" />
+          <Metric value={`${m.areaTotal.toFixed(1)}`} label="Hectares (total)" />
+          <Metric value={String(m.enviados)} label="Enviados" />
+          <Metric
+            value={String(m.requerVisita)}
+            label="Requer visita"
+            tone={m.requerVisita > 0 ? 'aviso' : 'verde'}
+            onPress={m.requerVisita > 0 ? () => switchTab({ name: 'visitas' }) : undefined}
+          />
         </View>
+
+        {m.requerVisita > 0 && (
+          <Text style={s.dica}>Toque em “Requer visita” para abrir a fila e agendar/contatar o produtor.</Text>
+        )}
 
         <Card style={{ marginTop: 14 }}>
           <SectionTitle>Validação</SectionTitle>
@@ -56,7 +81,7 @@ export function PainelScreen() {
 
         {m.total === 0 && (
           <Text style={s.empty}>
-            Nenhum imóvel ainda. Cadastre o primeiro pela aba “Imóveis”.
+            Nenhum imóvel ainda. Os imóveis enviados pelos produtores aparecem na aba “Triagem”.
           </Text>
         )}
       </ScrollView>
@@ -67,18 +92,25 @@ export function PainelScreen() {
 function Metric({
   value,
   label,
-  tone,
+  tone = 'verde',
+  onPress,
 }: {
   value: string;
   label: string;
-  tone: 'verde' | 'ok' | 'aviso';
+  tone?: 'verde' | 'aviso';
+  onPress?: () => void;
 }) {
   const color = tone === 'aviso' ? colors.aviso : colors.verde;
-  return (
-    <View style={s.metric}>
+  const inner = (
+    <View style={[s.metric, onPress && s.metricLink]}>
       <Text style={[s.metricValue, { color }]}>{value}</Text>
-      <Text style={s.metricLabel}>{label}</Text>
+      <Text style={s.metricLabel}>{label}{onPress ? '  ›' : ''}</Text>
     </View>
+  );
+  return onPress ? (
+    <TouchableOpacity style={s.metricWrap} activeOpacity={0.85} onPress={onPress}>{inner}</TouchableOpacity>
+  ) : (
+    <View style={s.metricWrap}>{inner}</View>
   );
 }
 
@@ -94,9 +126,8 @@ function Linha({ label, value, color }: { label: string; value: number; color: s
 const s = StyleSheet.create({
   content: { padding: 16 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  metricWrap: { flexBasis: '47%', flexGrow: 1 },
   metric: {
-    flexBasis: '47%',
-    flexGrow: 1,
     backgroundColor: colors.branco,
     borderRadius: 16,
     borderWidth: 1,
@@ -104,8 +135,10 @@ const s = StyleSheet.create({
     paddingVertical: 18,
     alignItems: 'center',
   },
+  metricLink: { borderColor: colors.aviso },
   metricValue: { fontSize: 28, fontWeight: '800' },
   metricLabel: { fontSize: 12, color: colors.muted, marginTop: 4 },
+  dica: { fontSize: 12, color: colors.muted, marginTop: 10, lineHeight: 17 },
   linha: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.line },
   linhaLabel: { fontSize: 14, color: colors.ink },
   linhaValue: { fontSize: 16, fontWeight: '800' },
