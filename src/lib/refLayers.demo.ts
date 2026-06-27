@@ -150,6 +150,65 @@ const APP_RIACHO: CamadaRef = {
 };
 
 // ---------------------------------------------------------------------------
+// 5. Hidrografia — riacho (linha d'água como polígono fino) cruzando SORRISO_SOJA
+//
+// Convenção para derivarAPP (src/lib/app.ts):
+//   - nome NÃO contém 'nascente' → trata como margem de rio (faixa 30 m padrão).
+//   - nome CONTÉM 'nascente'     → trata como nascente (raio 50 m).
+//
+// Esta feição representa um córrego de 1ª ordem (< 10 m de largura) que atravessa
+// a fazenda de W para E. Representado como polígono fino (~10 m de largura).
+// Após buffer de 30 m (Art. 4°, I, a, Lei 12.651/2012), produz uma faixa APP
+// de ≈ 70 m de largura que cruza toda a fazenda.
+// ---------------------------------------------------------------------------
+const HIDRO_RIO_SORRISO: CamadaRef = {
+  tipo: 'hidrografia',
+  tipo_feicao: 'curso_dagua',
+  nome: 'Córrego sem nome – 1ª ordem (demo)',
+  fonte: 'ANA SNIRH BHO — fixture offline',
+  rings: [
+    [
+      // Polígono fino: faixa E-W cruzando o centro-norte do polígono SORRISO_SOJA.
+      // Lat ≈ -12.4200 a -12.4201 (faixa de ~11 m de largura, válida para turf).
+      [-55.9550, -12.4201], // NW — fora da fazenda (a oeste)
+      [-55.9440, -12.4200], // NE — fora da fazenda (a leste)
+      [-55.9440, -12.4199], // SE — fora da fazenda (a leste)
+      [-55.9550, -12.4200], // SW — fora da fazenda (a oeste)
+      [-55.9550, -12.4201], // fecha anel
+    ],
+  ],
+};
+
+// ---------------------------------------------------------------------------
+// 6. Hidrografia — nascente dentro de SORRISO_SOJA
+//
+// Representa uma nascente perene localizada no interior da fazenda.
+// Após buffer de 50 m (Art. 4°, IV, Lei 12.651/2012), produz um círculo
+// de APP de ≈ 0,785 ha em torno do olho d'água.
+//
+// Geometria: quadrado mínimo (~11 m × 11 m) centrado na nascente, válido
+// como polígono turf. O centroide de rings[0] é usado por derivarAPP ao
+// computar o buffer de ponto.
+// ---------------------------------------------------------------------------
+const HIDRO_NASCENTE_SORRISO: CamadaRef = {
+  tipo: 'hidrografia',
+  tipo_feicao: 'nascente',
+  nome: 'Nascente – olho d\'água (demo)',
+  fonte: 'ANA SNIRH BHO — fixture offline',
+  rings: [
+    [
+      // Quadrado mínimo centrado em [-55.9500, -12.4208] — dentro do polígono.
+      // halfSide ≈ 0.000050° ≈ 5,6 m
+      [-55.9500500, -12.4208500], // NW
+      [-55.9499500, -12.4208500], // NE
+      [-55.9499500, -12.4207500], // SE
+      [-55.9500500, -12.4207500], // SW
+      [-55.9500500, -12.4208500], // fecha anel
+    ],
+  ],
+};
+
+// ---------------------------------------------------------------------------
 // Exportação das fixtures
 // ---------------------------------------------------------------------------
 
@@ -175,4 +234,20 @@ export const DEMO_CAMADAS: CamadaRef[] = [
   DESMATAMENTO_PRODES,
   QUEIMADA_AQ1KM,
   APP_RIACHO,
+];
+
+/**
+ * Hidrografia bruta (linhas d'água e nascentes) para a demo SORRISO_SOJA.
+ *
+ * Uso: passar para `derivarAPP()` (src/lib/app.ts) para gerar polígonos de APP.
+ * Em seguida, passar o resultado para `appDentroDoImovel()` junto com os vértices
+ * do imóvel. Com os vértices de SORRISO_SOJA, o resultado será APP > 0 ha.
+ *
+ * Convenção de nome (src/lib/app.ts):
+ *   - nome.includes('nascente') → nascente (buffer 50 m, Art. 4°, IV)
+ *   - caso contrário            → margem de rio (buffer 30 m, Art. 4°, I, a)
+ */
+export const DEMO_HIDROGRAFIA: CamadaRef[] = [
+  HIDRO_RIO_SORRISO,
+  HIDRO_NASCENTE_SORRISO,
 ];

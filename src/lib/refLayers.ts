@@ -38,7 +38,7 @@
 //              CRS servidor: SIRGAS 2000 (EPSG:4674); consultado via CRS:84.
 
 import type { CamadaRef, CamadaTipo } from './overlay';
-import { DEMO_CAMADAS } from './refLayers.demo';
+import { DEMO_CAMADAS, DEMO_HIDROGRAFIA } from './refLayers.demo';
 
 // ---------------------------------------------------------------------------
 // Tipos de bbox e configurações por camada
@@ -130,6 +130,31 @@ const WFS_CONFIGS: WfsConfig[] = [
     version: '2.0.0',
     fonteLabel: 'INPE Programa Queimadas AQ1km (terrabrasilis.dpi.inpe.br)',
     maxFeatures: 300,
+  },
+
+  // ---- Hidrografia — ANA SNIRH (Base Hidrográfica Ottocodificada) ----
+  //
+  // Fonte preferencial: ANA/SNIRH — Base Hidrográfica Ottocodificada (BHO).
+  //   Catálogo de metadados: https://metadados.snirh.gov.br/geonetwork
+  //   Portal SNIRH ArcGIS REST (não-OGC):
+  //     https://portal1.snirh.gov.br/ana/rest/services/dados_abertos/
+  //   FBDS (shapefile, sem WFS ao vivo): http://geo.fbds.org.br/
+  //
+  // ▼ LIMITAÇÃO: não há endpoint WFS OGC nacional consolidado e publicamente
+  //   disponível para hidrografia ANA/FBDS em 2025. O ANA/SNIRH expõe seus
+  //   dados via ArcGIS REST (não-OGC WFS). A URL abaixo é hipotética e
+  //   documentada como referência — em produção sempre cairá no fallback
+  //   offline-demo (DEMO_HIDROGRAFIA) via Promise.allSettled.
+  //   Alternativa futura: proxy no servidor convertendo ArcGIS REST → GeoJSON.
+  //
+  // CRS: CRS:84 (lon/lat WGS84). SIRGAS 2000 ≈ WGS84 (sub-métrico).
+  {
+    tipo: 'hidrografia',
+    baseUrl: 'https://geoserver.snirh.gov.br/ows',
+    typeName: 'snirh:bho_trecho_drenagem',
+    version: '2.0.0',
+    fonteLabel: 'ANA SNIRH BHO (geoserver.snirh.gov.br) — estimativa de campo',
+    maxFeatures: 500,
   },
 ];
 
@@ -361,6 +386,7 @@ export async function fetchCamadasPorBBox(
     'desmatamento',
     'queimada',
     'app_hidrografia',
+    'hidrografia',
     'car_vizinho',
   ],
 ): Promise<FetchCamadasResult> {
@@ -429,7 +455,8 @@ export async function fetchCamadasPorBBox(
  */
 function _filtrarDemoPorBbox(bbox: BBox): CamadaRef[] {
   const [minLon, minLat, maxLon, maxLat] = bbox;
-  return DEMO_CAMADAS.filter((c) => {
+  const todasDemo = [...DEMO_CAMADAS, ...DEMO_HIDROGRAFIA];
+  return todasDemo.filter((c) => {
     const ring = c.rings[0];
     if (!ring || ring.length === 0) return false;
     return ring.some(

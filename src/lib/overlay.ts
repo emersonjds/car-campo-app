@@ -31,6 +31,7 @@ export type CamadaTipo =
   | 'desmatamento'
   | 'queimada'
   | 'app_hidrografia'
+  | 'hidrografia'
   | 'car_vizinho';
 
 /** Uma camada de referência ambiental (TI, UC, embargo, etc.). */
@@ -40,6 +41,13 @@ export interface CamadaRef {
   nome: string;
   /** Origem dos dados. Ex.: "FUNAI WFS". */
   fonte: string;
+  /**
+   * Discriminador opcional de feição de hidrografia (para derivação de APP).
+   * Quando presente, tem prioridade sobre a heurística de nome:
+   *   'nascente'    → APP circular (raio 50 m, Art. 4°, IV)
+   *   'curso_dagua' → APP de margem (faixa por largura, Art. 4°, I)
+   */
+  tipo_feicao?: 'nascente' | 'curso_dagua';
   /**
    * Anéis de um polígono simples em [lon, lat] (GeoJSON, WGS84).
    *
@@ -117,6 +125,7 @@ export function severidadePorTipo(tipo: CamadaTipo): Severidade {
     case 'queimada':
       return 'alerta';
     case 'app_hidrografia':
+    case 'hidrografia':
     case 'car_vizinho':
       return 'info';
   }
@@ -195,6 +204,11 @@ function _mensagem(
       return (
         `${icone} Seu imóvel inclui ${cobertura} de Área de Preservação Permanente (APP) de curso d'água ou nascente (${nome}). ` +
         `Confira se há obrigação de recomposição (Código Florestal, art. 61-A).`
+      );
+    case 'hidrografia':
+      return (
+        `${icone} Seu imóvel contém ${cobertura} de hidrografia (curso d'água ou nascente) — ${nome}. ` +
+        `Verifique a faixa de APP correspondente (Código Florestal, art. 4°) antes de finalizar a demarcação.`
       );
     case 'car_vizinho':
       if (severidade === 'alerta') {
