@@ -20,6 +20,7 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MapView, { Circle, Marker, Polygon, Polyline } from 'react-native-maps';
 
 import { Screen } from '../app/Screen';
@@ -68,8 +69,9 @@ function validatePerimeterLocal(points: LngLat[]): Array<{ msg: string; tone: 'a
 const DEFAULT_REGION = {
   latitude: DEMO_ROUTES[0]!.vertices[0]!.latitude,
   longitude: DEMO_ROUTES[0]!.vertices[0]!.longitude,
-  latitudeDelta: 0.012,
-  longitudeDelta: 0.012,
+  // Zoom inicial mais aberto — mostra o terreno a uma distância maior.
+  latitudeDelta: 0.03,
+  longitudeDelta: 0.03,
 };
 
 // ---------- camadas estáticas (módulo-level, imutáveis) ----------
@@ -203,6 +205,7 @@ function MapControls({
 
 export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
   const { navigate } = useNav();
+  const insets = useSafeAreaInsets();
   const [mode, setMode] = useState<Mode>('sim');
   const [selectedRouteId, setSelectedRouteId] = useState(DEMO_ROUTES[0]!.id);
   const [saving, setSaving] = useState(false);
@@ -257,7 +260,7 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
     if (now - lastRegionUpdateRef.current < 1000) return;
     lastRegionUpdateRef.current = now;
     mapRef.current.animateToRegion(
-      { latitude: activeAvatar.latitude, longitude: activeAvatar.longitude, latitudeDelta: 0.006, longitudeDelta: 0.006 },
+      { latitude: activeAvatar.latitude, longitude: activeAvatar.longitude, latitudeDelta: 0.018, longitudeDelta: 0.018 },
       500,
     );
   }, [activeAvatar]);
@@ -301,7 +304,7 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
     const t = activeAvatar ?? activePoints[activePoints.length - 1] ?? null;
     if (!t || !mapRef.current) return;
     mapRef.current.animateToRegion(
-      { latitude: t.latitude, longitude: t.longitude, latitudeDelta: 0.006, longitudeDelta: 0.006 },
+      { latitude: t.latitude, longitude: t.longitude, latitudeDelta: 0.018, longitudeDelta: 0.018 },
       400,
     );
   }, [activeAvatar, activePoints]);
@@ -509,7 +512,7 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
       </View>
 
       {/* ── Rodapé sólido: rota (idle) + status + botões ──────────────── */}
-      <View style={s.footer}>
+      <View style={[s.footer, { paddingBottom: insets.bottom + 12 }]}>
         {showRoutePanel && (
           <View style={s.routeRow}>
             <Text style={s.routePanelLabel}>Rota de demonstracao</Text>
@@ -840,7 +843,7 @@ const s = StyleSheet.create({
   footer: {
     paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: 44, // folga pro home indicator (~34px) — botão não cortado
+    // paddingBottom vem do safe-area inset (proporcional ao aparelho) — aplicado inline.
     backgroundColor: colors.neutral,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.line,
