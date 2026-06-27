@@ -6,6 +6,7 @@ import { ReactNode } from 'react';
 import {
   ActivityIndicator,
   KeyboardTypeOptions,
+  StyleProp,
   StyleSheet,
   Text,
   TextInput,
@@ -32,7 +33,7 @@ export function Button({
   variant?: ButtonVariant;
   disabled?: boolean;
   loading?: boolean;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
 }) {
   const variantStyle = {
     primary:  ui.btnPrimary,
