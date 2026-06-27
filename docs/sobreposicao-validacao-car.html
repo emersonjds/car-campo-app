@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Validação de Sobreposição do Terreno contra Mapas Oficiais — CAR Campo</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      font-family: 'Segoe UI', 'Trebuchet MS', Arial, Helvetica, sans-serif;
+      font-size: 11pt;
+      line-height: 1.6;
+      color: #1d2b22;
+      background: #ffffff;
+    }
+
+    body {
+      padding: 20mm;
+    }
+
+    @page {
+      size: A4 portrait;
+      margin: 15mm;
+    }
+
+    @media print {
+      body { padding: 0; }
+      a { color: #1b6b3a; text-decoration: none; }
+    }
+
+    /* Headings */
+    h1 {
+      color: #1b6b3a;
+      font-size: 22pt;
+      font-weight: 600;
+      border-bottom: 3px solid #1b6b3a;
+      padding-bottom: 10px;
+      margin: 24px 0 16px 0;
+      page-break-after: avoid;
+    }
+
+    h1.title-main {
+      text-align: center;
+      border: none;
+      margin-top: 60px;
+      margin-bottom: 8px;
+      font-size: 26pt;
+    }
+
+    h1.subtitle {
+      text-align: center;
+      border: none;
+      color: #5d6b62;
+      font-size: 14pt;
+      font-weight: 400;
+      margin-top: 4px;
+      margin-bottom: 40px;
+    }
+
+    h2 {
+      color: #1b6b3a;
+      font-size: 13pt;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 20px;
+      margin-bottom: 10px;
+      page-break-after: avoid;
+    }
+
+    h3 {
+      color: #2e9e57;
+      font-size: 11pt;
+      font-weight: 600;
+      margin-top: 12px;
+      margin-bottom: 8px;
+      page-break-after: avoid;
+    }
+
+    p {
+      margin-bottom: 10px;
+      text-align: justify;
+    }
+
+    p.lead {
+      font-size: 12pt;
+      color: #1b6b3a;
+      font-weight: 500;
+      margin-bottom: 16px;
+    }
+
+    ul, ol {
+      margin-left: 20px;
+      margin-bottom: 12px;
+    }
+
+    li {
+      margin-bottom: 6px;
+    }
+
+    /* Cover page */
+    .cover {
+      text-align: center;
+      padding-top: 80px;
+      page-break-after: always;
+    }
+
+    .cover-header {
+      color: #1b6b3a;
+      font-size: 13pt;
+      font-weight: 600;
+      margin-bottom: 20px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .cover-title {
+      font-size: 28pt;
+      font-weight: 700;
+      color: #1b6b3a;
+      margin-bottom: 16px;
+      line-height: 1.3;
+    }
+
+    .cover-subtitle {
+      font-size: 14pt;
+      color: #5d6b62;
+      margin-bottom: 60px;
+      line-height: 1.5;
+    }
+
+    .cover-meta {
+      margin-top: 120px;
+      font-size: 10pt;
+      color: #5d6b62;
+      line-height: 1.8;
+    }
+
+    /* TOC */
+    .toc {
+      page-break-after: always;
+    }
+
+    .toc h2 {
+      margin-bottom: 16px;
+    }
+
+    .toc ol {
+      margin-left: 20px;
+    }
+
+    .toc li {
+      margin-bottom: 8px;
+      font-size: 11pt;
+    }
+
+    .toc a {
+      color: #1b6b3a;
+      text-decoration: none;
+    }
+
+    /* Content sections */
+    section {
+      page-break-inside: avoid;
+    }
+
+    /* Highlight boxes */
+    .highlight {
+      background: #eef7f0;
+      border-left: 4px solid #1b6b3a;
+      padding: 12px 14px;
+      margin: 12px 0;
+      border-radius: 2px;
+    }
+
+    .highlight.warning {
+      background: #fbf0d9;
+      border-left-color: #8a5a13;
+    }
+
+    .highlight.critical {
+      background: #fde8e5;
+      border-left-color: #a3302a;
+    }
+
+    .highlight p {
+      margin-bottom: 4px;
+    }
+
+    .highlight p:last-child {
+      margin-bottom: 0;
+    }
+
+    /* Code blocks */
+    pre {
+      background: #f5f5f5;
+      border: 1px solid #d9e4dc;
+      border-radius: 4px;
+      padding: 12px;
+      font-family: 'Courier New', monospace;
+      font-size: 9pt;
+      overflow-x: auto;
+      margin: 10px 0;
+      color: #1d2b22;
+    }
+
+    code {
+      font-family: 'Courier New', monospace;
+      font-size: 9pt;
+      color: #1d2b22;
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0;
+      font-size: 10pt;
+    }
+
+    thead {
+      background: #1b6b3a;
+      color: #ffffff;
+    }
+
+    th {
+      padding: 8px 10px;
+      text-align: left;
+      font-weight: 600;
+      border: 1px solid #1b6b3a;
+    }
+
+    td {
+      padding: 8px 10px;
+      border-bottom: 1px solid #d9e4dc;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #eef7f0;
+    }
+
+    tbody tr:hover {
+      background: #e2f3e8;
+    }
+
+    /* Badges and labels */
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 9pt;
+      font-weight: 600;
+      margin-right: 4px;
+      margin-bottom: 4px;
+    }
+
+    .badge-success {
+      background: #e2f3e8;
+      color: #1b6b3a;
+    }
+
+    .badge-danger {
+      background: #fde8e5;
+      color: #a3302a;
+    }
+
+    .badge-warning {
+      background: #fbf0d9;
+      color: #8a5a13;
+    }
+
+    /* Emoji as text indicators */
+    .indicator {
+      font-size: 11pt;
+      margin-right: 6px;
+    }
+
+    /* Lists with icons */
+    ul.checklist, ul.xlist {
+      list-style: none;
+      margin-left: 0;
+    }
+
+    ul.checklist li:before {
+      content: "✓ ";
+      color: #1b6b3a;
+      font-weight: bold;
+      margin-right: 8px;
+    }
+
+    ul.xlist li:before {
+      content: "✗ ";
+      color: #a3302a;
+      font-weight: bold;
+      margin-right: 8px;
+    }
+
+    ul.checklist li, ul.xlist li {
+      margin-left: 20px;
+      margin-bottom: 6px;
+    }
+
+    /* Examples */
+    .example {
+      background: #fafafa;
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+      padding: 10px;
+      margin: 10px 0;
+      font-size: 10pt;
+      font-family: 'Courier New', monospace;
+    }
+
+    /* Footer */
+    footer {
+      margin-top: 40px;
+      padding-top: 12px;
+      border-top: 1px solid #d9e4dc;
+      font-size: 9pt;
+      color: #5d6b62;
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    /* Page break utility */
+    .page-break {
+      page-break-after: always;
+    }
+
+    /* Glossary term */
+    .term {
+      font-weight: 600;
+      color: #1b6b3a;
+    }
+
+    .definition {
+      margin-left: 20px;
+      margin-bottom: 8px;
+      font-size: 10pt;
+    }
+  </style>
+</head>
+<body>
+
+<!-- COVER PAGE -->
+<div class="cover">
+  <div class="cover-header">CAR Campo</div>
+  <div class="cover-title">Validação de Sobreposição do Terreno contra Mapas Oficiais</div>
+  <div class="cover-subtitle">
+    Guia Técnico para Produtor Rural e Analista de Órgão Ambiental
+  </div>
+  <div class="cover-meta">
+    <p><strong>Versão 1.0</strong></p>
+    <p>junho de 2026</p>
+    <p style="margin-top: 12px;">
+      haCARthon · Desafio 2 · Solução 4<br>
+      App de desenho georreferenciado pelo celular
+    </p>
+  </div>
+</div>
+
+<!-- TABLE OF CONTENTS -->
+<div class="toc">
+  <h2>Sumário</h2>
+  <ol>
+    <li><a href="#o-problema">O problema</a></li>
+    <li><a href="#como-funciona">Como funciona a validação</a></li>
+    <li><a href="#camadas-oficiais">As camadas oficiais</a></li>
+    <li><a href="#o-que-da">O que dá para afirmar</a></li>
+    <li><a href="#o-que-nao-da">O que NÃO dá para afirmar</a></li>
+    <li><a href="#produtor">O que isso destrava para o produtor</a></li>
+    <li><a href="#analista">O que resolve para o analista</a></li>
+    <li><a href="#limitacoes">Limitações offline e roadmap</a></li>
+    <li><a href="#glossario">Glossário</a></li>
+    <li><a href="#fontes">Fontes</a></li>
+  </ol>
+</div>
+
+<!-- CONTENT -->
+
+<h1 id="o-problema">O problema</h1>
+
+<p>Quando você desenha um perímetro de imóvel rural usando o app CAR Campo, o desafio é <strong>saber se aquele desenho cruza com áreas protegidas, com desmatamento ilegal, ou com restrições ambientais</strong>.</p>
+
+<p class="lead">Por que isso importa?</p>
+
+<ul>
+  <li><strong>Para você (produtor)</strong>: Se o terreno invade uma Terra Indígena ou Unidade de Conservação, a sobreposição anula qualquer direito de uso naquela fração. Se há alerta de desmatamento após 2008, crédito rural pode ser negado.</li>
+  <li><strong>Para o banco</strong>: Quem financia (Pronaf, Pronampe) precisa saber se há embargo IBAMA ou invasão de APP antes de liberar recurso.</li>
+  <li><strong>Para o órgão ambiental</strong>: Precisa triagar imóveis de risco alto (terraplanagem em APP, TI, UC) antes de auditar manualmente.</li>
+</ul>
+
+<p>O app CAR Campo, rodando localmente no seu celular, <strong>já calcula área e perímetro geodésicos com precisão</strong> — sabemos se você desenhou 50 ha ou 150 ha. Agora precisamos conferir se esse desenho bate com a realidade dos mapas oficiais.</p>
+
+<div class="highlight">
+  <p>Este documento explica como a validação de sobreposição funciona, quais são as camadas e o que elas significam, <strong>o que dá para afirmar com rigor</strong> e o que não dá, e como as informações destravam crédito e regularização.</p>
+</div>
+
+---
+
+<h1 id="como-funciona">Como funciona a validação</h1>
+
+<h2>1. Interseção de Polígonos</h2>
+
+<p>Validar sobreposição é comparar <strong>dois polígonos</strong>: o perímetro que você desenhou vs. um perímetro de restrição oficial (Terra Indígena, Unidade de Conservação, área embargada, etc.).</p>
+
+<p><strong>Exemplo prático:</strong></p>
+
+<div class="example">
+Seu imóvel: 50 ha em formato retangular<br>
+Terra Indígena Yanomami: polígono oficial do FUNAI (EPSG:4674)<br>
+<br>
+Resultado: 2.3 ha de interseção = 4.6% da sua propriedade invade TI
+</div>
+
+<p>A lógica:</p>
+<ol>
+  <li><strong>Ler o perímetro que você desenhou</strong> (pontos GPS em WGS84 lon/lat)</li>
+  <li><strong>Buscar camadas oficiais</strong> que cobrem aquela região (quadrante de latitude/longitude)</li>
+  <li><strong>Calcular a interseção</strong> usando algoritmos de geometria computacional</li>
+  <li><strong>Gerar relatório</strong> com hectares e percentual de sobreposição por camada</li>
+</ol>
+
+<h2>2. Comparação de Área Declarada vs. Calculada</h2>
+
+<p>Você declara "meu imóvel tem 50 ha" no cadastro. O app calcula a área geodésica do perímetro que você desenhou. <strong>Se a diferença é grande</strong>, pode indicar erro de desenho, GPS impreciso, ou má-fé.</p>
+
+<p><strong>Exemplo:</strong></p>
+
+<div class="example">
+Área declarada:   50 ha<br>
+Área calculada:   47.8 ha (diferença: 4.4% — OK)<br>
+Área calculada:   120 ha (diferença: 140% — ALERTA: revisar desenho)
+</div>
+
+<p>Diferenças pequenas (até ~5%) são normais (GPS celular é ±5–10 metros, e isso gera pequenos erros). Diferenças grandes indicam que o produtor "expandiu" o desenho intencionalmente.</p>
+
+<h2>3. Cálculo de Hectares e Percentual</h2>
+
+<p>A área de um polígono é calculada usando <strong>fórmula geodésica esférica</strong>:</p>
+
+<ul>
+  <li>Entrada: coordenadas WGS84 (longitude/latitude)</li>
+  <li>Saída: área em hectares (1 ha = 10.000 m²)</li>
+</ul>
+
+<p><strong>Exemplo de saída:</strong></p>
+
+<pre>{
+  "imovel_area_ha": 50.0,
+  "interseções": [
+    {
+      "camada": "Embargo IBAMA",
+      "area_interseção_ha": 2.5,
+      "percentual": "5.0%",
+      "severidade": "Médio"
+    },
+    {
+      "camada": "Desmatamento PRODES",
+      "area_interseção_ha": 0.8,
+      "percentual": "1.6%",
+      "data_alerta": "2023-06-15"
+    }
+  ]
+}</pre>
+
+---
+
+<h1 id="camadas-oficiais">As camadas oficiais</h1>
+
+<p>Estas são as camadas públicas que o CAR Campo valida:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Camada</th>
+      <th>Órgão</th>
+      <th>O que é</th>
+      <th>Impacto</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Terra Indígena (TI)</strong></td>
+      <td>FUNAI</td>
+      <td>Terras demarcadas ou em processo de demarcação sob proteção da União</td>
+      <td>Qualquer ha de sobreposição invalida o direito de uso naquela fração. Sem exceções.</td>
+    </tr>
+    <tr>
+      <td><strong>Unidade de Conservação (UC)</strong></td>
+      <td>ICMBio / MMA</td>
+      <td>Terras protegidas: parques, estações ecológicas, florestas nacionais, reservas</td>
+      <td>Depende do tipo (UC de uso direto vs. integral). Sobreposição pode permitir ou bloquear atividade.</td>
+    </tr>
+    <tr>
+      <td><strong>Embargo IBAMA</strong></td>
+      <td>IBAMA</td>
+      <td>Imóveis rurais com proibição de desmatamento por não-compliance</td>
+      <td>Bloqueia crédito rural. APP não restaurada = embargo. Desmatamento após embargo = crime.</td>
+    </tr>
+    <tr>
+      <td><strong>Desmatamento PRODES/DETER</strong></td>
+      <td>INPE</td>
+      <td>Alertas de remoção de cobertura vegetal, detectados via satélite</td>
+      <td>PRODES = anual (oficial); DETER = alertas em tempo real. Sobreposição com desmatamento pós-2008 reduz aptidão a crédito.</td>
+    </tr>
+    <tr>
+      <td><strong>APP e Hidrografia</strong></td>
+      <td>MMA / ANA</td>
+      <td>Áreas de Preservação Permanente (faixa de 30/50m ao redor de rios, lagos, nascentes)</td>
+      <td>Depende de situação: se floresta nativa = OK; se desmatada pós-2008 = deve restaurar.</td>
+    </tr>
+    <tr>
+      <td><strong>Reserva Legal (RL)</strong></td>
+      <td>SICAR / MMA</td>
+      <td>Fração do imóvel que deve manter floresta nativa (20% mata atlântica, 80% Amazônia)</td>
+      <td>Não é uma camada de "interseção" fixa, mas resultado da análise: APP + RL devem totalizar % mínimo de cobertura vegetal.</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="highlight warning">
+  <p><strong>Nota sobre painéis de visualização</strong></p>
+  <p>Você pode ver dados estatísticos em dashboards públicos (ex.: painel.car.gov.br, painéis estaduais Power BI). Esses painéis mostram <strong>gráficos e totalizações</strong> (ex.: "Estado de MT tem 2.3M ha embargados"). Porém, eles <strong>não são APIs geoespaciais consultáveis</strong>. A validação real requer acesso aos WFS (Web Feature Service) do MMA, FUNAI, INPE, etc., que retornam geometrias completas para interseção.</p>
+</div>
+
+---
+
+<h1 id="o-que-da">O que dá para afirmar</h1>
+
+<p>Com a validação de sobreposição, você pode afirmar com confiança:</p>
+
+<ul class="checklist">
+  <li><strong>Sobreposição quantificada</strong><br>
+    "Este imóvel tem <strong>2.5 ha (5.0%)</strong> de sobreposição com área embargada pelo IBAMA."</li>
+
+  <li><strong>Comparação de área</strong><br>
+    "O produtor declarou 50 ha, mas o perímetro desenhado mede 47.8 ha (4.4% de diferença)."</li>
+
+  <li><strong>Severidade / Alertas por camada</strong><br>
+    "Há sobreposição com desmatamento PRODES em junho de 2023 (1.2 ha)."</li>
+
+  <li><strong>Aptidão a crédito (indicativa)</strong><br>
+    "Imóvel <strong>não embargado</strong>, sem desmatamento pós-2008, APP completa → <strong>apto para crédito Pronaf</strong>."</li>
+
+  <li><strong>Laudo técnico</strong><br>
+    "Relatório de conformidade ambiental: RL em déficit de 3.2 ha; APP com 40% de cobertura (deve ser 100%)."</li>
+
+  <li><strong>Priorização de análise</strong><br>
+    "Imóvel com sobreposição Terra Indígena → <strong>prioridade alta</strong> para vistoria de campo."</li>
+</ul>
+
+---
+
+<h1 id="o-que-nao-da">O que NÃO dá para afirmar</h1>
+
+<p>Seja rigoroso com os limites:</p>
+
+<ul class="xlist">
+  <li><strong>Titularidade da terra</strong><br>
+    A validação <strong>não confirma quem é o dono</strong>. Somente o INCRA (via SIPRA/Padrão de Terceiros) e Justiça (ações reais de imóvel) determinam titularidade. O app não substitui busca de matrícula no Cartório.</li>
+
+  <li><strong>Legalidade definitiva de desmatamento</strong><br>
+    Se o app detecta sobreposição com desmatamento PRODES pós-2008, <strong>não afirma automaticamente que é ilegal</strong>. Pode haver exceções:
+    <ul style="margin-top: 6px; margin-bottom: 6px;">
+      <li>Autorização de supressão antes do corte (licença ambiental)</li>
+      <li>Área consolidada (Lei 12.651/12, art. 61): desmatamento anterior a 22 de julho de 2008 é legal</li>
+      <li>Uso consolidado registrado no SICAR (até limite legal)</li>
+    </ul>
+    Quem afirma legalidade/ilegalidade é a Justiça + IBAMA + PF (após investigação).</li>
+
+  <li><strong>Precisão sub-métrica</strong><br>
+    GPS de celular tem precisão de <strong>±5–10 metros</strong> (caso bom). Um iPhone 15 ou Samsung S24 em condições ideais não ultrapassa 3–5 m. Portanto, <strong>slivers menores que 10–20 m² podem ser ruído GPS</strong>, não sobreposição real. A validação funciona bem para áreas > 100 m² (0.01 ha).</li>
+
+  <li><strong>Datum / Projeção</strong><br>
+    O app trabalha com WGS84 (EPSG:4326, lon/lat). Camadas oficiais também são convertidas para WGS84 antes de interseção. Porém, em fronteiras de estado e países, pequenos desalinhamentos entre bases podem gerar artefatos. A tolerância aceita é ±10 m.</li>
+
+  <li><strong>Legalidade de uso anterior</strong><br>
+    Se o imóvel tem documento de posse de 1995, e o desmatamento PRODES detecta 2010, o fato de ter "posse anterior" não o torna automaticamente legal — quem valida são os órgãos competentes (IBAMA, Justiça). O app apenas <strong>aponta o fato</strong>.</li>
+</ul>
+
+---
+
+<h1 id="produtor">O que isso destrava para o produtor</h1>
+
+<p>Ter um imóvel validado no CAR Campo (com relatório de conformidade) abre portas:</p>
+
+<h2>Regularização Ambiental (CAR ativo)</h2>
+
+<ul>
+  <li>Registro do Cadastro Ambiental Rural (CAR) no SICAR</li>
+  <li>Plano de Adequação Ambiental (PAA): roteiro para restaurar APP/RL</li>
+  <li>Assinatura do Termo de Compromisso com IBAMA (se houver débito)</li>
+</ul>
+
+<h2>Crédito Rural</h2>
+
+<p><strong>Exigência</strong>: Imóvel com CAR ativo e <strong>sem embargo IBAMA</strong> (conforme resoluções do Banco Central/MAPA).</p>
+
+<ul>
+  <li><strong>Pronaf</strong> (até ~150 ha, agricultura familiar): requer CAR</li>
+  <li><strong>Pronampe</strong> (micro e pequenas empresas): requer CAR + ausência de embargo</li>
+  <li><strong>Crédito Funceme</strong> / outros bancos: cada um tem sua política, mas tendem a exigir CAR + relatório de conformidade</li>
+</ul>
+
+<div class="highlight">
+  <p>A validação de sobreposição <strong>não garante aprovação de crédito</strong> — mas remove um obstáculo crítico.</p>
+</div>
+
+<h2>Transparência com terceiros</h2>
+
+<ul>
+  <li>Relatório PDF/GeoJSON para mostrar ao consultor, banco, ONG</li>
+  <li>Evidência de diligência ambiental (due diligence)</li>
+  <li>Proteção contra acusações futuras: "Eu validei meu imóvel, estava OK quando registrei"</li>
+</ul>
+
+---
+
+<h1 id="analista">O que resolve para o analista</h1>
+
+<p>Para a equipe técnica de IBAMA, ICMBio, órgãos estaduais e consultores:</p>
+
+<h2>1. Triagem automática</h2>
+<p>Imóveis com sobreposição > 1% em TI/UC/embargo ganham <strong>bandeira vermelha</strong> — prioridade para vistoria.</p>
+
+<h2>2. Priorização</h2>
+<p>Ao invés de auditar 1.000 imóveis manualmente, ordena por risco:</p>
+<ul>
+  <li>Alto: sobreposição TI, desmatamento PRODES pós-2008</li>
+  <li>Médio: embargo IBAMA < 5%, APP parcial</li>
+  <li>Baixo: conformidade integral, pequeno desvio área declarada</li>
+</ul>
+
+<h2>3. Aceleração de pareceres</h2>
+<p>Relatório gerado pelo app fornece:</p>
+<ul>
+  <li>Coordenadas precisas (para vistoria de campo com GPS)</li>
+  <li>Croqui do perímetro (referência para topógrafo)</li>
+  <li>Intersecções quantificadas (baliza o tamanho da intervenção)</li>
+</ul>
+
+<h2>4. Redução de polígonos mal desenhados</h2>
+<p>Imóveis com perímetro que se cruza (auto-interseção) ou com área muito pequena/grande vs. declarada são rejeitados <strong>antes de chegar ao analista</strong>.</p>
+
+<h2>5. Suporte a decisão em campo</h2>
+<p>Analista leva iPad com app offline, consulta o relatório, valida se o terreno real bate com o desenho.</p>
+
+---
+
+<h1 id="limitacoes">Limitações offline e roadmap</h1>
+
+<h2>Hoje (versão 1.0 — offline-first)</h2>
+
+<div class="highlight badge-success">
+  <p><strong>Cálculo de área/perímetro</strong> geodésico (seu imóvel)</p>
+  <p><strong>Validação de geometria</strong> (auto-interseção, anel fechado, GPS ruim)</p>
+  <p><strong>Modo demo</strong> com rotas pré-carregadas (teste sem GPS real)</p>
+</div>
+
+<div class="highlight warning">
+  <p><strong>Interseção contra camadas oficiais</strong>: requer backend (CAR Geo API) — app local não tem as camadas FUNAI/IBAMA carregadas</p>
+</div>
+
+<div class="highlight critical">
+  <p><strong>Offline não valida contra camadas públicas</strong> — você desenha, valida local (geom OK?), depois <strong>envia à API quando há rede</strong>. A API faz a interseção no servidor.</p>
+</div>
+
+<h2>Roadmap (futuro)</h2>
+
+<ul>
+  <li><strong>Cache de camadas offline</strong>
+    <ul style="margin-top: 6px;">
+      <li>Baixar camadas (TI, UC, embargo) para uma região quando conecta</li>
+      <li>Validar offline usando cache local</li>
+      <li>Sincronizar quando houver rede</li>
+    </ul>
+  </li>
+
+  <li><strong>WFS offline</strong>
+    <ul style="margin-top: 6px;">
+      <li>Integrar biblioteca como mapbox/basemap para servir WFS cached</li>
+      <li>Suportar re-validação em aeroporto, mata adentro, sem dados</li>
+    </ul>
+  </li>
+
+  <li><strong>Exportação de parecer técnico</strong>
+    <ul style="margin-top: 6px;">
+      <li>PDF com assinatura digital (eIDAS)</li>
+      <li>Laudo de conformidade + lista de alertas</li>
+    </ul>
+  </li>
+
+  <li><strong>Integração com SICAR</strong>
+    <ul style="margin-top: 6px;">
+      <li>Envio automático para registro CAR via API SICAR (quando autorização)</li>
+    </ul>
+  </li>
+</ul>
+
+---
+
+<h1 id="glossario">Glossário</h1>
+
+<div class="definition">
+  <p class="term">APP (Área de Preservação Permanente)</p>
+  <p>Faixa de terra ao redor de rios, lagos, lagoas, nascentes, encostas — deve manter cobertura vegetal conforme Lei 12.651/12.</p>
+</div>
+
+<div class="definition">
+  <p class="term">CAR (Cadastro Ambiental Rural)</p>
+  <p>Registro de auto-declaração do imóvel rural no SICAR, informando perímetro, APP, Reserva Legal, usos.</p>
+</div>
+
+<div class="definition">
+  <p class="term">Código Florestal (Lei 12.651/2012)</p>
+  <p>Lei federal que disciplina proteção da vegetação nativa e estabelece APP e Reserva Legal.</p>
+</div>
+
+<div class="definition">
+  <p class="term">EPSG:4674 (SIRGAS 2000)</p>
+  <p>Sistema geodésico oficial do Brasil. Muito similar a WGS84 (diferença &lt; 1m); o app converte internamente.</p>
+</div>
+
+<div class="definition">
+  <p class="term">GeoJSON (RFC 7946)</p>
+  <p>Formato padrão aberto para geometrias em longitude/latitude (WGS84).</p>
+</div>
+
+<div class="definition">
+  <p class="term">Geodésica / Geodésico</p>
+  <p>Cálculo que leva em conta a curvatura da Terra, não apenas geometria plana. Necessário para áreas rurais > 100 m² com precisão.</p>
+</div>
+
+<div class="definition">
+  <p class="term">IBAMA (Instituto Brasileiro do Meio Ambiente e Recursos Naturais Renováveis)</p>
+  <p>Órgão federal que supervisiona enforcement ambiental, emite embargos, autoriza supressões.</p>
+</div>
+
+<div class="definition">
+  <p class="term">INPE (Instituto Nacional de Pesquisas Espaciais)</p>
+  <p>Órgão que monitora desmatamento via satélites (PRODES anual, DETER em tempo real).</p>
+</div>
+
+<div class="definition">
+  <p class="term">Interseção de polígonos</p>
+  <p>Operação geométrica que encontra a sobreposição entre dois polígonos e calcula sua área.</p>
+</div>
+
+<div class="definition">
+  <p class="term">RL (Reserva Legal)</p>
+  <p>Fração do imóvel privado que deve manter vegetação nativa: 80% Amazônia, 20% Mata Atlântica, etc.</p>
+</div>
+
+<div class="definition">
+  <p class="term">SICAR (Sistema de Cadastro Ambiental Rural)</p>
+  <p>Plataforma online do MMA que centraliza registros de CAR de todos os estados.</p>
+</div>
+
+<div class="definition">
+  <p class="term">WFS (Web Feature Service)</p>
+  <p>Padrão OGC que permite consultar geometrias vetoriais online (ex.: "quais Terras Indígenas cruzam com ponto X,Y?").</p>
+</div>
+
+<div class="definition">
+  <p class="term">WGS84 (EPSG:4326)</p>
+  <p>Sistema geodésico mundial, padrão para GPS e GeoJSON. Latitude/longitude em graus decimais.</p>
+</div>
+
+---
+
+<h1 id="fontes">Fontes</h1>
+
+<h2>Legislação e Regulação</h2>
+<ul>
+  <li>Lei Federal nº 12.651, de 25 de maio de 2012 (Código Florestal Brasileiro)</li>
+  <li>Resolução CONAMA nº 369/2006 (Supressão em APP)</li>
+  <li>Resolução Banco Central nº 5.097/2022 (Política de Crédito Rural — exigência de CAR)</li>
+</ul>
+
+<h2>Bases de Dados Públicas</h2>
+<ul>
+  <li>FUNAI — Terras Indígenas: https://www.funai.gov.br/</li>
+  <li>INCRA — Terras Federais / SIPRA: https://www.gov.br/incra/</li>
+  <li>ICMBio / MMA — Unidades de Conservação: https://www.icmbio.gov.br/</li>
+  <li>IBAMA — Embargos e Licenças: https://www.ibama.gov.br/</li>
+  <li>INPE — PRODES / DETER: https://www.inpe.gov.br/</li>
+  <li>MMA — SICAR / Hidrografia: https://www.gov.br/mma/</li>
+</ul>
+
+<h2>Documentação Técnica</h2>
+<ul>
+  <li>RFC 7946 (GeoJSON): https://tools.ietf.org/html/rfc7946</li>
+  <li>OGC Web Feature Service: https://www.ogc.org/standards/wfs</li>
+  <li>EPSG:4674 (SIRGAS 2000): https://epsg.io/4674</li>
+</ul>
+
+<h2>Referências do Projeto</h2>
+<ul>
+  <li>CAR Campo GitHub: https://github.com/haCARthon/car-campo-app</li>
+  <li>CAR Geo API: https://github.com/haCARthon/car-geo-api</li>
+  <li>Código de cálculo geodésico: <code>src/lib/geo.ts</code></li>
+</ul>
+
+---
+
+<footer>
+  <p><strong>Versão 1.0 | junho de 2026</strong></p>
+  <p>Documentação gerada para haCARthon · Desafio 2 · Solução 4</p>
+  <p>App de desenho georreferenciado pelo celular</p>
+</footer>
+
+</body>
+</html>
