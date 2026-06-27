@@ -18,18 +18,20 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import MapView, { Marker, Polygon, Polyline } from 'react-native-maps';
+import MapView, { Circle, Marker, Polygon, Polyline } from 'react-native-maps';
 
 import { Screen } from '../app/Screen';
 import { WizardSteps } from '../app/WizardSteps';
 import { useNav } from '../app/navigation';
-import { areaHectares, perimeterM, type LngLat } from '../lib/geo';
+import { areaHectares, perimeterM, simplifyRDP, type LngLat } from '../lib/geo';
 import { getImovel, updateImovel } from '../lib/store';
 import { DEMO_ROUTES } from '../sim/routes';
 import { useSimulatedWalk } from '../sim/useSimulatedWalk';
 import { usePerimeterTracker } from '../hooks/usePerimeterTracker';
 import { Badge, PrimaryButton, SecondaryButton, StatBox } from '../ui';
 import { colors } from '../theme/colors';
+import { derivarAPP, appDentroDoImovel, type AppResultado } from '../lib/app';
+import { DEMO_HIDROGRAFIA } from '../lib/refLayers.demo';
 
 // ---------- tipos ----------
 
@@ -68,6 +70,44 @@ const DEFAULT_REGION = {
   latitudeDelta: 0.012,
   longitudeDelta: 0.012,
 };
+
+// ---------- camadas estáticas de hidrografia e APP ----------
+// Computadas uma vez no carregamento do módulo — DEMO_HIDROGRAFIA é imutável.
+// derivarAPP é puro JS offline (turf/buffer) e nunca lança exceção.
+
+/** Polígonos de APP derivados da hidrografia de demo (faixas e raios do Código Florestal). */
+const APP_CAMADAS_DEMO = derivarAPP(DEMO_HIDROGRAFIA);
+
+/**
+ * Feições de hidrografia convertidas para render no react-native-maps.
+ * Nascente → center {lat,lon}; Rio → coords[] (anel exterior do polígono fino).
+ */
+const HIDRO_FEATURES = DEMO_HIDROGRAFIA.map((feat) => {
+  const isNascente = feat.nome.toLowerCase().includes('nascente');
+  const ring = feat.rings[0] ?? [];
+  if (isNascente) {
+    const validPts = ring.filter((c) => c.length >= 2);
+    const count = validPts.length || 1;
+    const lon = validPts.reduce((s, c) => s + (c[0] ?? 0), 0) / count;
+    const lat = validPts.reduce((s, c) => s + (c[1] ?? 0), 0) / count;
+    return { isNascente: true as const, center: { latitude: lat, longitude: lon } };
+  } else {
+    const coords = ring.map((coord) => ({
+      latitude: coord[1] ?? 0,
+      longitude: coord[0] ?? 0,
+    }));
+    return { isNascente: false as const, coords };
+  }
+});
+
+/** Anéis exteriores dos polígonos de APP convertidos para react-native-maps. */
+const APP_POLY_COORDS = APP_CAMADAS_DEMO.map((feat) => {
+  const ring = feat.rings[0] ?? [];
+  return ring.map((coord) => ({
+    latitude: coord[1] ?? 0,
+    longitude: coord[0] ?? 0,
+  }));
+});
 
 // ---------- sub-componentes ----------
 
@@ -151,6 +191,7 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
   const [selectedRouteId, setSelectedRouteId] = useState(DEMO_ROUTES[0]!.id);
   const [saving, setSaving] = useState(false);
   const [imovelLoaded, setImovelLoaded] = useState(false);
+  const [appResultado, setAppResultado] = useState<AppResultado | null>(null);
 
   // Hooks de captura (ambos sempre ativos — lei dos hooks)
   const sim = useSimulatedWalk();
@@ -218,16 +259,33 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
     );
   }, [activeAvatar]);
 
+  // ---------- APP: cálculo ao vivo com debounce ----------
+  // Roda sobre a geometria simplificada (RDP) para performance.
+  // Só calcula com >= 3 pontos. Cleanup de timer garantido no retorno do effect.
+  useEffect(() => {
+    if (activePoints.length < 3) {
+      setAppResultado(null);
+      return;
+    }
+    const timer = setTimeout(() => {
+      try {
+        const simplified = simplifyRDP(activePoints, 3);
+        const pts = simplified.length >= 3 ? simplified : activePoints;
+        setAppResultado(appDentroDoImovel(pts, APP_CAMADAS_DEMO));
+      } catch {
+        // Geometria inválida — não quebrar a UI (offline-first)
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [activePoints]);
+
   // ---------- polígono / polyline ----------
 
-  // Base do trail (só muda quando um vértice é marcado), isolada do tick de 30fps do avatar.
+  // Trail estático: só recalcula quando um vértice é marcado (não a cada tick de 30fps).
   const trailBase = useMemo(() => activePoints.map(toLatLng), [activePoints]);
-  const trailCoords = useMemo(() => {
-    if (activeAvatar && trailBase.length > 0) {
-      return [...trailBase, toLatLng(activeAvatar)];
-    }
-    return trailBase;
-  }, [trailBase, activeAvatar]);
+
+  // Último vértice marcado — ponto de origem do segmento vivo (O(1), sem useMemo).
+  const lastTrailPt = trailBase.length > 0 ? trailBase[trailBase.length - 1] : undefined;
 
   const polygonCoords = useMemo(() => {
     if (activePoints.length < 3) return null;
@@ -388,8 +446,10 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
       footerPrimary = { label: '⏸  Pausar', onPress: sim.pause };
       footerSecondary = { label: '↺ Recomecar', onPress: handleSimStart };
     } else if (sim.status === 'paused') {
-      footerPrimary = canSave ? saveAction : { label: '▶  Retomar', onPress: sim.resume };
-      footerSecondary = { label: '↺ Recomecar', onPress: handleSimStart };
+      // "Retomar" SEMPRE disponível — nunca deixar o usuário sem caminho para continuar.
+      // Se já há >= 3 vértices, "Salvar" ocupa o secundário; senão, "Recomecar".
+      footerPrimary = { label: '▶  Retomar', onPress: sim.resume };
+      footerSecondary = canSave ? saveAction : { label: '↺ Recomecar', onPress: handleSimStart };
     } else {
       // done
       footerPrimary = canSave ? saveAction : { label: '↺ Recomecar', onPress: handleSimStart };
@@ -437,10 +497,59 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
         showsCompass
         showsScale
       >
-        {/* Caminho percorrido */}
-        {trailCoords.length > 1 && (
+        {/* Hidrografia e APP — só relevantes na rota SORRISO_SOJA (fixtures são localizadas) */}
+        {mode === 'sim' && selectedRouteId === DEMO_ROUTES[0]!.id && (
+          <>
+            {/* APP derivada — polígonos âmbar translúcidos (Código Florestal) */}
+            {APP_POLY_COORDS.map((coords, i) =>
+              coords.length >= 3 ? (
+                <Polygon
+                  key={`app-${i}`}
+                  coordinates={coords}
+                  strokeColor="rgba(138,90,19,0.65)"
+                  fillColor="rgba(138,90,19,0.14)"
+                  strokeWidth={1.5}
+                />
+              ) : null,
+            )}
+
+            {/* Hidrografia — rio (Polyline azul) e nascente (Circle azul) */}
+            {HIDRO_FEATURES.map((feat, i) =>
+              feat.isNascente ? (
+                <Circle
+                  key={`hidro-${i}`}
+                  center={feat.center}
+                  radius={20}
+                  fillColor="rgba(37,121,199,0.45)"
+                  strokeColor="#2579c7"
+                  strokeWidth={2}
+                />
+              ) : (
+                <Polyline
+                  key={`hidro-${i}`}
+                  coordinates={feat.coords}
+                  strokeColor="#2579c7"
+                  strokeWidth={3}
+                />
+              ),
+            )}
+          </>
+        )}
+
+        {/* Trail estático: vértice a vértice — não muda a cada tick de 30fps */}
+        {trailBase.length > 1 && (
           <Polyline
-            coordinates={trailCoords}
+            coordinates={trailBase}
+            strokeColor={colors.verdeClaro}
+            strokeWidth={3}
+            lineDashPattern={[8, 4]}
+          />
+        )}
+
+        {/* Segmento vivo: último vértice → avatar (apenas 2 pontos pela bridge, 30fps) */}
+        {activeAvatar !== null && lastTrailPt !== undefined && (
+          <Polyline
+            coordinates={[lastTrailPt, toLatLng(activeAvatar)]}
             strokeColor={colors.verdeClaro}
             strokeWidth={3}
             lineDashPattern={[8, 4]}
@@ -512,6 +621,30 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
                 {v.msg}
               </Badge>
             ))}
+          </View>
+        )}
+
+        {/* Card de APP ao vivo — aparece apos >= 3 vertices + debounce de 500 ms */}
+        {appResultado !== null && (
+          <View style={s.appCard}>
+            <View style={s.appCardHeader}>
+              <Text style={s.appCardLabel}>APP dentro do desenho</Text>
+              <Text style={s.appCardValor}>
+                {appResultado.app_ha.toFixed(2)} ha ({appResultado.porcentagem.toFixed(1)}%)
+              </Text>
+            </View>
+            {appResultado.feicoes.length > 0 ? (
+              appResultado.feicoes.map((f, i) => (
+                <Text key={i} style={s.appFeicao}>
+                  {f.tipo === 'nascente' ? 'Nascente' : 'Margem de rio'}: {f.ha.toFixed(2)} ha
+                </Text>
+              ))
+            ) : (
+              <Text style={s.appZero}>Nenhuma APP detectada no desenho atual</Text>
+            )}
+            <Text style={s.appDisclaimer}>
+              Estimativa de campo — nao substitui a APP oficial homologada
+            </Text>
           </View>
         )}
 
@@ -792,5 +925,52 @@ const s = StyleSheet.create({
     fontSize: 10,
     fontWeight: '800',
     color: colors.branco,
+  },
+
+  // Card de APP ao vivo
+  appCard: {
+    backgroundColor: '#fdf6e3',
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#d4a843',
+  },
+  appCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  appCardLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.aviso,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    flex: 1,
+  },
+  appCardValor: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: colors.aviso,
+  },
+  appFeicao: {
+    fontSize: 12,
+    color: colors.muted,
+    marginBottom: 2,
+    paddingLeft: 6,
+  },
+  appZero: {
+    fontSize: 12,
+    color: colors.verde,
+    fontStyle: 'italic',
+  },
+  appDisclaimer: {
+    fontSize: 10,
+    color: colors.muted,
+    fontStyle: 'italic',
+    marginTop: 6,
+    lineHeight: 14,
   },
 });
