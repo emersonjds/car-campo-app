@@ -94,6 +94,12 @@ Mapa com **STATUS: CRÍTICO – DIVERGÊNCIA DE ÁREA**, toggle "Dados Governo",
 ### A1 · Analista — Painel (`design/analista/01-painel.png`)
 "Painel do Analista", N alertas críticos, Filtrar + Nova Medição, card vermelho **Alertas de Divergência** (Agendar Visita Técnica / Ver Detalhes), **Média de Divergência** (4.2% com tendência), **Pendências de Validação** (lista com "12 Novos"), **Visitas Agendadas** (mini-calendário horizontal + itens com horário/local). Dados de `store` + `overlay`/`alteracao`/`conferencia`.
 
+**Legenda da conferência (cores fixas, pedido do usuário):** na re-medição do analista, a legenda e os polígonos do mapa devem usar:
+- **Medição Produtor** → azul preenchido (`tertiary #00A8E8`) — é o perímetro declarado pelo fazendeiro (hoje "Fazendeiro", branco tracejado).
+- **Dados Governo** → vermelho contornado, sem preenchimento (`critico #a3302a`) — as camadas oficiais de referência.
+- **Medição Analista** → verde (`primary`), mantido.
+Legenda e mapa devem ficar consistentes (mesma cor no chip e no polígono/trilha).
+
 ### A2 · Analista — Agendar Visita Técnica (`design/analista/02-agendar-visita.png`)
 "AÇÃO NECESSÁRIA", calendário de mês, **Observações sobre a Divergência** (textarea), **Horários Disponíveis** (grade de slots, um desabilitado), card **Local da Visita** (gleba/coordenadas/divergência), **Confirmar Agendamento**. Evoluir o `CalendarModal` já criado para uma tela completa; persiste em `VisitaAgendada` (`dataVisita`, `periodo`/slot, observação).
 
