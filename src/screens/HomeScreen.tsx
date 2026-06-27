@@ -1,117 +1,457 @@
-// "Meus imóveis" — lista offline (rascunho/enviado). Ponto de entrada do app.
+// Dashboard do Produtor — CAR Campo v2 (AgroMedição).
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '../app/Screen';
 import { useNav } from '../app/navigation';
-import { Badge, EmptyState } from '../ui';
+import { useAuth } from '../auth/AuthContext';
+import { Card, EmptyState, FAB, MetricBlock, StatusChip } from '../ui';
 import { colors } from '../theme/colors';
-import { deleteImovel, listImoveis } from '../lib/store';
+import { text } from '../theme/typography';
+import { listImoveis } from '../lib/store';
 import type { Imovel } from '../types';
 
+// ── helpers ────────────────────────────────────────────────────────────────────
+
+function fmtData(ms: number): string {
+  return new Date(ms).toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+const DOC_ICON: Record<string, keyof typeof Ionicons.glyphMap> = {
+  matricula:    'document-text-outline',
+  ccir:         'receipt-outline',
+  car:          'leaf-outline',
+  rg:           'card-outline',
+  'foto-divisa': 'camera-outline',
+  outro:        'document-outline',
+};
+
+const DOC_LABEL: Record<string, string> = {
+  matricula:    'Matrícula',
+  ccir:         'CCIR',
+  car:          'CAR – Cadastro Ambiental Rural',
+  rg:           'RG',
+  'foto-divisa': 'Foto de Divisa',
+  outro:        'Documento',
+};
+
+type ChipStatus = 'regularizado' | 'aviso' | 'critico' | 'info';
+
+function resolveChip(im: Imovel): ChipStatus {
+  if (im.validacao?.status === 'aprovado') return 'regularizado';
+  if (im.alertaDivergencia?.severidade === 'critico') return 'critico';
+  if (im.alertaDivergencia) return 'aviso';
+  return im.status === 'enviado' ? 'info' : 'aviso';
+}
+
+// Botão de ação com ícone — exclusivo do dashboard.
+// ponytail: mantido local; exportar para ui/index quando outra tela precisar.
+function ActionBtn({
+  icon,
+  label,
+  onPress,
+  primary = false,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  onPress: () => void;
+  primary?: boolean;
+}) {
+  return (
+    <TouchableOpacity
+      style={[s.actionBtn, primary && s.actionBtnPrimary]}
+      onPress={onPress}
+      activeOpacity={0.85}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+    >
+      <View style={[s.actionIconCircle, primary && s.actionIconCirclePrimary]}>
+        <Ionicons
+          name={icon}
+          size={20}
+          color={primary ? colors.branco : colors.secondary}
+        />
+      </View>
+      <Text style={[s.actionLabel, primary && s.actionLabelPrimary]}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
+// ── Tela ───────────────────────────────────────────────────────────────────────
+
 export function HomeScreen() {
-  const { navigate, perfil } = useNav();
+  const { navigate, switchTab } = useNav();
+  const { sessao } = useAuth();
   const [imoveis, setImoveis] = useState<Imovel[]>([]);
 
   const load = useCallback(() => {
     listImoveis().then(setImoveis);
   }, []);
-  // O Router só monta a rota ativa, então Home remonta ao voltar — basta o efeito de montagem.
+  // Remonta ao voltar (Router troca de rota) — efeito de montagem suficiente.
   useEffect(() => load(), [load]);
 
-  function confirmDelete(im: Imovel) {
-    Alert.alert('Excluir imóvel', `Remover "${im.imovel.nome || 'sem nome'}"?`, [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Excluir', style: 'destructive', onPress: () => deleteImovel(im.id).then(load) },
-    ]);
-  }
+  const primario = imoveis[0] ?? null;
+  // Documentos do imóvel principal, limitado a 3 para não sobrecarregar.
+  const docs = primario?.documentos.slice(0, 3) ?? [];
+  // Histórico: imóveis com geometria demarcada.
+  const medicoes = imoveis.filter((im) => im.geometry.points.length >= 3);
 
   return (
-    <Screen
-      title={perfil === 'analista' ? 'Imóveis' : 'Meus imóveis'}
-      subtitle={perfil === 'analista' ? 'Todos os imóveis · Analista de campo' : 'Produtor rural'}
-      showBack={false}
-    >
-      <FlatList
-        data={imoveis}
-        keyExtractor={(i) => i.id}
-        contentContainerStyle={s.list}
-        ListEmptyComponent={
+    <Screen title="CAR Campo" showBack={false}>
+      <ScrollView
+        contentContainerStyle={s.scroll}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* ── Saudação ───────────────────────────────────────── */}
+        <View style={s.greeting}>
+          <Text style={s.greetingSub}>Bem-vindo ao seu painel,</Text>
+          <Text style={s.greetingName}>
+            Olá, {sessao?.nome?.split(' ')[0] ?? 'Produtor'}
+          </Text>
+        </View>
+
+        {imoveis.length === 0 ? (
           <EmptyState
-            title="Nenhum imóvel ainda"
-            hint={
-              perfil === 'analista'
-                ? 'Os imóveis enviados pelos produtores aparecem aqui para validação e conferência de terreno.'
-                : 'Toque em “Novo imóvel” para cadastrar e desenhar o perímetro caminhando — ou simulando a caminhada.'
-            }
+            title="Nenhum imóvel cadastrado"
+            hint="Toque em + para cadastrar e desenhar o perímetro do seu terreno caminhando."
           />
-        }
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={s.card}
-            activeOpacity={0.85}
-            onPress={() => navigate({ name: 'cadastro', imovelId: item.id })}
-            onLongPress={() => confirmDelete(item)}
-          >
-            <View style={s.cardHead}>
-              <Text style={s.cardTitle} numberOfLines={1}>
-                {item.imovel.nome || 'Imóvel sem nome'}
-              </Text>
-              <Badge tone={item.status === 'enviado' ? 'ok' : 'aviso'}>
-                {item.status === 'enviado' ? 'Enviado' : 'Rascunho'}
-              </Badge>
+        ) : (
+          <>
+            {/* ── Meus Terrenos ───────────────────────────────── */}
+            <View style={s.sectionHeader}>
+              <Text style={s.sectionTitle}>Meus Terrenos</Text>
+              {imoveis.length > 1 && (
+                <TouchableOpacity
+                  onPress={() => switchTab({ name: 'medicoes' })}
+                  hitSlop={8}
+                  accessibilityLabel="Ver todos os imóveis"
+                >
+                  <Text style={s.verTodos}>Ver todos</Text>
+                </TouchableOpacity>
+              )}
             </View>
-            <Text style={s.cardSub} numberOfLines={1}>
-              {[item.imovel.municipio, item.imovel.uf].filter(Boolean).join(' · ') || 'Sem localização'}
-            </Text>
-            <View style={s.metaRow}>
-              <Text style={s.meta}>{item.geometry.area_ha.toFixed(2)} ha</Text>
-              <Text style={s.meta}>{item.geometry.points.length} vértices</Text>
-              <Text style={s.meta}>{item.documentos.length} docs</Text>
-            </View>
-            {item.solicitacaoVisita && (
-              <Text style={s.confTag}>📍 Conferência de terreno solicitada</Text>
+
+            {primario && (
+              <Card style={s.terrenoCard}>
+                {/* Placeholder de foto satélite */}
+                <View style={s.satelite}>
+                  <Ionicons
+                    name="map-outline"
+                    size={40}
+                    color={colors.branco}
+                    style={{ opacity: 0.45 }}
+                  />
+                  <View style={s.chipWrap}>
+                    <StatusChip status={resolveChip(primario)} />
+                  </View>
+                </View>
+
+                {/* Nome + Hectares */}
+                <View style={s.terrenoRow}>
+                  <View style={s.terrenoLeft}>
+                    <Text style={s.terrenoNome}>{primario.imovel.nome}</Text>
+                    <Text style={s.terrenoLoc}>
+                      {[primario.imovel.municipio, primario.imovel.uf]
+                        .filter(Boolean)
+                        .join(', ')}
+                    </Text>
+                  </View>
+                  <MetricBlock
+                    label="HECTARES TOTAIS"
+                    value={Math.round(primario.geometry.area_ha).toString()}
+                  />
+                </View>
+
+                {/* Solo / Última Medição / CAR */}
+                <View style={s.metaRow}>
+                  <View style={s.metaCol}>
+                    <Text style={s.metaLbl}>Solo</Text>
+                    <Text style={s.metaVal}>—</Text>
+                  </View>
+                  <View style={s.metaSep} />
+                  <View style={s.metaCol}>
+                    <Text style={s.metaLbl}>Última Medição</Text>
+                    <Text style={s.metaVal}>{fmtData(primario.updatedAt)}</Text>
+                  </View>
+                  <View style={s.metaSep} />
+                  <View style={s.metaCol}>
+                    <Text style={s.metaLbl}>CAR</Text>
+                    <Text style={s.metaVal}>
+                      {primario.status === 'enviado' ? 'Ativo' : 'Rascunho'}
+                    </Text>
+                  </View>
+                </View>
+              </Card>
             )}
-          </TouchableOpacity>
+
+            {/* ── Ações Rápidas ────────────────────────────────── */}
+            <Text style={[s.sectionTitle, s.sectionMt]}>Ações Rápidas</Text>
+            <ActionBtn
+              icon="locate-outline"
+              label="Iniciar Nova Medição"
+              primary
+              onPress={() => navigate({ name: 'cadastro' })}
+            />
+            <ActionBtn
+              icon="document-text-outline"
+              label="Consultar Documentos"
+              onPress={() => switchTab({ name: 'documentos-hub' })}
+            />
+            <ActionBtn
+              icon="map-outline"
+              label="Visualizar Mapas"
+              onPress={() =>
+                primario
+                  ? navigate({ name: 'demarcacao', imovelId: primario.id })
+                  : navigate({ name: 'cadastro' })
+              }
+            />
+
+            {/* ── Documentos Recentes ──────────────────────────── */}
+            <Text style={[s.sectionTitle, s.sectionMt]}>Documentos Recentes</Text>
+
+            {docs.length === 0 ? (
+              <Card>
+                <Text style={s.emptyCard}>Nenhum documento anexado ainda.</Text>
+              </Card>
+            ) : (
+              <Card>
+                {docs.map((d, i) => (
+                  <View key={d.id}>
+                    {i > 0 && <View style={s.divider} />}
+                    <View style={s.docRow}>
+                      <Ionicons
+                        name={DOC_ICON[d.tipo] ?? 'document-outline'}
+                        size={22}
+                        color={colors.mutedText}
+                      />
+                      <View style={s.docInfo}>
+                        <Text style={s.docNome} numberOfLines={1}>
+                          {d.nome || DOC_LABEL[d.tipo] || 'Documento'}
+                        </Text>
+                        <Text style={s.docMeta}>
+                          {DOC_LABEL[d.tipo] ?? 'Doc'} · {fmtData(d.createdAt)}
+                        </Text>
+                      </View>
+                      <TouchableOpacity
+                        hitSlop={12}
+                        onPress={() =>
+                          primario &&
+                          navigate({ name: 'documentos', imovelId: primario.id })
+                        }
+                        accessibilityLabel="Ver documento"
+                      >
+                        <Ionicons
+                          name="download-outline"
+                          size={20}
+                          color={colors.primary}
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))}
+              </Card>
+            )}
+
+            {/* ── Histórico de Medições ────────────────────────── */}
+            <Text style={[s.sectionTitle, s.sectionMt]}>Histórico de Medições</Text>
+
+            {medicoes.length === 0 ? (
+              <Card>
+                <Text style={s.emptyCard}>Nenhuma medição demarcada ainda.</Text>
+              </Card>
+            ) : (
+              medicoes.slice(0, 3).map((im) => (
+                <Card key={im.id} style={s.historicoCard}>
+                  <View style={s.historicoHead}>
+                    <View style={s.historicoIcon}>
+                      <Ionicons
+                        name="git-branch-outline"
+                        size={22}
+                        color={colors.primary}
+                      />
+                    </View>
+                    <View style={s.historicoInfo}>
+                      <Text style={s.historicoNome}>{im.imovel.nome}</Text>
+                      <Text style={s.historicoSub}>
+                        {im.imovel.municipio}
+                        {im.imovel.uf ? ` · ${im.imovel.uf}` : ''}
+                      </Text>
+                    </View>
+                    <Text style={s.historicoData}>{fmtData(im.updatedAt)}</Text>
+                  </View>
+                  <View style={s.statusRow}>
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={16}
+                      color={colors.primary}
+                    />
+                    <Text style={s.statusText}>STATUS: OK</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={s.detalheBtn}
+                    onPress={() => navigate({ name: 'revisao', imovelId: im.id })}
+                    activeOpacity={0.85}
+                    accessibilityRole="button"
+                    accessibilityLabel="Ver Detalhes do Perímetro"
+                  >
+                    <Text style={s.detalheBtnText}>Ver Detalhes do Perímetro</Text>
+                  </TouchableOpacity>
+                </Card>
+              ))
+            )}
+          </>
         )}
-      />
-      {/* Botão flutuante de novo imóvel — só para o PRODUTOR (o analista não mede/cria). */}
-      {perfil !== 'analista' && (
-        <TouchableOpacity
-          style={s.fab}
-          activeOpacity={0.9}
-          onPress={() => navigate({ name: 'cadastro' })}
-          accessibilityRole="button"
-          accessibilityLabel="Novo imóvel"
-        >
-          <Text style={s.fabText}>＋ Novo imóvel</Text>
-        </TouchableOpacity>
-      )}
+
+        {/* Espaço para o FAB não cobrir o último item */}
+        <View style={s.fabSpace} />
+      </ScrollView>
+
+      <FAB onPress={() => navigate({ name: 'cadastro' })} />
     </Screen>
   );
 }
 
+// ── Estilos ────────────────────────────────────────────────────────────────────
+
 const s = StyleSheet.create({
-  list: { padding: 16, paddingBottom: 96, gap: 12, flexGrow: 1 },
-  card: { backgroundColor: colors.branco, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: colors.line },
-  cardHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10 },
-  cardTitle: { flex: 1, fontSize: 17, fontWeight: '800', color: colors.ink },
-  cardSub: { fontSize: 13, color: colors.muted, marginTop: 4 },
-  metaRow: { flexDirection: 'row', gap: 14, marginTop: 10 },
-  meta: { fontSize: 12, fontWeight: '700', color: colors.verde },
-  confTag: { fontSize: 12, fontWeight: '800', color: colors.aviso, marginTop: 10 },
-  fab: {
-    position: 'absolute',
-    right: 16,
-    bottom: 16,
-    backgroundColor: colors.verde,
-    paddingHorizontal: 22,
-    paddingVertical: 16,
-    borderRadius: 30,
-    shadowColor: '#000',
-    shadowOpacity: 0.25,
-    shadowOffset: { width: 0, height: 3 },
-    shadowRadius: 6,
-    elevation: 6,
+  scroll: { padding: 16, flexGrow: 1 },
+
+  // Saudação
+  greeting:     { marginBottom: 20 },
+  greetingSub:  { ...text.body, color: colors.mutedText },
+  greetingName: { ...text.headline, color: colors.inkText, marginTop: 2 },
+
+  // Cabeçalho de seção
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
   },
-  fabText: { color: colors.branco, fontWeight: '800', fontSize: 16 },
+  sectionTitle: { ...text.headlineSm, color: colors.inkText },
+  sectionMt:    { marginTop: 24, marginBottom: 10 },
+  verTodos:     { ...text.bodySemibold, color: colors.primary },
+
+  // Card Meus Terrenos — padding zerado para a imagem sangrar até a borda.
+  terrenoCard: { padding: 0, overflow: 'hidden', marginBottom: 16 },
+  satelite: {
+    height: 160,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chipWrap: { position: 'absolute', top: 12, right: 12 },
+  terrenoRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    padding: 14,
+    paddingBottom: 0,
+  },
+  terrenoLeft:  { flex: 1 },
+  terrenoNome:  { ...text.headlineSm, color: colors.inkText, flexShrink: 1 },
+  terrenoLoc:   { ...text.caption, color: colors.mutedText, marginTop: 2 },
+
+  // Linha Solo / Última Medição / CAR
+  metaRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderColor: colors.line,
+    marginTop: 12,
+  },
+  metaCol: { flex: 1 },
+  metaSep: { width: 1, backgroundColor: colors.line, marginHorizontal: 8 },
+  metaLbl: { ...text.caption, color: colors.mutedText, marginBottom: 2 },
+  metaVal: { ...text.bodySemibold, color: colors.inkText },
+
+  // Ações Rápidas
+  actionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.branco,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.line,
+    padding: 14,
+    marginBottom: 10,
+    minHeight: 56,
+    gap: 12,
+  },
+  actionBtnPrimary: { backgroundColor: colors.primary, borderColor: colors.primary },
+  actionIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.verdeBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionIconCirclePrimary: { backgroundColor: 'rgba(255,255,255,0.18)' },
+  actionLabel:        { ...text.bodySemibold, color: colors.inkText, flex: 1 },
+  actionLabelPrimary: { color: colors.branco },
+
+  // Documentos Recentes
+  divider: { height: 1, backgroundColor: colors.line, marginVertical: 10 },
+  docRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    minHeight: 44,
+  },
+  docInfo: { flex: 1 },
+  docNome:  { ...text.bodySemibold, color: colors.inkText },
+  docMeta:  { ...text.caption, color: colors.mutedText, marginTop: 2 },
+  emptyCard: {
+    ...text.body,
+    color: colors.mutedText,
+    textAlign: 'center',
+    paddingVertical: 8,
+  },
+
+  // Histórico de Medições
+  historicoCard: { marginBottom: 10 },
+  historicoHead: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    marginBottom: 10,
+  },
+  historicoIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.verdeBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  historicoInfo: { flex: 1 },
+  historicoNome: { ...text.bodySemibold, color: colors.inkText },
+  historicoSub:  { ...text.caption, color: colors.mutedText, marginTop: 2 },
+  historicoData: { ...text.caption, color: colors.mutedText },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 12,
+  },
+  statusText: { ...text.label, color: colors.primary },
+  detalheBtn: {
+    backgroundColor: colors.inkText,
+    borderRadius: 10,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 50,
+  },
+  detalheBtnText: { ...text.bodySemibold, color: colors.branco },
+
+  // Espaço sob o FAB (60px botão + 24px bottom offset + buffer)
+  fabSpace: { height: 100 },
 });
