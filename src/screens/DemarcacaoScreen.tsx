@@ -372,6 +372,9 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
   const showProgress = mode === 'sim' && (sim.status === 'walking' || sim.status === 'paused');
   // Camadas ambientais de demonstração (rio/nascente + APP) — só na rota Sorriso.
   const showEnvLayers = mode === 'sim' && selectedRouteId === DEMO_ROUTES[0]!.id;
+  // Medindo ativamente? Se não, e já dá pra fechar, "Finalizar" vira a ação primária.
+  const medindo = sim.status === 'walking' || tracker.status === 'tracking' || tracker.status === 'requesting';
+  const finalizarPrimario = canSave && !medindo;
 
   // ---------- JSX ----------
 
@@ -550,22 +553,46 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
         )}
 
         <View style={s.footerBtns}>
-          <Button
-            label={primaryLabel}
-            variant="primary"
-            onPress={primaryPress}
-            disabled={primaryDisabled}
-            style={s.footerBtn}
-          />
-          {canSave && (
-            <Button
-              label="Finalizar Perimetro"
-              variant="outlined"
-              onPress={handleSave}
-              disabled={saving}
-              loading={saving}
-              style={[s.footerBtn, s.footerBtnSecond]}
-            />
+          {finalizarPrimario ? (
+            <>
+              {/* Pronto pra fechar: "Finalizar" é a ação principal (verde). */}
+              <Button
+                label="Finalizar Perimetro"
+                variant="primary"
+                onPress={handleSave}
+                disabled={saving}
+                loading={saving}
+                style={s.footerBtn}
+              />
+              <Button
+                label={primaryLabel}
+                variant="outlined"
+                onPress={primaryPress}
+                disabled={primaryDisabled}
+                style={[s.footerBtn, s.footerBtnSecond]}
+              />
+            </>
+          ) : (
+            <>
+              {/* Ainda medindo/ocioso: o controle é a ação principal. */}
+              <Button
+                label={primaryLabel}
+                variant="primary"
+                onPress={primaryPress}
+                disabled={primaryDisabled}
+                style={s.footerBtn}
+              />
+              {canSave && (
+                <Button
+                  label="Finalizar Perimetro"
+                  variant="outlined"
+                  onPress={handleSave}
+                  disabled={saving}
+                  loading={saving}
+                  style={[s.footerBtn, s.footerBtnSecond]}
+                />
+              )}
+            </>
           )}
         </View>
       </View>
