@@ -57,7 +57,7 @@
       "expo-secure-store"
     ],
     "extra": {
-      "apiBaseUrl": "http://192.168.15.9:3000"
+      "apiBaseUrl": "https://car-geo-api.onrender.com"
     }
   }
 }
