@@ -869,18 +869,22 @@ const s = StyleSheet.create({
   // ── Rodapé sólido (rota + status + botões) ──────────────────────────────────
   footer: {
     paddingHorizontal: 16,
-    paddingTop: 12,
+    paddingTop: 20,
     // paddingBottom vem do safe-area inset (proporcional ao aparelho) — aplicado inline.
     backgroundColor: colors.neutral,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.line,
+    // Cantos arredondados no topo dão a sensação de "folha" subindo sobre o mapa.
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    marginTop: -20,
   },
-  routeRow: { marginBottom: 12 },
-  statusLine: { fontSize: 13, fontWeight: '700', marginBottom: 10 },
-  // Botões empilhados e compactos (anula o flex:1 das variantes; altura menor).
+  routeRow: { marginBottom: 14 },
+  statusLine: { fontSize: 14, fontWeight: '700', marginBottom: 14, textAlign: 'center' },
+  // Botões empilhados (anula o flex:1 das variantes).
   footerBtns: {},
-  footerBtn: { flexGrow: 0, minHeight: 46, paddingVertical: 10 },
-  footerBtnSecond: { marginTop: 8 },
+  footerBtn: { flexGrow: 0, minHeight: 52, paddingVertical: 12 },
+  footerBtnSecond: { marginTop: 10 },
 
   // ── Step badge na app-bar ────────────────────────────────────────────────────
   stepBadge: {
