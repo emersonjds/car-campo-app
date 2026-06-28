@@ -140,24 +140,4 @@ export const DEMO_IMOVEIS_SEED: NovoImovel[] = [
       observacao: 'Conferência de campo concluída — perímetro aprovado.',
     },
   },
-  {
-    perfil: 'produtor',
-    produtor: {
-      nome: 'José da Silva',
-      cpfCnpj: '123.456.789-00',
-      telefone: '66999990001',
-    },
-    imovel: {
-      nome: 'Fazenda Santa Luzia',
-      municipio: 'Sorriso',
-      uf: 'MT',
-      matricula: '33.221',
-      modulosFiscais: 5,
-      uso: 'Milho',
-      carNumero: 'MT-5107925-D4E5.F6A1.B2C3.0004',
-    },
-    geometry: geo(rota('sorriso-fazendeiro')),
-    documentos: [],
-    status: 'enviado',
-  },
 ];

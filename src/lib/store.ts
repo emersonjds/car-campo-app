@@ -11,7 +11,7 @@ const PERFIL_KEY = '@car-campo/perfil';
 // um app de demonstração, o bump é uma ação deliberada de "resetar para o estado
 // limpo" (ex.: passar a ter exatamente 4 sítios com geometria/CAR/técnico).
 const SEED_KEY = '@car-campo/seed-version';
-const SEED_VERSION = '3';
+const SEED_VERSION = '4';
 
 /** id simples, sem dependências nativas (evita uuid). */
 function genId(): string {
