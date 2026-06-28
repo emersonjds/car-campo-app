@@ -15,6 +15,7 @@ export type Route =
   | { name: 'validacao' }
   | { name: 'visitas' }
   | { name: 'painel' }
+  | { name: 'notificacoes' }
   | { name: 'config' }
   // ── Telas de detalhe / wizard ─────────────────────────────────────────────
   | { name: 'imovel-detalhe'; imovelId: string }
@@ -25,7 +26,7 @@ export type Route =
   | { name: 'revisao'; imovelId: string }
   | { name: 'analise-ambiental'; imovelId: string }
   | { name: 'alteracao-detalhe'; imovelId: string }
-  | { name: 'conferencia-lab'; imovelId?: string }
+  | { name: 'conferencia-lab'; imovelId?: string; car?: string }
   | { name: 'agendar-visita'; imovelId: string };
 
 export type RouteName = Route['name'];

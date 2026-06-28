@@ -3,7 +3,7 @@
 // usa alertaDivergencia (já persistido pelo produtor) para não travar a UI.
 // ponytail: alertaDivergencia é o campo certo; analisarAlteracaoImovel fica no lab.
 import { useEffect, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '../app/Screen';
 import { useNav } from '../app/navigation';
@@ -15,7 +15,6 @@ import type { Imovel } from '../types';
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
 const DIAS_SEMANA = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'] as const;
-const PESO_SEV: Record<string, number> = { critico: 3, alto: 2, medio: 1, baixo: 0 };
 
 function semanaAtual(): Date[] {
   const hoje = new Date();
@@ -42,10 +41,20 @@ function tempoAtras(ts: number): string {
 export function PainelScreen() {
   const { navigate } = useNav();
   const [imoveis, setImoveis] = useState<Imovel[]>([]);
+  // Modal de Nova Medição: analista informa o CAR antes de cair no mapa.
+  const [carModal, setCarModal] = useState(false);
+  const [carInput, setCarInput] = useState('');
 
   useEffect(() => {
     listImoveis().then(setImoveis);
   }, []);
+
+  const iniciarMedicao = () => {
+    const car = carInput.trim();
+    setCarModal(false);
+    setCarInput('');
+    navigate({ name: 'conferencia-lab', car: car || undefined });
+  };
 
   const m = useMemo(() => {
     const comAlerta = imoveis.filter((i) => i.alertaDivergencia);
@@ -53,17 +62,6 @@ export function PainelScreen() {
     const nCriticos = comAlerta.filter(
       (i) => i.alertaDivergencia!.severidade === 'critico',
     ).length;
-
-    // Mais urgente: crítico primeiro, depois maior delta_pct absoluto.
-    const maisUrgente =
-      [...comAlerta].sort((a, b) => {
-        const ds =
-          (PESO_SEV[b.alertaDivergencia!.severidade] ?? 0) -
-          (PESO_SEV[a.alertaDivergencia!.severidade] ?? 0);
-        return ds !== 0
-          ? ds
-          : Math.abs(b.alertaDivergencia!.delta_pct) - Math.abs(a.alertaDivergencia!.delta_pct);
-      })[0] ?? null;
 
     const mediaDiv = comAlerta.length
       ? comAlerta.reduce((s, i) => s + Math.abs(i.alertaDivergencia!.delta_pct), 0) /
@@ -80,7 +78,7 @@ export function PainelScreen() {
 
     const visitasAgendadas = imoveis.filter((i) => i.visitaAgendada);
 
-    return { nCriticos, maisUrgente, mediaDiv, pendencias, nNovos, visitasAgendadas, nComAlerta: comAlerta.length };
+    return { nCriticos, mediaDiv, pendencias, nNovos, visitasAgendadas, nComAlerta: comAlerta.length };
   }, [imoveis]);
 
   const semana = useMemo(semanaAtual, []);
@@ -103,7 +101,7 @@ export function PainelScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             style={s.btnNovaMedicao}
-            onPress={() => navigate({ name: 'conferencia-lab' })}
+            onPress={() => setCarModal(true)}
             activeOpacity={0.85}
           >
             <Ionicons name="add" size={18} color={colors.branco} />
@@ -111,43 +109,7 @@ export function PainelScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* ── Alertas de Divergência ── */}
-        {m.maisUrgente ? (
-          <View style={s.cardAlertas}>
-            <View style={s.alertasTop}>
-              <View style={s.alertasIconBox}>
-                <Ionicons name="alert-circle-outline" size={20} color={colors.critico} />
-              </View>
-            </View>
-            <Text style={s.alertasTitle}>Alertas de Divergência</Text>
-            <Text style={s.alertasDesc}>
-              {'Divergência detectada na '}
-              <Text style={s.bold}>{m.maisUrgente.imovel.nome}</Text>
-              {' (Produtor: '}
-              {m.maisUrgente.produtor.nome}
-              {'). Diferença de '}
-              <Text style={s.bold}>
-                {Math.abs(m.maisUrgente.alertaDivergencia!.delta_pct).toFixed(0)}% vs INCRA
-              </Text>
-              {'.'}
-            </Text>
-            <TouchableOpacity
-              style={s.btnAgendarVisita}
-              onPress={() => navigate({ name: 'visitas' })}
-              activeOpacity={0.85}
-            >
-              <Ionicons name="calendar-outline" size={16} color={colors.branco} />
-              <Text style={s.btnAgendarVisitaText}>Agendar Visita Técnica</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={s.btnVerDetalhes}
-              onPress={() => navigate({ name: 'alteracao-detalhe', imovelId: m.maisUrgente.id })}
-              activeOpacity={0.85}
-            >
-              <Text style={s.btnVerDetalhesText}>Ver Detalhes do Lote</Text>
-            </TouchableOpacity>
-          </View>
-        ) : null}
+        {/* Alertas de Divergência agora moram na central de Notificações (sino). */}
 
         {/* ── Média de Divergência ── */}
         <Card style={s.cardMedia}>
@@ -276,6 +238,42 @@ export function PainelScreen() {
 
         <View style={s.bottomSpacer} />
       </ScrollView>
+
+      {/* Modal Nova Medição: informa o CAR → cai no mapa para medir */}
+      <Modal visible={carModal} transparent animationType="slide" onRequestClose={() => setCarModal(false)}>
+        <Pressable style={s.mBackdrop} onPress={() => setCarModal(false)}>
+          <Pressable style={s.mSheet} onPress={() => {}}>
+            <View style={s.mHandle} />
+            <Text style={s.mTitle}>Nova Medição</Text>
+            <Text style={s.mDesc}>
+              Informe o número do CAR da propriedade. Em seguida você cai no mapa para iniciar a medição.
+            </Text>
+            <Text style={s.mLabel}>Número do CAR</Text>
+            <TextInput
+              style={s.mInput}
+              placeholder="UF-IBGE-..."
+              placeholderTextColor={colors.mutedText}
+              value={carInput}
+              onChangeText={setCarInput}
+              autoCapitalize="characters"
+              autoFocus
+            />
+            <View style={s.mActions}>
+              <TouchableOpacity style={s.mCancel} onPress={() => setCarModal(false)} activeOpacity={0.8}>
+                <Text style={s.mCancelTxt}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[s.mOk, !carInput.trim() && s.mOkDisabled]}
+                onPress={iniciarMedicao}
+                disabled={!carInput.trim()}
+                activeOpacity={0.85}
+              >
+                <Text style={s.mOkTxt}>Iniciar medição</Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </Screen>
   );
 }
@@ -312,51 +310,35 @@ const s = StyleSheet.create({
   },
   btnNovaMedicaoText: { fontSize: 15, fontWeight: '800', color: colors.branco },
 
-  // Card Alertas (fundo vermelho claro)
-  cardAlertas: {
-    backgroundColor: '#fbeae9',
-    borderRadius: 16,
+  // Modal Nova Medição (bottom-sheet — mesmo padrão da Conferência)
+  mBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
+  mSheet: {
+    backgroundColor: colors.branco,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    paddingHorizontal: 18,
+    paddingTop: 10,
+    paddingBottom: 34,
+  },
+  mHandle: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, backgroundColor: colors.line, marginBottom: 12 },
+  mTitle: { fontSize: 19, fontWeight: '800', color: colors.primary },
+  mDesc: { fontSize: 13, color: colors.mutedText, lineHeight: 19, marginTop: 8 },
+  mLabel: { fontSize: 12, fontWeight: '800', color: colors.mutedText, marginTop: 16, marginBottom: 6 },
+  mInput: {
+    minHeight: 50,
     borderWidth: 1,
-    borderColor: '#f0c4c2',
-    padding: 16,
-    marginBottom: 14,
-  },
-  alertasTop: { marginBottom: 10 },
-  alertasIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: '#f8d7d6',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  alertasTitle: {
+    borderColor: colors.line,
+    borderRadius: 12,
+    paddingHorizontal: 12,
     fontSize: 15,
-    fontWeight: '800',
-    color: colors.critico,
-    marginBottom: 6,
+    color: colors.inkText,
   },
-  alertasDesc: { fontSize: 14, color: colors.critico, lineHeight: 20, marginBottom: 14 },
-  bold: { fontWeight: '800' },
-  btnAgendarVisita: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: colors.critico,
-    borderRadius: 12,
-    paddingVertical: 14,
-    marginBottom: 10,
-  },
-  btnAgendarVisitaText: { fontSize: 15, fontWeight: '800', color: colors.branco },
-  btnVerDetalhes: {
-    borderWidth: 1.5,
-    borderColor: colors.critico,
-    borderRadius: 12,
-    paddingVertical: 13,
-    alignItems: 'center',
-  },
-  btnVerDetalhesText: { fontSize: 15, fontWeight: '700', color: colors.critico },
+  mActions: { flexDirection: 'row', gap: 12, marginTop: 18 },
+  mCancel: { flex: 1, paddingVertical: 15, borderRadius: 14, borderWidth: 1, borderColor: colors.line, alignItems: 'center' },
+  mCancelTxt: { fontSize: 15, fontWeight: '800', color: colors.mutedText },
+  mOk: { flex: 2, paddingVertical: 15, borderRadius: 14, alignItems: 'center', backgroundColor: colors.primary },
+  mOkDisabled: { opacity: 0.45 },
+  mOkTxt: { fontSize: 15, fontWeight: '800', color: colors.branco },
 
   // Média de Divergência
   cardMedia: { marginBottom: 14 },

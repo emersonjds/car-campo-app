@@ -1,12 +1,13 @@
 // Casca de tela: SafeArea + barra de marca fina (app-bar, conforme os mockups)
 // + título de página opcional como heading escuro sobre o corpo claro.
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { text, fonts } from '../theme/typography';
 import { useNav } from './navigation';
+import { listImoveis } from '../lib/store';
 
 export function Screen({
   title,
@@ -21,7 +22,13 @@ export function Screen({
   right?: ReactNode;
   children: ReactNode;
 }) {
-  const { goBack, canGoBack } = useNav();
+  const { goBack, canGoBack, navigate } = useNav();
+  // Badge do sino = nº de imóveis com divergência. ponytail: leitura simples do
+  // store por tela; demo tem poucos imóveis, sobra de custo é desprezível.
+  const [alertas, setAlertas] = useState(0);
+  useEffect(() => {
+    listImoveis().then((l) => setAlertas(l.filter((i) => i.alertaDivergencia).length));
+  }, []);
   return (
     <View style={s.safe}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.branco} />
@@ -41,8 +48,18 @@ export function Screen({
           </View>
           <View style={s.appBarRight}>
             {right ?? (
-              <TouchableOpacity hitSlop={10} accessibilityRole="button" accessibilityLabel="Notificações">
+              <TouchableOpacity
+                hitSlop={10}
+                onPress={() => navigate({ name: 'notificacoes' })}
+                accessibilityRole="button"
+                accessibilityLabel={`Notificações${alertas > 0 ? `, ${alertas} alertas` : ''}`}
+              >
                 <Ionicons name="notifications-outline" size={22} color={colors.inkText} />
+                {alertas > 0 && (
+                  <View style={s.badge}>
+                    <Text style={s.badgeText}>{alertas > 9 ? '9+' : alertas}</Text>
+                  </View>
+                )}
               </TouchableOpacity>
             )}
           </View>
@@ -87,6 +104,19 @@ const s = StyleSheet.create({
   },
   brandName: { fontFamily: fonts.extraBold, fontSize: 17, color: colors.primary },
   appBarRight: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  badge: {
+    position: 'absolute',
+    top: -5,
+    right: -6,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    paddingHorizontal: 4,
+    backgroundColor: colors.critico,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeText: { color: colors.branco, fontSize: 10, fontFamily: fonts.extraBold },
 
   pageHead: { paddingHorizontal: 18, paddingTop: 14, paddingBottom: 4, backgroundColor: colors.neutral },
   title: { ...text.headline, color: colors.inkText },

@@ -21,6 +21,7 @@ import { AlteracaoDetalheScreen } from '../screens/AlteracaoDetalheScreen';
 import { ConferenciaLabScreen } from '../screens/ConferenciaLabScreen';
 import { AgendarVisitaScreen } from '../screens/AgendarVisitaScreen';
 import { PainelScreen } from '../screens/PainelScreen';
+import { NotificacoesScreen } from '../screens/NotificacoesScreen';
 import { ConfigScreen } from '../screens/ConfigScreen';
 
 export function Router() {
@@ -59,6 +60,8 @@ export function Router() {
       return <VisitasScreen />;
     case 'painel':
       return <PainelScreen />;
+    case 'notificacoes':
+      return <NotificacoesScreen />;
     case 'config':
       return <ConfigScreen />;
     // ── Wizard / detalhe ─────────────────────────────────────────────────────
@@ -79,7 +82,7 @@ export function Router() {
     case 'alteracao-detalhe':
       return <AlteracaoDetalheScreen imovelId={route.imovelId} />;
     case 'conferencia-lab':
-      return <ConferenciaLabScreen imovelId={route.imovelId} />;
+      return <ConferenciaLabScreen imovelId={route.imovelId} car={route.car} />;
     case 'agendar-visita':
       return <AgendarVisitaScreen imovelId={route.imovelId} />;
     default:
