@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import MapView, { Polygon } from 'react-native-maps';
 import { Screen } from '../app/Screen';
 import { useNav } from '../app/navigation';
 import { getImovel, updateImovel } from '../lib/store';
@@ -18,6 +19,22 @@ import { Button, EmptyState } from '../ui';
 import { colors } from '../theme/colors';
 import type { Documento, DocumentoTipo, Imovel } from '../types';
 import { sincronizarDocumentos, avaliarRegularidade, CATALOGO_DIGITAL } from '../lib/docHub';
+
+function calcRegion(points: Array<{ latitude: number; longitude: number }>) {
+  if (points.length < 3) return null;
+  const lons = points.map((p) => p.longitude);
+  const lats = points.map((p) => p.latitude);
+  const minLat = Math.min(...lats);
+  const maxLat = Math.max(...lats);
+  const minLon = Math.min(...lons);
+  const maxLon = Math.max(...lons);
+  return {
+    latitude: (minLat + maxLat) / 2,
+    longitude: (minLon + maxLon) / 2,
+    latitudeDelta: Math.max(maxLat - minLat, 0.002) * 1.6,
+    longitudeDelta: Math.max(maxLon - minLon, 0.002) * 1.6,
+  };
+}
 
 // ponytail: label e orgao vêm do CATALOGO_DIGITAL; aqui só acoes e geotag
 type TipoMeta = {
@@ -296,6 +313,7 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
 
   // ponytail: chamada direta (pura); useMemo aqui seria hook após early-return → Rules of Hooks
   const reg = avaliarRegularidade(imovel);
+  const region = calcRegion(imovel.geometry.points);
 
   // govbr primeiro (ordem do catálogo), manuais por createdAt desc
   const docsOrdenados = [
@@ -337,7 +355,30 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
           )}
         </View>
 
-        {/* 2. Banner de regularidade (só se impacta crédito) */}
+        {/* 2. Mapa do perímetro */}
+        {region ? (
+          <View style={s.mapCard}>
+            <Text style={s.mapLabel}>Perímetro do imóvel — SIRGAS 2000</Text>
+            <MapView
+              style={s.map}
+              region={region}
+              mapType="satellite"
+              scrollEnabled={false}
+              zoomEnabled={false}
+              rotateEnabled={false}
+              pitchEnabled={false}
+            >
+              <Polygon
+                coordinates={imovel.geometry.points.map((p) => ({ latitude: p.latitude, longitude: p.longitude }))}
+                fillColor="rgba(45,90,39,0.3)"
+                strokeColor={colors.primary}
+                strokeWidth={2}
+              />
+            </MapView>
+          </View>
+        ) : null}
+
+        {/* 3. Banner de regularidade (só se impacta crédito) */}
         {reg.podeImpactarCredito ? (
           <View style={[s.banner, reg.nivel === 'critico' ? s.bannerCritico : s.bannerPendente]}>
             <Text style={s.bannerTitulo}>{bannerTitulo}</Text>
@@ -345,7 +386,7 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
           </View>
         ) : null}
 
-        {/* 3. Lista de documentos */}
+        {/* 4. Lista de documentos */}
         <Text style={s.secaoTitulo}>Seus documentos</Text>
 
         {sincronizando ? (
@@ -371,7 +412,7 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
           </View>
         )}
 
-        {/* 4. Botão "+ Adicionar documento" */}
+        {/* 5. Botão "+ Adicionar documento" */}
         <Button
           label="Adicionar documento"
           variant="outlined"
@@ -386,7 +427,7 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
           </View>
         ) : null}
 
-        {/* 5. Link discreto de sync */}
+        {/* 6. Link discreto de sync */}
         <TouchableOpacity
           onPress={() => sincronizar(imovel)}
           disabled={sincronizando}
@@ -411,7 +452,7 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
         </TouchableOpacity>
       </ScrollView>
 
-      {/* 6. Rodapé fixo */}
+      {/* 7. Rodapé fixo */}
       <View style={s.rodape}>
         <Button label="Voltar" variant="secondary" onPress={goBack} />
         <View style={s.rodapeSpacer} />
@@ -443,6 +484,10 @@ const s = StyleSheet.create({
   },
   metricaLabel: { fontSize: 13, fontWeight: '600', color: colors.mutedText },
   metricaValor: { fontSize: 22, fontWeight: '800', color: colors.inkText },
+
+  mapCard: { marginBottom: 12 },
+  mapLabel: { fontSize: 11, fontWeight: '700', color: colors.mutedText, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 },
+  map: { height: 180, borderRadius: 12, overflow: 'hidden' },
 
   banner: {
     borderLeftWidth: 4,
