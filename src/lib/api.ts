@@ -48,13 +48,3 @@ export async function submitPerimeter(
     };
   }
 }
-
-/** Verifica se a CAR Geo API está acessível. */
-export async function checkApiHealth(): Promise<boolean> {
-  try {
-    const res = await fetch(`${API_BASE_URL}/health`);
-    return res.ok;
-  } catch {
-    return false;
-  }
-}
