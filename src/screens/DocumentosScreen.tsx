@@ -2,7 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Linking,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -13,7 +15,7 @@ import MapView, { Polygon } from 'react-native-maps';
 import { Screen } from '../app/Screen';
 import { useNav } from '../app/navigation';
 import { getImovel } from '../lib/store';
-import { exportPDF, exportGeoJSONFile, previewPDF } from '../lib/export';
+import { exportPDF, exportGeoJSONFile, previewPDF, uploadPDFLink } from '../lib/export';
 import { Button, EmptyState } from '../ui';
 import { colors } from '../theme/colors';
 import type { Imovel } from '../types';
@@ -21,7 +23,7 @@ import { solicitacaoMetragem } from '../lib/docHub';
 import { CHECKLIST_CAR_OFICIAL, type PassoCAR } from '../lib/checklistCAR';
 
 // chave da exportação em andamento
-type Gerando = 'pdf-view' | 'pdf-share' | 'geojson' | null;
+type Gerando = 'pdf-view' | 'pdf-share' | 'geojson' | 'pdf-link' | null;
 
 function calcRegion(points: Array<{ latitude: number; longitude: number }>) {
   if (points.length < 3) return null;
@@ -164,6 +166,27 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
     [imovel, gerando],
   );
 
+  const gerarLink = useCallback(async () => {
+    if (!imovel || gerando) return;
+    setGerando('pdf-link');
+    try {
+      const url = await uploadPDFLink(imovel);
+      Alert.alert(
+        'Link gerado',
+        url,
+        [
+          { text: 'Abrir', onPress: () => Linking.openURL(url) },
+          { text: 'Compartilhar', onPress: () => Share.share({ message: url }) },
+          { text: 'Fechar', style: 'cancel' },
+        ],
+      );
+    } catch (err: unknown) {
+      Alert.alert('Ops', err instanceof Error ? err.message : 'Não foi possível gerar o link.');
+    } finally {
+      if (montado.current) setGerando(null);
+    }
+  }, [imovel, gerando]);
+
   if (loading) {
     return (
       <Screen title="Documentos" showBack>
@@ -273,6 +296,11 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
                   label: 'Baixar / Enviar',
                   carregando: gerando === 'pdf-share',
                   onPress: () => exportar('pdf-share', exportPDF),
+                },
+                {
+                  label: 'Gerar link',
+                  carregando: gerando === 'pdf-link',
+                  onPress: gerarLink,
                 },
               ]}
             />
