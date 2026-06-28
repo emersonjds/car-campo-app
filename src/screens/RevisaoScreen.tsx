@@ -7,10 +7,9 @@ import { useNav } from '../app/navigation';
 import { getImovel, updateImovel } from '../lib/store';
 import { areaHectares, perimeterM, validatePerimeter } from '../lib/geo';
 import { submitPerimeter } from '../lib/api';
-import { analisarSobreposicoes } from '../lib/overlay';
 import { analisarAlteracaoImovel } from '../lib/alteracao';
 import { DEMO_CAMADAS } from '../lib/refLayers.demo';
-import { exportPDF } from '../lib/export';
+import { exportPDF, previewPDF } from '../lib/export';
 import {
   Badge,
   Card,
@@ -43,7 +42,7 @@ function maskCpfCnpj(value: string): string {
 }
 
 // Qual botão de ação está carregando agora
-type ActiveAction = 'pdf' | 'submit' | 'visita' | null;
+type ActiveAction = 'pdf-view' | 'pdf-share' | 'visita' | null;
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
@@ -57,7 +56,7 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 }
 
 export function RevisaoScreen({ imovelId }: { imovelId: string }) {
-  const { navigate, goBack, switchTab } = useNav();
+  const { goBack, switchTab } = useNav();
 
   // Análise ambiental resumida — síncrona com DEMO_CAMADAS (sem rede necessária).
   // O laudo completo (com tentativa online) fica na AnaliseAmbientalScreen.
@@ -98,67 +97,18 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
     [activeAction],
   );
 
-  const handleExportPDF = useCallback(() => {
+  const handlePreviewPDF = useCallback(() => {
     if (!imovel) return;
-    withAction('pdf', () => exportPDF(imovel));
+    withAction('pdf-view', () => previewPDF(imovel));
   }, [imovel, withAction]);
 
-  const handleSubmit = useCallback(() => {
+  const handleExportPDF = useCallback(() => {
     if (!imovel) return;
-    withAction('submit', async () => {
-      const { imovel: dados, produtor, geometry } = imovel;
-
-      // Propriedades enviadas à API (sem CPF/CNPJ por extenso — LGPD)
-      const properties: Record<string, unknown> = {
-        nome: dados.nome,
-        municipio: dados.municipio,
-        uf: dados.uf,
-        produtor_nome: produtor.nome,
-        ...(dados.matricula ? { matricula: dados.matricula } : {}),
-        ...(dados.modulosFiscais != null ? { modulos_fiscais: dados.modulosFiscais } : {}),
-      };
-
-      const result = await submitPerimeter(geometry.points, properties);
-
-      // Offline-first: marcamos como 'enviado' independente do resultado de rede.
-      // O dado está seguro no device; um job de sync re-tentaria em produção.
-      await updateImovel(imovelId, { status: 'enviado' });
-
-      if (result.ok) {
-        Alert.alert(
-          'Imóvel enviado!',
-          `${result.message}\n\nRegistro confirmado na CAR Geo API.`,
-          [{ text: 'Ok', onPress: () => switchTab({ name: 'home' }) }],
-        );
-      } else if (result.status === 0) {
-        // Sem rede — offline-first: dados salvos localmente, fluxo concluído
-        Alert.alert(
-          'Salvo localmente',
-          'Sem conexão com a CAR Geo API no momento.\n\n' +
-            'O imóvel está salvo no dispositivo e será reenviado assim que houver rede.',
-          [{ text: 'Ok', onPress: () => switchTab({ name: 'home' }) }],
-        );
-      } else {
-        // Endpoint retornou erro HTTP (ex.: 404/405 em API somente-leitura)
-        Alert.alert(
-          'Atenção',
-          `${result.message}\n\nOs dados ficaram salvos localmente com segurança.`,
-          [{ text: 'Ok', onPress: () => switchTab({ name: 'home' }) }],
-        );
-      }
-    });
-  }, [imovel, imovelId, switchTab, withAction]);
+    withAction('pdf-share', () => exportPDF(imovel));
+  }, [imovel, withAction]);
 
   // IMPORTANTE: este useMemo precisa vir ANTES dos early returns abaixo, senão a
   // contagem de hooks muda entre renders (Rules of Hooks). `imovel` é nullable aqui.
-  const analiseResumo = useMemo(
-    () =>
-      imovel && imovel.geometry.points.length >= 3
-        ? analisarSobreposicoes(imovel.geometry.points, DEMO_CAMADAS, 'offline-demo')
-        : null,
-    [imovel],
-  );
-
   const alteracaoResumo = useMemo(
     () => (imovel ? analisarAlteracaoImovel(imovel, DEMO_CAMADAS, 'offline-demo') : null),
     [imovel],
@@ -169,12 +119,32 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
     const r = alteracaoResumo?.relatorio;
     const pedir = (motivo: MotivoVisita, detalhe: string) =>
       withAction('visita', async () => {
+        const { imovel: dados, produtor, geometry } = imovel;
         const sol: SolicitacaoVisita = { solicitadaEm: Date.now(), motivo, detalhe };
-        const updated = await updateImovel(imovel.id, { solicitacaoVisita: sol });
+        // A solicitação JÁ registra e envia o imóvel para a fila do analista.
+        const updated = await updateImovel(imovel.id, {
+          solicitacaoVisita: sol,
+          status: 'enviado',
+        });
         if (updated) setImovel(updated);
+
+        // Melhor-esforço: publica o perímetro preliminar na CAR Geo API
+        // (offline-resiliente — nunca bloqueia o produtor por falta de rede).
+        const properties: Record<string, unknown> = {
+          nome: dados.nome,
+          municipio: dados.municipio,
+          uf: dados.uf,
+          produtor_nome: produtor.nome,
+          ...(dados.matricula ? { matricula: dados.matricula } : {}),
+          ...(dados.modulosFiscais != null ? { modulos_fiscais: dados.modulosFiscais } : {}),
+        };
+        await submitPerimeter(geometry.points, properties).catch(() => {});
+
         Alert.alert(
-          'Conferência solicitada',
-          'Sua solicitação entrou na fila de visitas do analista. Você será avisado quando a conferência for agendada.',
+          'Visita solicitada',
+          'Seu imóvel entrou na fila de visitas do analista com a medição preliminar. ' +
+            'Você poderá discutir os números com o técnico na visita de campo.',
+          [{ text: 'Ok', onPress: () => switchTab({ name: 'home' }) }],
         );
       });
     Alert.alert('Solicitar visita do técnico', 'Qual o motivo da conferência?', [
@@ -194,7 +164,7 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
       },
       { text: 'Cancelar', style: 'cancel' },
     ]);
-  }, [imovel, alteracaoResumo, withAction]);
+  }, [imovel, alteracaoResumo, withAction, switchTab]);
 
   if (loadingImovel) {
     return (
@@ -248,11 +218,10 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
   const validation = validatePerimeter(points);
   const area = areaHectares(points).toFixed(4);
   const perim = Number(perimeterM(points).toFixed(0)).toLocaleString('pt-BR');
-  const { imovel: dados, produtor, documentos } = imovel;
+  const { imovel: dados, produtor } = imovel;
   const cpfDisplay = maskCpfCnpj(produtor.cpfCnpj);
 
   const isBusy = activeAction !== null;
-  const canSubmit = validation.ok && !isBusy;
 
   return (
     <Screen title="Revisão" subtitle="Documento preliminar de metragem">
@@ -299,24 +268,6 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
           </View>
         </Card>
 
-        <Card style={s.card}>
-          <SectionTitle>
-            {`Documentos anexados (${documentos.length})`}
-          </SectionTitle>
-          {documentos.length > 0 ? (
-            documentos.map((doc) => (
-              <View key={doc.id} style={s.docRow}>
-                <Text style={s.docNome} numberOfLines={1}>
-                  {doc.nome}
-                </Text>
-                <Badge tone="neutro">{doc.tipo}</Badge>
-              </View>
-            ))
-          ) : (
-            <Text style={s.noDoc}>Nenhum documento anexado.</Text>
-          )}
-        </Card>
-
         {(validation.problemas.length > 0 || validation.avisos.length > 0) ? (
           <Card style={s.card}>
             <SectionTitle>Validação do contorno</SectionTitle>
@@ -338,56 +289,24 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
         <Card style={s.card}>
           <SectionTitle>Documento preliminar</SectionTitle>
           <Text style={s.docPrelimText}>
-            Gere o PDF com o croqui e as medidas para guardar e apresentar na visita do
-            técnico. É um documento de referência, não a medição oficial.
+            Veja como o documento ficou no seu celular ou baixe/envie o PDF com o croqui e as
+            medidas para guardar e apresentar na visita do técnico. É um documento de
+            referência, não a medição oficial.
           </Text>
           <View style={s.btnRow}>
             <PrimaryButton
-              label={activeAction === 'pdf' ? 'Gerando PDF…' : 'Gerar Documento Final (PDF)'}
+              label={activeAction === 'pdf-view' ? 'Abrindo…' : 'Visualizar PDF'}
+              onPress={handlePreviewPDF}
+              disabled={isBusy}
+            />
+          </View>
+          <View style={[s.btnRow, { marginTop: 8 }]}>
+            <SecondaryButton
+              label={activeAction === 'pdf-share' ? 'Gerando PDF…' : 'Baixar / Enviar PDF'}
               onPress={handleExportPDF}
               disabled={isBusy}
             />
           </View>
-        </Card>
-
-        <Card style={s.card}>
-          <SectionTitle>Análise Ambiental</SectionTitle>
-          {analiseResumo === null ? (
-            <Text style={s.noDoc}>Demarcação incompleta — análise indisponível.</Text>
-          ) : (
-            <>
-              {!analiseResumo.ok ? (
-                <View style={s.analiseBannerCritico}>
-                  <Text style={s.analiseBannerCriticoText}>
-                    ⛔{' '}
-                    {analiseResumo.sobreposicoes.filter((x) => x.severidade === 'critico').length}{' '}
-                    sobreposição(ões) crítica(s) detectada(s)
-                  </Text>
-                  <Text style={s.analiseBannerHint}>
-                    Pode impedir o crédito rural. Veja o laudo antes de enviar.
-                  </Text>
-                </View>
-              ) : analiseResumo.sobreposicoes.length > 0 ? (
-                <View style={s.analiseBannerAviso}>
-                  <Text style={s.analiseBannerAvisoText}>
-                    ⚠ {analiseResumo.sobreposicoes.length} sobreposição(ões) sem impedimento crítico.
-                  </Text>
-                </View>
-              ) : (
-                <Text style={s.analiseOk}>
-                  ✓ Nenhuma sobreposição detectada (dados de demonstração).
-                </Text>
-              )}
-              <Text style={s.analiseNota}>Prévia offline — confirmada pelo técnico na visita.</Text>
-              <View style={[s.btnRow, { marginTop: 10 }]}>
-                <SecondaryButton
-                  label="Ver análise ambiental completa"
-                  onPress={() => navigate({ name: 'analise-ambiental', imovelId })}
-                  disabled={isBusy}
-                />
-              </View>
-            </>
-          )}
         </Card>
 
         {alteracaoResumo && (
@@ -422,8 +341,9 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
             ) : (
               <>
                 <Text style={s.analiseNota}>
-                  A medição oficial é feita por um técnico em campo. Solicite a visita para
-                  oficializar e regularizar o imóvel.
+                  Esta é uma medição preliminar. A medição oficial precisa de um técnico
+                  habilitado em campo — solicite a visita para conferir os números juntos e
+                  regularizar o imóvel.
                 </Text>
                 <View style={[s.btnRow, { marginTop: 12 }]}>
                   <PrimaryButton
@@ -438,22 +358,7 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
         )}
 
         <View style={s.submitSection}>
-          {!validation.ok ? (
-            <Text style={s.blockMsg}>
-              Corrija os problemas no contorno antes de enviar.
-            </Text>
-          ) : null}
-
           <View style={s.btnRow}>
-            <PrimaryButton
-              label="Enviar imóvel"
-              onPress={handleSubmit}
-              disabled={!canSubmit}
-              loading={activeAction === 'submit'}
-            />
-          </View>
-
-          <View style={[s.btnRow, { marginTop: 8 }]}>
             <SecondaryButton label="Voltar" onPress={goBack} disabled={isBusy} />
           </View>
         </View>
@@ -556,26 +461,6 @@ const s = StyleSheet.create({
     width: 8,
   },
 
-  docRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 7,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.line,
-  },
-  docNome: {
-    flex: 1,
-    fontSize: 13,
-    color: colors.ink,
-    marginRight: 10,
-  },
-  noDoc: {
-    fontSize: 13,
-    color: colors.muted,
-    fontStyle: 'italic',
-  },
-
   validRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -600,55 +485,7 @@ const s = StyleSheet.create({
     marginTop: 8,
     marginBottom: 8,
   },
-  blockMsg: {
-    fontSize: 13,
-    color: colors.alerta,
-    textAlign: 'center',
-    marginBottom: 10,
-    fontWeight: '700',
-    lineHeight: 18,
-  },
 
-  analiseBannerCritico: {
-    backgroundColor: '#fce8e7',
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: colors.alerta,
-  },
-  analiseBannerCriticoText: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: colors.alerta,
-    lineHeight: 18,
-  },
-  analiseBannerHint: {
-    fontSize: 12,
-    color: colors.alerta,
-    marginTop: 4,
-    lineHeight: 17,
-  },
-  analiseBannerAviso: {
-    backgroundColor: '#fdf4e3',
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#c07a1a',
-  },
-  analiseBannerAvisoText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.aviso,
-    lineHeight: 18,
-  },
-  analiseOk: {
-    fontSize: 13,
-    color: colors.verde,
-    fontWeight: '700',
-    marginBottom: 8,
-  },
   analiseNota: {
     fontSize: 11,
     color: colors.muted,
