@@ -1,16 +1,14 @@
-// Feed multi-tipo agrupado em HOJE / ANTERIORES. Os itens de divergência são
-// derivados de dados reais (alertaDivergencia); os demais são exemplos de demo
-// para ilustrar o fluxo (documento recebido, visita confirmada, sistema, lembrete).
-import { useEffect, useMemo, useState } from 'react';
+// Feed informativo agrupado em HOJE / ANTERIORES: licenças liberadas, documentos
+// aprovados, visita confirmada, sistema e lembretes. Itens de demonstração que
+// ilustram o que o produtor recebe ao longo do processo.
+import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '../app/Screen';
 import { useNav, type Route } from '../app/navigation';
 import { colors } from '../theme/colors';
-import { listImoveis } from '../lib/store';
-import type { Imovel } from '../types';
 
-type Tipo = 'critico' | 'documento' | 'visita' | 'sistema' | 'lembrete';
+type Tipo = 'documento' | 'visita' | 'sistema' | 'lembrete';
 
 interface Notif {
   id: string;
@@ -19,52 +17,61 @@ interface Notif {
   descricao: string;
   quando: string;
   grupo: 'hoje' | 'anteriores';
-  badge?: string;
   rota?: Route;
 }
 
 // Ícone + cor por tipo (o fundo do ícone é a cor com baixa opacidade).
 const TIPO: Record<Tipo, { cor: string; icon: keyof typeof Ionicons.glyphMap }> = {
-  critico:   { cor: colors.critico, icon: 'warning' },
   documento: { cor: colors.tertiary, icon: 'document-text' },
-  visita:    { cor: colors.primary, icon: 'checkmark-circle' },
-  sistema:   { cor: colors.mutedText, icon: 'cloud-download' },
-  lembrete:  { cor: colors.aviso, icon: 'alarm' },
+  visita: { cor: colors.primary, icon: 'checkmark-circle' },
+  sistema: { cor: colors.mutedText, icon: 'cloud-download' },
+  lembrete: { cor: colors.aviso, icon: 'alarm' },
 };
 
-// Notificações de demo (não derivadas do store) — completam o feed.
+// Feed informativo de demonstração — licenças/documentos liberados, visita, etc.
 const DEMO: Notif[] = [
+  {
+    id: 'demo-licenca',
+    tipo: 'documento',
+    titulo: 'Licença ambiental liberada',
+    descricao:
+      'A licença ambiental da Propriedade Vale Verde foi liberada pelo órgão estadual.',
+    quando: '11:28',
+    grupo: 'hoje',
+    rota: { name: 'documentos-hub' },
+  },
   {
     id: 'demo-doc',
     tipo: 'documento',
-    titulo: 'Novo Documento Recebido',
-    descricao: 'O laudo técnico ambiental da Propriedade Vale Verde foi anexado ao sistema e está pronto para revisão.',
-    quando: '11:28',
+    titulo: 'Documento aprovado',
+    descricao: 'O laudo técnico ambiental foi aprovado e anexado ao seu processo.',
+    quando: '10:02',
     grupo: 'hoje',
     rota: { name: 'documentos-hub' },
   },
   {
     id: 'demo-visita',
     tipo: 'visita',
-    titulo: 'Visita Técnica Confirmada',
-    descricao: 'O produtor confirmou a agenda para o levantamento topográfico amanhã às 08:00 na Gleba B.',
-    quando: '14:05',
+    titulo: 'Visita técnica confirmada',
+    descricao: 'O técnico confirmou a visita de campo para a medição oficial.',
+    quando: '09:14',
     grupo: 'hoje',
     rota: { name: 'visitas' },
   },
   {
     id: 'demo-sistema',
     tipo: 'sistema',
-    titulo: 'Atualização de Software',
-    descricao: 'A versão 2.4 do app CAR Campo foi instalada com melhorias na captura de coordenadas offline.',
+    titulo: 'CAR em análise',
+    descricao:
+      'A inscrição no SICAR está em análise no órgão ambiental — já vale para crédito rural.',
     quando: 'Ontem, 18:30',
     grupo: 'anteriores',
   },
   {
     id: 'demo-lembrete',
     tipo: 'lembrete',
-    titulo: 'Lembrete de Vencimento',
-    descricao: 'Faltam 5 dias para o prazo final de retificação do CAR da Unidade Produtiva Sul.',
+    titulo: 'Lembrete',
+    descricao: 'Leve o PDF da medição preliminar na visita do técnico.',
     quando: '21 Mai',
     grupo: 'anteriores',
   },
@@ -72,38 +79,14 @@ const DEMO: Notif[] = [
 
 export function NotificacoesScreen() {
   const { navigate } = useNav();
-  const [imoveis, setImoveis] = useState<Imovel[]>([]);
   const [lidas, setLidas] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    listImoveis().then(setImoveis);
-  }, []);
-
-  // Divergências reais → notificações críticas; juntadas às de demo.
-  const notifs = useMemo<Notif[]>(() => {
-    const divergencias: Notif[] = imoveis
-      .filter((i) => i.alertaDivergencia)
-      .map((i) => ({
-        id: `div-${i.id}`,
-        tipo: 'critico',
-        titulo: 'Divergência de Limites Detectada',
-        descricao: `O processamento de imagens identificou divergência de ${Math.abs(
-          i.alertaDivergencia!.delta_pct,
-        ).toFixed(0)}% na ${i.imovel.nome} (Produtor: ${i.produtor.nome}).`,
-        quando: '09:14',
-        grupo: 'hoje',
-        badge: 'CRÍTICO',
-        rota: { name: 'alteracao-detalhe', imovelId: i.id },
-      }));
-    return [...divergencias, ...DEMO];
-  }, [imoveis]);
-
-  const hoje = notifs.filter((n) => n.grupo === 'hoje');
-  const anteriores = notifs.filter((n) => n.grupo === 'anteriores');
+  const hoje = DEMO.filter((n) => n.grupo === 'hoje');
+  const anteriores = DEMO.filter((n) => n.grupo === 'anteriores');
 
   // "Anteriores" já nascem lidas; as de hoje viram lidas ao tocar ou no "marcar todas".
   const isLida = (n: Notif) => n.grupo === 'anteriores' || lidas.has(n.id);
-  const marcarTodas = () => setLidas(new Set(notifs.map((n) => n.id)));
+  const marcarTodas = () => setLidas(new Set(DEMO.map((n) => n.id)));
 
   const abrir = (n: Notif) => {
     setLidas((prev) => new Set(prev).add(n.id));
@@ -133,11 +116,6 @@ export function NotificacoesScreen() {
           <Text style={s.descricao} numberOfLines={2}>
             {n.descricao}
           </Text>
-          {n.badge && (
-            <View style={[s.badge, { backgroundColor: t.cor }]}>
-              <Text style={s.badgeText}>{n.badge}</Text>
-            </View>
-          )}
         </View>
       </TouchableOpacity>
     );
@@ -146,7 +124,7 @@ export function NotificacoesScreen() {
   return (
     <Screen
       title="Notificações"
-      subtitle="Gerencie seus alertas e atualizações de campo"
+      subtitle="Acompanhe licenças, documentos e visitas"
       right={<View />} // já estamos nas notificações: sem sino auto-referente
     >
       <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
@@ -202,6 +180,4 @@ const s = StyleSheet.create({
   tituloLida: { color: colors.mutedText },
   quando: { fontSize: 11, color: colors.mutedText },
   descricao: { fontSize: 13, color: colors.mutedText, lineHeight: 18, marginTop: 3 },
-  badge: { alignSelf: 'flex-start', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2, marginTop: 8 },
-  badgeText: { fontSize: 10, fontWeight: '800', color: colors.branco, letterSpacing: 0.5 },
 });
