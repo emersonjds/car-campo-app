@@ -215,24 +215,33 @@ export function PainelScreen() {
           {m.visitasAgendadas.length === 0 ? (
             <Text style={s.emptyText}>Nenhuma visita agendada esta semana.</Text>
           ) : (
-            m.visitasAgendadas.map((im) => (
-              <View key={im.id} style={s.visitaItem}>
-                <View style={s.visitaBar} />
-                <View style={s.visitaInfo}>
-                  <Text style={s.visitaHorario}>
-                    {im.visitaAgendada!.periodo === 'manha'
-                      ? 'Manhã'
-                      : im.visitaAgendada!.periodo === 'tarde'
-                        ? 'Tarde'
-                        : '—'}
-                  </Text>
-                  <Text style={s.visitaNome}>{im.imovel.nome}</Text>
-                  <Text style={s.visitaLocal}>
-                    Local: {im.imovel.municipio}/{im.imovel.uf}
-                  </Text>
+            m.visitasAgendadas.map((im) => {
+              const va = im.visitaAgendada!;
+              const horario =
+                va.horario && va.horaFim
+                  ? `${va.horario} - ${va.horaFim}`
+                  : va.periodo === 'manha'
+                    ? 'Manhã'
+                    : va.periodo === 'tarde'
+                      ? 'Tarde'
+                      : '—';
+              const online = va.modalidade === 'online';
+              const onde = online
+                ? `Online / ${va.plataforma ?? 'Teams'}`
+                : `Local: ${im.imovel.municipio}/${im.imovel.uf}`;
+              return (
+                <View key={im.id} style={s.visitaItem}>
+                  <View style={[s.visitaBar, online && s.visitaBarOnline]} />
+                  <View style={s.visitaInfo}>
+                    <Text style={s.visitaHorario}>{horario}</Text>
+                    <Text style={s.visitaNome}>
+                      {va.titulo ? `${va.titulo} · ${im.imovel.nome}` : im.imovel.nome}
+                    </Text>
+                    <Text style={s.visitaLocal}>{onde}</Text>
+                  </View>
                 </View>
-              </View>
-            ))
+              );
+            })
           )}
         </Card>
 
@@ -421,7 +430,8 @@ const s = StyleSheet.create({
 
   // Visitas
   visitaItem: { flexDirection: 'row', gap: 12, marginBottom: 12 },
-  visitaBar: { width: 3, borderRadius: 2, backgroundColor: colors.primary },
+  visitaBar: { width: 3, borderRadius: 2, backgroundColor: colors.aviso },
+  visitaBarOnline: { backgroundColor: colors.tertiary },
   visitaInfo: { flex: 1 },
   visitaHorario: { fontSize: 12, fontWeight: '700', color: colors.mutedText },
   visitaNome: { fontSize: 14, fontWeight: '700', color: colors.inkText, marginTop: 2 },

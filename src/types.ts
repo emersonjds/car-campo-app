@@ -70,8 +70,16 @@ export interface VisitaAgendada {
   dataVisita?: number;
   /** Período do dia combinado para a visita. */
   periodo?: 'manha' | 'tarde';
-  /** Slot de horário exato selecionado (ex.: "08:00", "14:30"). */
+  /** Slot de horário exato selecionado / início (ex.: "08:00", "14:30"). */
   horario?: string;
+  /** Hora de término, quando há janela definida (ex.: "11:30"). */
+  horaFim?: string;
+  /** Título do evento (ex.: "Vistoria de Contorno", "Reunião de Alinhamento - INCRA"). */
+  titulo?: string;
+  /** Modalidade: presencial (tem local físico) ou online (tem plataforma). */
+  modalidade?: 'presencial' | 'online';
+  /** Plataforma quando online (ex.: "Teams", "Meet"). */
+  plataforma?: string;
   /** Observação livre do analista sobre a divergência/motivo da visita. */
   observacao?: string;
   analista?: string;
