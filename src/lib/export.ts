@@ -377,6 +377,14 @@ export async function previewPDF(imovel: Imovel): Promise<void> {
 }
 
 /**
+ * HTML do documento preliminar (CPF mascarado — LGPD) para exibir num WebView
+ * dentro do app — pré-visualização offline, sem salvar nem imprimir.
+ */
+export function documentoHTML(imovel: Imovel): string {
+  return buildHTML(imovel, /* maskPii */ true);
+}
+
+/**
  * Gera o relatório PDF (croqui SVG, medidas e vértices) via expo-print e abre o
  * share sheet nativo para baixar (salvar nos Arquivos) ou enviar (WhatsApp, e-mail…).
  * Funciona 100% offline — sem assets remotos, sem mapa raster.

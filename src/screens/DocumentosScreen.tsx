@@ -15,7 +15,8 @@ import MapView, { Polygon } from 'react-native-maps';
 import { Screen } from '../app/Screen';
 import { useNav } from '../app/navigation';
 import { getImovel } from '../lib/store';
-import { exportPDF, exportGeoJSONFile, previewPDF, uploadPDFLink } from '../lib/export';
+import { exportPDF, exportGeoJSONFile, uploadPDFLink } from '../lib/export';
+import { DocumentoPreviewModal } from '../ui/DocumentoPreviewModal';
 import { Button, EmptyState } from '../ui';
 import { colors } from '../theme/colors';
 import type { Imovel } from '../types';
@@ -159,6 +160,7 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
   const [imovel, setImovel] = useState<Imovel | null>(null);
   const [loading, setLoading] = useState(true);
   const [gerando, setGerando] = useState<Gerando>(null);
+  const [previewVisivel, setPreviewVisivel] = useState(false);
   const montado = useRef(true);
   useEffect(() => {
     montado.current = true;
@@ -317,8 +319,8 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
               acoes={[
                 {
                   label: 'Visualizar',
-                  carregando: gerando === 'pdf-view',
-                  onPress: () => exportar('pdf-view', previewPDF),
+                  carregando: false,
+                  onPress: () => setPreviewVisivel(true),
                 },
                 {
                   label: 'Baixar / Enviar',
@@ -401,6 +403,12 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
           onPress={() => navigate({ name: 'revisao', imovelId })}
         />
       </View>
+
+      <DocumentoPreviewModal
+        imovel={imovel}
+        visible={previewVisivel}
+        onClose={() => setPreviewVisivel(false)}
+      />
     </Screen>
   );
 }

@@ -8,8 +8,9 @@ import { getImovel } from '../lib/store';
 import { areaHectares, perimeterM, validatePerimeter } from '../lib/geo';
 import { analisarAlteracaoImovel } from '../lib/alteracao';
 import { DEMO_CAMADAS } from '../lib/refLayers.demo';
-import { exportPDF, previewPDF, uploadPDFLink } from '../lib/export';
+import { exportPDF, uploadPDFLink } from '../lib/export';
 import { solicitarVisitaTecnico } from '../lib/visita';
+import { DocumentoPreviewModal } from '../ui/DocumentoPreviewModal';
 import {
   Badge,
   Card,
@@ -64,6 +65,7 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
   const [imovel, setImovel] = useState<Imovel | null>(null);
   const [loadingImovel, setLoadingImovel] = useState(true);
   const [activeAction, setActiveAction] = useState<ActiveAction>(null);
+  const [previewVisivel, setPreviewVisivel] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -99,8 +101,8 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
 
   const handlePreviewPDF = useCallback(() => {
     if (!imovel) return;
-    withAction('pdf-view', () => previewPDF(imovel));
-  }, [imovel, withAction]);
+    setPreviewVisivel(true);
+  }, [imovel]);
 
   const handleExportPDF = useCallback(() => {
     if (!imovel) return;
@@ -292,11 +294,7 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
             referência, não a medição oficial.
           </Text>
           <View style={s.btnRow}>
-            <PrimaryButton
-              label={activeAction === 'pdf-view' ? 'Abrindo…' : 'Visualizar PDF'}
-              onPress={handlePreviewPDF}
-              disabled={isBusy}
-            />
+            <PrimaryButton label="Visualizar documento" onPress={handlePreviewPDF} />
           </View>
           <View style={[s.btnRow, { marginTop: 8 }]}>
             <SecondaryButton
@@ -365,12 +363,15 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
           <View style={s.btnRow}>
             <PrimaryButton label="Concluir" onPress={() => switchTab({ name: 'home' })} disabled={isBusy} />
           </View>
-          <View style={[s.btnRow, { marginTop: 8 }]}>
-            <SecondaryButton label="Voltar" onPress={goBack} disabled={isBusy} />
-          </View>
         </View>
 
       </ScrollView>
+
+      <DocumentoPreviewModal
+        imovel={imovel}
+        visible={previewVisivel}
+        onClose={() => setPreviewVisivel(false)}
+      />
     </Screen>
   );
 }
