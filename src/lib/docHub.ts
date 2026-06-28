@@ -236,12 +236,11 @@ const PRIORIDADE_STATUS: Record<DocStatus, number> = {
  * ausentes/vencidos/pendentes primeiro, em-dia por último.
  */
 export function listarDocumentosPropriedade(imovel: Imovel, hoje: number): ItemDocumento[] {
-  const tipos: DocumentoTipo[] = [];
-  if (imovel.imovel.carNumero) tipos.push('car', 'car-extrato');
-  tipos.push('ccir');
-  if (imovel.imovel.matricula) tipos.push('matricula');
-  if (imovel.geometry.points.length >= 3) tipos.push('sigef');
-  tipos.push('caf', 'itr', 'licenca');
+  // Catálogo digital COMPLETO sempre — documentos obrigatórios faltando aparecem
+  // como 'ausente' (o fazendeiro precisa vê-los para providenciar), não somem.
+  const tipos: DocumentoTipo[] = [
+    'car', 'car-extrato', 'ccir', 'sigef', 'matricula', 'caf', 'itr', 'licenca',
+  ];
 
   const docPorTipo = new Map<DocumentoTipo, Documento>(
     imovel.documentos.map((d) => [d.tipo, d]),
