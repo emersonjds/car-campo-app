@@ -1,12 +1,22 @@
 // Dashboard do Produtor — CAR Campo v2 (AgroMedição).
-import { useCallback, useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  FlatList,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import MapView, { Polygon } from 'react-native-maps';
 import { Screen } from '../app/Screen';
 import { useNav } from '../app/navigation';
 import { useAuth } from '../auth/AuthContext';
-import { Card, EmptyState, MetricBlock, StatusChip } from '../ui';
+import { Card, EmptyState, StatusChip } from '../ui';
 import { colors } from '../theme/colors';
 import { text } from '../theme/typography';
 import { listImoveis } from '../lib/store';
@@ -95,6 +105,50 @@ function resolveChip(im: Imovel): ChipStatus {
   return im.status === 'enviado' ? 'info' : 'aviso';
 }
 
+/** Card de um imóvel — usado no carrossel horizontal "Meus Terrenos". */
+function TerrenoCard({ im, width }: { im: Imovel; width: number }) {
+  return (
+    <Card style={[s.terrenoCard, { width }]}>
+      <View style={s.satWrap}>
+        <TerrenoHero points={im.geometry.points} />
+        <View style={s.chipWrap}>
+          <StatusChip status={resolveChip(im)} />
+        </View>
+      </View>
+
+      <View style={s.terrenoRow}>
+        <View style={s.terrenoLeft}>
+          <Text style={s.terrenoNome} numberOfLines={2}>{im.imovel.nome}</Text>
+          <Text style={s.terrenoLoc}>
+            {[im.imovel.municipio, im.imovel.uf].filter(Boolean).join(', ')}
+          </Text>
+        </View>
+        <View style={s.hectaresBox}>
+          <Text style={s.hectaresLbl}>HECTARES</Text>
+          <Text style={s.hectaresVal}>{Math.round(im.geometry.area_ha)}</Text>
+        </View>
+      </View>
+
+      <View style={s.metaRow}>
+        <View style={s.metaCol}>
+          <Text style={s.metaLbl}>Solo</Text>
+          <Text style={s.metaVal}>{im.imovel.uso ?? 'Soja'}</Text>
+        </View>
+        <View style={s.metaSep} />
+        <View style={s.metaCol}>
+          <Text style={s.metaLbl}>Última Medição</Text>
+          <Text style={s.metaVal}>{fmtData(im.updatedAt)}</Text>
+        </View>
+        <View style={s.metaSep} />
+        <View style={s.metaCol}>
+          <Text style={s.metaLbl}>CAR</Text>
+          <Text style={s.metaVal}>{im.status === 'enviado' ? 'Ativo' : 'Rascunho'}</Text>
+        </View>
+      </View>
+    </Card>
+  );
+}
+
 // Botão de ação com ícone — exclusivo do dashboard.
 // ponytail: mantido local; exportar para ui/index quando outra tela precisar.
 function ActionBtn({
@@ -147,6 +201,15 @@ export function HomeScreen() {
   // Histórico: imóveis com geometria demarcada.
   const medicoes = imoveis.filter((im) => im.geometry.points.length >= 3);
 
+  // Carrossel "Meus Terrenos" — largura proporcional à tela, com peek do próximo.
+  const { width: winW } = useWindowDimensions();
+  const GAP = 12;
+  const CARD_W = winW - 32; // deixa ~16px do próximo card aparecendo (afordância de swipe)
+  const [terrenoIdx, setTerrenoIdx] = useState(0);
+  const onTerrenoScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    setTerrenoIdx(Math.round(e.nativeEvent.contentOffset.x / (CARD_W + GAP)));
+  };
+
   return (
     <Screen showBack={false}>
       <ScrollView
@@ -182,52 +245,31 @@ export function HomeScreen() {
               )}
             </View>
 
-            {primario && (
-              <Card style={s.terrenoCard}>
-                {/* Satélite real do terreno + perímetro */}
-                <View style={s.satWrap}>
-                  <TerrenoHero points={primario.geometry.points} />
-                  <View style={s.chipWrap}>
-                    <StatusChip status={resolveChip(primario)} />
-                  </View>
+            {imoveis.length === 1 ? (
+              <TerrenoCard im={imoveis[0]!} width={CARD_W} />
+            ) : (
+              <>
+                <FlatList
+                  data={imoveis}
+                  keyExtractor={(im) => im.id}
+                  renderItem={({ item }) => <TerrenoCard im={item} width={CARD_W} />}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  snapToInterval={CARD_W + GAP}
+                  decelerationRate="fast"
+                  snapToAlignment="start"
+                  ItemSeparatorComponent={() => <View style={{ width: GAP }} />}
+                  onMomentumScrollEnd={onTerrenoScroll}
+                  style={s.carousel}
+                  contentContainerStyle={s.carouselContent}
+                />
+                {/* Pontinhos indicadores de página */}
+                <View style={s.dots}>
+                  {imoveis.map((im, i) => (
+                    <View key={im.id} style={[s.dot, i === terrenoIdx && s.dotActive]} />
+                  ))}
                 </View>
-
-                {/* Nome + Hectares */}
-                <View style={s.terrenoRow}>
-                  <View style={s.terrenoLeft}>
-                    <Text style={s.terrenoNome}>{primario.imovel.nome}</Text>
-                    <Text style={s.terrenoLoc}>
-                      {[primario.imovel.municipio, primario.imovel.uf]
-                        .filter(Boolean)
-                        .join(', ')}
-                    </Text>
-                  </View>
-                  <MetricBlock
-                    label="HECTARES TOTAIS"
-                    value={Math.round(primario.geometry.area_ha).toString()}
-                  />
-                </View>
-
-                {/* Solo / Última Medição / CAR */}
-                <View style={s.metaRow}>
-                  <View style={s.metaCol}>
-                    <Text style={s.metaLbl}>Solo</Text>
-                    <Text style={s.metaVal}>{primario.imovel.uso ?? 'Soja'}</Text>
-                  </View>
-                  <View style={s.metaSep} />
-                  <View style={s.metaCol}>
-                    <Text style={s.metaLbl}>Última Medição</Text>
-                    <Text style={s.metaVal}>{fmtData(primario.updatedAt)}</Text>
-                  </View>
-                  <View style={s.metaSep} />
-                  <View style={s.metaCol}>
-                    <Text style={s.metaLbl}>CAR</Text>
-                    <Text style={s.metaVal}>
-                      {primario.status === 'enviado' ? 'Ativo' : 'Rascunho'}
-                    </Text>
-                  </View>
-                </View>
-              </Card>
+              </>
             )}
 
             {/* ── Ações Rápidas ────────────────────────────────── */}
@@ -376,6 +418,13 @@ const s = StyleSheet.create({
   sectionMt:    { marginTop: 24, marginBottom: 10 },
   verTodos:     { ...text.bodySemibold, color: colors.primary },
 
+  // Carrossel horizontal — sangra além do padding da scroll p/ mostrar peek do próximo card.
+  carousel: { marginHorizontal: -16 },
+  carouselContent: { paddingHorizontal: 16 },
+  dots: { flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: 10, marginBottom: 4 },
+  dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.line },
+  dotActive: { backgroundColor: colors.primary, width: 18 },
+
   // Card Meus Terrenos — padding zerado para a imagem sangrar até a borda.
   terrenoCard: { padding: 0, overflow: 'hidden', marginBottom: 16 },
   satWrap: { height: 120, backgroundColor: colors.primary },
@@ -389,8 +438,19 @@ const s = StyleSheet.create({
     paddingBottom: 0,
   },
   terrenoLeft:  { flex: 1 },
-  terrenoNome:  { ...text.headlineSm, color: colors.inkText, flexShrink: 1 },
+  terrenoNome:  { ...text.headlineSm, fontSize: 18, lineHeight: 23, color: colors.inkText, flexShrink: 1 },
   terrenoLoc:   { ...text.caption, color: colors.mutedText, marginTop: 2 },
+
+  // Bloco de hectares compacto (substitui o MetricBlock grande).
+  hectaresBox: {
+    backgroundColor: colors.verdeBg,
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    alignItems: 'center',
+  },
+  hectaresLbl: { fontSize: 10, fontWeight: '700', color: colors.mutedText, letterSpacing: 0.5 },
+  hectaresVal: { fontSize: 20, fontWeight: '800', color: colors.inkText, marginTop: 1 },
 
   // Linha Solo / Última Medição / CAR
   metaRow: {

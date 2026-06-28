@@ -92,7 +92,7 @@ export function SecondaryButton({
 
 // ─── Card ─────────────────────────────────────────────────────────────────────
 
-export function Card({ children, style }: { children: ReactNode; style?: ViewStyle }) {
+export function Card({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
   return <View style={[ui.card, style]}>{children}</View>;
 }
 
