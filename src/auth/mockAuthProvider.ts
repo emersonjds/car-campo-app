@@ -1,23 +1,6 @@
 import type { AuthProvider } from './AuthProvider';
-import type { Sessao } from './types';
 import { clearSession, loadSession, saveSession } from './secureSession';
-
-// Analistas de demonstração (mock — substituir por backend no futuro).
-const ANALISTAS: Record<string, { senha: string; nome: string; orgao: string }> = {
-  '12345': { senha: 'car2026', nome: 'Ana Lima (Analista)', orgao: 'SEMA-MT' },
-  '54321': { senha: 'car2026', nome: 'Bruno Souza (Analista)', orgao: 'INCRA' },
-};
-
-export function validarMatricula(
-  matricula: string,
-  senha: string,
-): { ok: boolean; erro?: string; nome?: string; orgao?: string } {
-  const m = matricula.trim();
-  if (!/^\d{3,}$/.test(m)) return { ok: false, erro: 'Matrícula inválida (só números).' };
-  const rec = ANALISTAS[m];
-  if (!rec || rec.senha !== senha) return { ok: false, erro: 'Matrícula ou senha incorretos.' };
-  return { ok: true, nome: rec.nome, orgao: rec.orgao };
-}
+import type { Sessao } from './types';
 
 export const mockAuthProvider: AuthProvider = {
   async loginGovBr(cpf: string) {
@@ -35,38 +18,9 @@ export const mockAuthProvider: AuthProvider = {
     return sessao;
   },
 
-  async loginMatricula(matricula: string, senha: string) {
-    const r = validarMatricula(matricula, senha);
-    if (!r.ok) throw new Error(r.erro ?? 'Falha no login.');
-    const sessao: Sessao = {
-      perfil: 'analista',
-      method: 'matricula',
-      nome: r.nome!,
-      matricula: matricula.trim(),
-      orgao: r.orgao,
-      token: `mock-matricula-${Date.now().toString(36)}`,
-      loggedAt: Date.now(),
-    };
-    await saveSession(sessao);
-    return sessao;
-  },
-
-  async loginPersona(perfil: 'produtor' | 'analista') {
-    if (perfil === 'produtor') {
-      // Reutiliza o fluxo gov.br com CPF de demo — sem pedir credenciais.
-      return mockAuthProvider.loginGovBr('00000000000');
-    }
-    const sessao: Sessao = {
-      perfil: 'analista',
-      method: 'matricula',
-      nome: 'Ana Lima (Analista)',
-      matricula: '12345',
-      orgao: 'SEMA-MT',
-      token: `mock-analista-${Date.now().toString(36)}`,
-      loggedAt: Date.now(),
-    };
-    await saveSession(sessao);
-    return sessao;
+  async loginPersona(_perfil: 'produtor') {
+    // Demo: login direto como produtor rural via gov.br sem pedir CPF.
+    return mockAuthProvider.loginGovBr('00000000000');
   },
 
   async logout() {

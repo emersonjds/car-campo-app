@@ -158,7 +158,7 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
 
         Alert.alert(
           'Visita solicitada',
-          'Seu imóvel entrou na fila de visitas do analista com a medição preliminar. ' +
+          'Solicitação de visita enviada com a medição preliminar. ' +
             'Você poderá discutir os números com o técnico na visita de campo.',
           [{ text: 'Ok', onPress: () => switchTab({ name: 'home' }) }],
         );
@@ -356,9 +356,8 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
             {imovel.solicitacaoVisita ? (
               <View style={s.visitaFeita}>
                 <Text style={s.visitaFeitaText}>
-                  ✓ Conferência solicitada (
-                  {imovel.solicitacaoVisita.motivo === 'medicao' ? 'nova medição' : 'documentação'}) — na fila
-                  do analista.
+                  ✓ Solicitação enviada (
+                  {imovel.solicitacaoVisita.motivo === 'medicao' ? 'nova medição' : 'documentação'}).
                 </Text>
               </View>
             ) : (

@@ -7,17 +7,17 @@ import { colors } from '../theme/colors';
 
 export function LoginScreen() {
   const { loginPersona } = useAuth();
-  const [busy, setBusy] = useState<'produtor' | 'analista' | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  async function entrar(perfil: 'produtor' | 'analista') {
+  async function entrar() {
     if (busy) return;
-    setBusy(perfil);
+    setBusy(true);
     try {
-      await loginPersona(perfil);
+      await loginPersona('produtor');
     } catch {
       // mock nunca lança; em produção: Alert com mensagem de erro.
     } finally {
-      setBusy(null);
+      setBusy(false);
     }
   }
 
@@ -34,67 +34,31 @@ export function LoginScreen() {
         </View>
 
         <View style={s.body}>
-          <Text style={s.euSou}>Eu sou:</Text>
-          <PersonaCard
-            titulo="Produtor Rural"
-            sub="Demarcar e acompanhar meu imóvel"
-            icone="leaf-outline"
-            acento={colors.primary}
-            busy={busy === 'produtor'}
-            onPress={() => entrar('produtor')}
-          />
-          <PersonaCard
-            titulo="Analista de Campo"
-            sub="Validar imóveis e agendar visitas"
-            icone="clipboard-outline"
-            acento={colors.secondary}
-            busy={busy === 'analista'}
-            onPress={() => entrar('analista')}
-          />
+          <TouchableOpacity
+            style={s.card}
+            onPress={entrar}
+            activeOpacity={0.85}
+            disabled={busy}
+            accessibilityRole="button"
+            accessibilityLabel="Entrar como Produtor Rural"
+          >
+            <View style={[s.cardIcon, { backgroundColor: colors.primary }]}>
+              {busy
+                ? <ActivityIndicator color={colors.branco} size="small" />
+                : <Ionicons name="leaf-outline" size={22} color={colors.branco} />
+              }
+            </View>
+            <View style={s.cardText}>
+              <Text style={s.cardTitulo}>Produtor Rural</Text>
+              <Text style={s.cardSub}>Demarcar e acompanhar meu imóvel</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.muted} />
+          </TouchableOpacity>
         </View>
 
         <Text style={s.lgpd}>Seus dados ficam protegidos neste aparelho (LGPD).</Text>
       </View>
     </SafeAreaView>
-  );
-}
-
-function PersonaCard({
-  titulo,
-  sub,
-  icone,
-  acento,
-  busy,
-  onPress,
-}: {
-  titulo: string;
-  sub: string;
-  icone: keyof typeof Ionicons.glyphMap;
-  acento: string;
-  busy: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <TouchableOpacity
-      style={[s.card, { borderTopColor: acento }]}
-      onPress={onPress}
-      activeOpacity={0.85}
-      disabled={!!busy}
-      accessibilityRole="button"
-      accessibilityLabel={titulo}
-    >
-      <View style={[s.cardIcon, { backgroundColor: acento }]}>
-        {busy
-          ? <ActivityIndicator color={colors.branco} size="small" />
-          : <Ionicons name={icone} size={22} color={colors.branco} />
-        }
-      </View>
-      <View style={s.cardText}>
-        <Text style={s.cardTitulo}>{titulo}</Text>
-        <Text style={s.cardSub}>{sub}</Text>
-      </View>
-      <Ionicons name="chevron-forward" size={20} color={colors.muted} />
-    </TouchableOpacity>
   );
 }
 
@@ -145,14 +109,6 @@ const s = StyleSheet.create({
   },
 
   body: { gap: 14 },
-  euSou: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.mutedText,
-    textTransform: 'uppercase',
-    letterSpacing: 1.2,
-    marginBottom: 4,
-  },
   card: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -163,6 +119,7 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.line,
     borderTopWidth: 3,
+    borderTopColor: colors.primary,
     shadowColor: '#000',
     shadowOpacity: 0.05,
     shadowOffset: { width: 0, height: 2 },
