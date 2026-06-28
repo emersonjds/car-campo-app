@@ -98,6 +98,8 @@ export interface ImovelDados {
   uf: string;
   matricula?: string;
   modulosFiscais?: number;
+  /** Uso predominante do solo (ex.: Soja, Milho, Gado). Rótulo no card. */
+  uso?: string;
 }
 
 export interface Imovel {

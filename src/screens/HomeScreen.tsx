@@ -212,7 +212,7 @@ export function HomeScreen() {
                 <View style={s.metaRow}>
                   <View style={s.metaCol}>
                     <Text style={s.metaLbl}>Solo</Text>
-                    <Text style={s.metaVal}>—</Text>
+                    <Text style={s.metaVal}>{primario.imovel.uso ?? 'Soja'}</Text>
                   </View>
                   <View style={s.metaSep} />
                   <View style={s.metaCol}>
@@ -378,7 +378,7 @@ const s = StyleSheet.create({
 
   // Card Meus Terrenos — padding zerado para a imagem sangrar até a borda.
   terrenoCard: { padding: 0, overflow: 'hidden', marginBottom: 16 },
-  satWrap: { height: 160, backgroundColor: colors.primary },
+  satWrap: { height: 120, backgroundColor: colors.primary },
   satelite: { ...StyleSheet.absoluteFill },
   chipWrap: { position: 'absolute', top: 12, right: 12 },
   terrenoRow: {
