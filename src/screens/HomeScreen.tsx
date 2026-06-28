@@ -30,24 +30,6 @@ function fmtData(ms: number): string {
   });
 }
 
-const DOC_ICON: Record<string, keyof typeof Ionicons.glyphMap> = {
-  matricula:    'document-text-outline',
-  ccir:         'receipt-outline',
-  car:          'leaf-outline',
-  rg:           'card-outline',
-  'foto-divisa': 'camera-outline',
-  outro:        'document-outline',
-};
-
-const DOC_LABEL: Record<string, string> = {
-  matricula:    'Matrícula',
-  ccir:         'CCIR',
-  car:          'CAR – Cadastro Ambiental Rural',
-  rg:           'RG',
-  'foto-divisa': 'Foto de Divisa',
-  outro:        'Documento',
-};
-
 // Região de satélite que enquadra o perímetro do imóvel (ou um fallback em MT).
 function regionForPoints(points: LngLat[]) {
   if (points.length === 0) {
@@ -190,8 +172,6 @@ export function HomeScreen() {
   useEffect(() => load(), [load]);
 
   const primario = imoveis[0] ?? null;
-  // Documentos do imóvel principal, limitado a 3 para não sobrecarregar.
-  const docs = primario?.documentos.slice(0, 3) ?? [];
   const medicoes = imoveis.filter((im) => im.geometry.points.length >= 3);
 
   // Carrossel "Meus Terrenos" — largura proporcional à tela, com peek do próximo.
@@ -295,51 +275,6 @@ export function HomeScreen() {
                   : navigate({ name: 'cadastro' })
               }
             />
-
-            <Text style={[s.sectionTitle, s.sectionMt]}>Documentos Recentes</Text>
-
-            {docs.length === 0 ? (
-              <Card>
-                <Text style={s.emptyCard}>Nenhum documento anexado ainda.</Text>
-              </Card>
-            ) : (
-              <Card>
-                {docs.map((d, i) => (
-                  <View key={d.id}>
-                    {i > 0 && <View style={s.divider} />}
-                    <View style={s.docRow}>
-                      <Ionicons
-                        name={DOC_ICON[d.tipo] ?? 'document-outline'}
-                        size={22}
-                        color={colors.mutedText}
-                      />
-                      <View style={s.docInfo}>
-                        <Text style={s.docNome} numberOfLines={1}>
-                          {d.nome || DOC_LABEL[d.tipo] || 'Documento'}
-                        </Text>
-                        <Text style={s.docMeta}>
-                          {DOC_LABEL[d.tipo] ?? 'Doc'} · {fmtData(d.createdAt)}
-                        </Text>
-                      </View>
-                      <TouchableOpacity
-                        hitSlop={12}
-                        onPress={() =>
-                          primario &&
-                          navigate({ name: 'documentos', imovelId: primario.id })
-                        }
-                        accessibilityLabel="Ver documento"
-                      >
-                        <Ionicons
-                          name="download-outline"
-                          size={20}
-                          color={colors.primary}
-                        />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                ))}
-              </Card>
-            )}
 
             <Text style={[s.sectionTitle, s.sectionMt]}>Histórico de Medições</Text>
 
@@ -484,16 +419,6 @@ const s = StyleSheet.create({
   actionLabel:        { ...text.bodySemibold, color: colors.inkText, flex: 1 },
   actionLabelPrimary: { color: colors.branco },
 
-  divider: { height: 1, backgroundColor: colors.line, marginVertical: 10 },
-  docRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    minHeight: 44,
-  },
-  docInfo: { flex: 1 },
-  docNome:  { ...text.bodySemibold, color: colors.inkText },
-  docMeta:  { ...text.caption, color: colors.mutedText, marginTop: 2 },
   emptyCard: {
     ...text.body,
     color: colors.mutedText,
