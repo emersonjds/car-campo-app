@@ -169,6 +169,20 @@ function _computeSeveridade(
     return 'critico';
   }
 
+  // 1b. Suprimido (área declarada a mais que a medição oficial não confirma) toca
+  //     TI, UC ou embargo — o produtor declarou terra restrita/embargada que a
+  //     conferência não reconhece. Red flag de questionamento.
+  if (
+    sobreposicoesSuprimido.some(
+      (s) =>
+        s.tipo === 'terra_indigena' ||
+        s.tipo === 'unidade_conservacao' ||
+        s.tipo === 'embargo_ibama',
+    )
+  ) {
+    return 'critico';
+  }
+
   // 2. Crescimento acima de 50 ha
   if (delta_ha > 50) return 'critico';
 

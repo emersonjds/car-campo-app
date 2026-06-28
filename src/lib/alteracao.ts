@@ -120,7 +120,7 @@ export interface DecisaoSugerida {
 const DECISAO_POR_SEVERIDADE: Record<SeveridadeDelta, DecisaoSugerida> = {
   critico: {
     titulo: 'Requer visita imediata',
-    detalhe: 'Acréscimo toca camada restritiva (TI/UC/embargo) ou crescimento muito alto. Não aprovar sem vistoria.',
+    detalhe: 'Divergência sobre camada restritiva (TI/UC/embargo) ou alteração muito alta. Não aprovar sem vistoria.',
     tone: 'alerta',
     prazo: '5 dias',
   },
