@@ -515,7 +515,7 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
       </View>
 
       {/* ── Rodapé sólido: rota (idle) + status + botões ──────────────── */}
-      <View style={[s.footer, { paddingBottom: insets.bottom + 12 }]}>
+      <View style={[s.footer, { paddingBottom: insets.bottom + 16 }]}>
         {showRoutePanel && (
           <View style={s.routeRow}>
             <Text style={s.routePanelLabel}>Rota de demonstracao</Text>
@@ -851,15 +851,21 @@ const s = StyleSheet.create({
   doneCueText: { color: colors.verde, fontWeight: '700', fontSize: 12, lineHeight: 17, textAlign: 'center' },
 
   // HUD: legenda das camadas ambientais (rio/nascente + APP)
+  // bottom:20 garante que fique acima da borda do rodapé sem margem negativa
   legend: {
     position: 'absolute',
-    bottom: 14,
+    bottom: 20,
     left: 10,
-    backgroundColor: 'rgba(249,248,246,0.92)',
+    backgroundColor: 'rgba(249,248,246,0.93)',
     borderRadius: 10,
     paddingHorizontal: 10,
     paddingVertical: 7,
     gap: 5,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 3,
   },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   legendLine: { width: 16, height: 3, borderRadius: 2 },
@@ -867,17 +873,21 @@ const s = StyleSheet.create({
   legendText: { fontSize: 11, fontWeight: '700', color: colors.inkText },
 
   // ── Rodapé sólido (rota + status + botões) ──────────────────────────────────
+  // marginTop:-20 foi removido — era a causa raiz da colisão com a legenda.
+  // O efeito "folha" agora vem dos cantos arredondados + sombra ascendente,
+  // sem overlap sobre o mapContainer.
   footer: {
     paddingHorizontal: 16,
-    paddingTop: 20,
+    paddingTop: 16,
     // paddingBottom vem do safe-area inset (proporcional ao aparelho) — aplicado inline.
     backgroundColor: colors.neutral,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.line,
-    // Cantos arredondados no topo dão a sensação de "folha" subindo sobre o mapa.
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    marginTop: -20,
+    shadowColor: '#000',
+    shadowOpacity: 0.10,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: -3 },
+    elevation: 8,
   },
   routeRow: { marginBottom: 14 },
   statusLine: { fontSize: 14, fontWeight: '700', marginBottom: 14, textAlign: 'center' },
