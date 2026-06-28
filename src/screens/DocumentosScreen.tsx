@@ -14,13 +14,12 @@ import MapView, { Polygon } from 'react-native-maps';
 import { Screen } from '../app/Screen';
 import { useNav } from '../app/navigation';
 import { getImovel, updateImovel } from '../lib/store';
-import { deleteDocumentFile, pickDocument, pickFromLibrary, takePhoto } from '../lib/documents';
+import { deleteDocumentFile } from '../lib/documents';
 import { Button, EmptyState } from '../ui';
 import { colors } from '../theme/colors';
-import type { Documento, DocumentoTipo, Imovel } from '../types';
+import type { Documento, Imovel } from '../types';
 import {
   sincronizarDocumentos,
-  avaliarRegularidade,
   listarDocumentosPropriedade,
   solicitacaoMetragem,
   CATALOGO_DIGITAL,
@@ -60,31 +59,6 @@ function calcRegion(points: Array<{ latitude: number; longitude: number }>) {
     longitudeDelta: Math.max(maxLon - minLon, 0.002) * 1.6,
   };
 }
-
-// ponytail: label e orgao vêm do CATALOGO_DIGITAL; aqui só acoes e geotag
-type TipoMeta = {
-  acoes: ('camera' | 'galeria' | 'arquivo')[];
-  geotag?: boolean;
-};
-
-const TIPOS_META: Record<DocumentoTipo, TipoMeta> = {
-  car:          { acoes: ['arquivo', 'galeria', 'camera'] },
-  'car-extrato':{ acoes: ['arquivo', 'galeria'] },
-  ccir:         { acoes: ['arquivo', 'galeria', 'camera'] },
-  sigef:        { acoes: ['arquivo', 'galeria'] },
-  matricula:    { acoes: ['arquivo', 'galeria', 'camera'] },
-  caf:          { acoes: ['arquivo', 'galeria'] },
-  itr:          { acoes: ['arquivo', 'galeria'] },
-  licenca:      { acoes: ['arquivo', 'galeria', 'camera'] },
-  rg:           { acoes: ['camera', 'galeria', 'arquivo'] },
-  'foto-divisa':{ acoes: ['camera', 'galeria'], geotag: true },
-  outro:        { acoes: ['camera', 'galeria', 'arquivo'] },
-};
-
-const ORDEM_TIPOS: DocumentoTipo[] = [
-  'car', 'car-extrato', 'ccir', 'sigef', 'matricula',
-  'caf', 'itr', 'licenca', 'rg', 'foto-divisa', 'outro',
-];
 
 function ehImagem(doc: Documento): boolean {
   if (doc.mime) return doc.mime.startsWith('image/');
@@ -294,13 +268,6 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
     await updateImovel(imovelId, { documentos: nova });
   }
 
-  const adicionarDoc = useCallback(
-    async (doc: Documento) => {
-      await salvarLista([...documentos, doc]);
-    },
-    [documentos], // eslint-disable-line react-hooks/exhaustive-deps
-  );
-
   const removerDoc = useCallback(
     async (doc: Documento) => {
       await deleteDocumentFile(doc);
@@ -308,67 +275,6 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
     },
     [documentos], // eslint-disable-line react-hooks/exhaustive-deps
   );
-
-  async function comCamera(tipo: DocumentoTipo, geotag: boolean) {
-    setBusy(true);
-    try {
-      const doc = await takePhoto(tipo, { geotag });
-      if (doc) await adicionarDoc(doc);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function comGaleria(tipo: DocumentoTipo) {
-    setBusy(true);
-    try {
-      const doc = await pickFromLibrary(tipo);
-      if (doc) await adicionarDoc(doc);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function comArquivo(tipo: DocumentoTipo) {
-    setBusy(true);
-    try {
-      const doc = await pickDocument(tipo);
-      if (doc) await adicionarDoc(doc);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  function abrirMenu(tipo: DocumentoTipo) {
-    if (busy) return;
-    const meta = TIPOS_META[tipo];
-    const botoes: { text: string; onPress: () => void }[] = [];
-    if (meta.acoes.includes('camera')) {
-      const rotulo = meta.geotag ? 'Tirar foto (com localização)' : 'Tirar foto';
-      botoes.push({ text: rotulo, onPress: () => comCamera(tipo, !!meta.geotag) });
-    }
-    if (meta.acoes.includes('galeria')) {
-      botoes.push({ text: 'Escolher da galeria', onPress: () => comGaleria(tipo) });
-    }
-    if (meta.acoes.includes('arquivo')) {
-      botoes.push({ text: 'Escolher arquivo (PDF)', onPress: () => comArquivo(tipo) });
-    }
-    Alert.alert('Como vai adicionar?', undefined, [
-      ...botoes.map((b) => ({ text: b.text, onPress: b.onPress })),
-      { text: 'Cancelar', style: 'cancel' as const },
-    ]);
-  }
-
-  function abrirSeletor() {
-    if (busy) return;
-    Alert.alert('Que documento é esse?', undefined, [
-      ...ORDEM_TIPOS.map((tipo) => ({
-        text: CATALOGO_DIGITAL[tipo].label,
-        onPress: () => abrirMenu(tipo),
-      })),
-      { text: 'Cancelar', style: 'cancel' as const },
-    ]);
-  }
 
   async function abrirDocumento(doc: Documento) {
     try {
@@ -400,33 +306,13 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
   }
 
   // ponytail: chamadas diretas (puras); useMemo aqui seria hook após early-return → Rules of Hooks
-  const reg = avaliarRegularidade(imovel);
   const region = calcRegion(imovel.geometry.points);
   const itens = listarDocumentosPropriedade(imovel, Date.now());
   const solMetragem = solicitacaoMetragem(imovel);
   // docs de tipos não-digitais (foto-divisa, rg, outro) não cabem no catálogo →
   // exibidos em seção própria abaixo
   const outrosDocs = documentos.filter((d) => !CATALOGO_DIGITAL[d.tipo].digital);
-
-  const nVencidos = itens.filter((i) => i.status === 'vencido').length;
-  const nPendentes = itens.filter((i) => i.status === 'pendente').length;
-
-  const bannerTitulo =
-    reg.nivel === 'critico'
-      ? 'Regularização crítica — acesso a crédito bloqueado.'
-      : 'Documentos faltando podem impedir crédito rural.';
-  const bannerContagemParts = [
-    nVencidos > 0 ? `${nVencidos} vencido${nVencidos > 1 ? 's' : ''}` : null,
-    nPendentes > 0 ? `${nPendentes} pendente${nPendentes > 1 ? 's' : ''}` : null,
-  ].filter(Boolean);
-  const bannerDetalhe =
-    bannerContagemParts.length > 0
-      ? bannerContagemParts.join(' · ')
-      : reg.docsObrigatoriosFaltando.length > 0
-        ? `Falta: ${reg.docsObrigatoriosFaltando.map((t) => CATALOGO_DIGITAL[t].label).join(', ')}`
-        : reg.haEmRisco > 0
-          ? `~${reg.haEmRisco.toFixed(1)} ha não regularizados.`
-          : null;
+  const temMedicao = imovel.geometry.area_ha > 0;
 
   return (
     <Screen title={imovel.imovel.nome}>
@@ -470,11 +356,18 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
           </View>
         ) : null}
 
-        {/* 3. Banner de regularidade (só se impacta crédito) */}
-        {reg.podeImpactarCredito ? (
-          <View style={[s.banner, reg.nivel === 'critico' ? s.bannerCritico : s.bannerPendente]}>
-            <Text style={s.bannerTitulo}>{bannerTitulo}</Text>
-            {bannerDetalhe ? <Text style={s.bannerDetalhe}>{bannerDetalhe}</Text> : null}
+        {/* 3. Aviso: medição preliminar, não oficial */}
+        {temMedicao ? (
+          <View style={s.banner}>
+            <Ionicons name="information-circle-outline" size={20} color={colors.aviso} />
+            <View style={s.bannerInfo}>
+              <Text style={s.bannerTitulo}>Medição preliminar (não oficial)</Text>
+              <Text style={s.bannerDetalhe}>
+                Feita pelo seu celular, serve como referência e adianta seu processo. Não
+                substitui a medição oficial, que deve ser feita por um técnico habilitado em
+                visita ao imóvel.
+              </Text>
+            </View>
           </View>
         ) : null}
 
@@ -527,14 +420,6 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
           </>
         ) : null}
 
-        {/* 5. Botão "+ Adicionar documento" */}
-        <Button
-          label="Adicionar documento"
-          variant="outlined"
-          onPress={abrirSeletor}
-          disabled={busy || sincronizando}
-          style={s.btnAdicionar}
-        />
         {busy ? (
           <View style={s.busyRow}>
             <ActivityIndicator color={colors.primary} size="small" />
@@ -572,7 +457,7 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
         <Button label="Voltar" variant="secondary" onPress={goBack} />
         <View style={s.rodapeSpacer} />
         <Button
-          label="Ir para Revisão"
+          label="Gerar Documento Final"
           variant="primary"
           onPress={() => navigate({ name: 'revisao', imovelId })}
         />
@@ -605,17 +490,20 @@ const s = StyleSheet.create({
   map: { height: 180, borderRadius: 12, overflow: 'hidden' },
 
   banner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    backgroundColor: '#FFF7E6',
     borderLeftWidth: 4,
+    borderLeftColor: colors.aviso,
     borderRadius: 10,
-    paddingVertical: 10,
+    paddingVertical: 12,
     paddingHorizontal: 14,
     marginBottom: 16,
-    gap: 4,
   },
-  bannerPendente: { backgroundColor: '#FFF7E6', borderLeftColor: colors.aviso },
-  bannerCritico:  { backgroundColor: '#FDECEC', borderLeftColor: colors.critico },
-  bannerTitulo: { fontSize: 13, fontWeight: '700', color: colors.inkText },
-  bannerDetalhe: { fontSize: 12, color: colors.mutedText },
+  bannerInfo: { flex: 1, gap: 4 },
+  bannerTitulo: { fontSize: 13, fontWeight: '700', color: colors.aviso },
+  bannerDetalhe: { fontSize: 12, color: colors.inkText, lineHeight: 18 },
 
   secaoTitulo: {
     fontSize: 15,
@@ -719,8 +607,6 @@ const s = StyleSheet.create({
   cardMetragemInfo: { flex: 1, gap: 4 },
   cardMetragemTitulo: { fontSize: 13, fontWeight: '700', color: colors.aviso },
   cardMetragemMsg: { fontSize: 12, color: colors.inkText, lineHeight: 18 },
-
-  btnAdicionar: { marginTop: 4, marginBottom: 16 },
 
   syncLink: { alignItems: 'center', paddingVertical: 12, marginBottom: 8 },
   syncLinkRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },

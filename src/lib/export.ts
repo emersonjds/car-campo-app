@@ -185,13 +185,27 @@ function buildHTML(imovel: Imovel, maskPii: boolean): string {
   td { padding: 4px 8px; border-bottom: 1px solid #d9e4dc; }
   tr:nth-child(even) td { background: #eef7f0; }
   .croqui-wrap { margin: 12px 0; }
+  .aviso { background: #fdf4e3; border-left: 4px solid #8a5a13; border-radius: 8px;
+           padding: 10px 12px; margin-bottom: 16px; }
+  .aviso-titulo { font-size: 11px; font-weight: bold; color: #8a5a13;
+                  text-transform: uppercase; letter-spacing: 0.4px; }
+  .aviso-texto { font-size: 10px; color: #1d2b22; margin-top: 4px; line-height: 1.5; }
   footer { margin-top: 24px; border-top: 1px solid #d9e4dc; padding-top: 8px;
            font-size: 9px; color: #5d6b62; text-align: center; line-height: 1.5; }
   @page { size: A4 portrait; margin: 15mm; }
 </style>
 </head>
 <body>
-<h1>CAR Campo — Demarcação do Imóvel</h1>
+<h1>CAR Campo — Medição Preliminar do Imóvel</h1>
+
+<div class="aviso">
+  <div class="aviso-titulo">Documento preliminar — não oficial</div>
+  <div class="aviso-texto">
+    Esta metragem foi feita pelo celular do produtor e serve como referência para adiantar
+    o processo. <strong>Não substitui a medição oficial</strong>, que deve ser realizada por
+    técnico habilitado (engenheiro/analista ambiental) em visita ao imóvel.
+  </div>
+</div>
 
 <div class="grid">
   <div>
@@ -282,8 +296,8 @@ ${
   Gerado em ${formatDateBR(Date.now())} pelo app <strong>CAR Campo</strong>
   (haCARthon &middot; Desafio 2 &middot; Solução 4).<br>
   Coordenadas no sistema geodésico WGS84 conforme RFC 7946 (GeoJSON).<br>
-  Este documento é uma referência de campo; a versão oficial deve ser homologada
-  junto ao órgão ambiental competente (SICAR/IBAMA).
+  Documento preliminar e não oficial — não substitui a medição do técnico nem a
+  homologação junto ao órgão ambiental competente (SICAR/IBAMA).
 </footer>
 </body>
 </html>`;
@@ -391,7 +405,7 @@ export async function exportPDF(imovel: Imovel): Promise<void> {
 
   await Sharing.shareAsync(uri, {
     mimeType: 'application/pdf',
-    dialogTitle: 'Exportar PDF / Croqui do imóvel',
+    dialogTitle: 'Documento preliminar de metragem',
     UTI: 'com.adobe.pdf',
   });
 }
