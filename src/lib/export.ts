@@ -121,7 +121,7 @@ async function fetchSatelliteDataUri(
     const b = `${bbox.minLon},${bbox.minLat},${bbox.maxLon},${bbox.maxLat}`;
     const url =
       'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export' +
-      `?bbox=${b}&bboxSR=4326&imageSR=4326&size=${CROQUI_W * 2},${CROQUI_H * 2}` +
+      `?bbox=${b}&bboxSR=4326&imageSR=4326&size=${CROQUI_W * 3},${CROQUI_H * 3}` +
       '&format=jpg&f=image';
     const tmp = `${dir}sat_${Date.now()}.jpg`;
     const { uri, status } = await FileSystem.downloadAsync(url, tmp);
@@ -171,7 +171,8 @@ function buildSVGCroqui(points: LngLat[], satDataUri?: string | null): string {
 
   const bg = onSat
     ? `<image href="${satDataUri}" xlink:href="${satDataUri}" x="0" y="0" ` +
-      `width="${W}" height="${H}" preserveAspectRatio="none" clip-path="url(#croquiClip)"/>` +
+      `width="${W}" height="${H}" preserveAspectRatio="none" ` +
+      `clip-path="url(#croquiClip)" filter="url(#croquiSat)"/>` +
       `<rect width="${W}" height="${H}" rx="8" fill="none" stroke="rgba(0,0,0,0.18)"/>`
     : `<rect width="${W}" height="${H}" rx="8" fill="#eef7f0"/>`;
 
@@ -183,7 +184,17 @@ function buildSVGCroqui(points: LngLat[], satDataUri?: string | null): string {
     `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" ` +
     `xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" ` +
     `style="display:block;margin:0 auto;">` +
-    `<defs><clipPath id="croquiClip"><rect width="${W}" height="${H}" rx="8"/></clipPath></defs>` +
+    `<defs>` +
+    `<clipPath id="croquiClip"><rect width="${W}" height="${H}" rx="8"/></clipPath>` +
+    // Realça o verde da lavoura: satura, dá leve contraste e puxa o canal verde.
+    `<filter id="croquiSat" x="0" y="0" width="100%" height="100%">` +
+    `<feColorMatrix type="saturate" values="1.35"/>` +
+    `<feComponentTransfer>` +
+    `<feFuncR type="linear" slope="1.06" intercept="-0.02"/>` +
+    `<feFuncG type="linear" slope="1.12" intercept="0"/>` +
+    `<feFuncB type="linear" slope="1.0" intercept="-0.02"/>` +
+    `</feComponentTransfer></filter>` +
+    `</defs>` +
     bg +
     poly +
     dotLabels +
@@ -455,6 +466,16 @@ export async function previewPDF(imovel: Imovel): Promise<void> {
  */
 export function documentoHTML(imovel: Imovel): string {
   return buildHTML(imovel, /* maskPii */ true);
+}
+
+/**
+ * Versão async do preview: tenta embutir a imagem de satélite no croqui (precisa
+ * de rede). Use no WebView mostrando primeiro `documentoHTML` (esquemático,
+ * instantâneo) e trocando por esta quando resolver — com fallback offline.
+ */
+export async function documentoHTMLComSatelite(imovel: Imovel): Promise<string> {
+  const sat = await croquiSatDataUri(imovel.geometry.points);
+  return buildHTML(imovel, /* maskPii */ true, sat);
 }
 
 /**
