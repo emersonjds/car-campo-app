@@ -8,6 +8,8 @@ import { LoginScreen } from '../screens/LoginScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { MedicoesScreen } from '../screens/MedicoesScreen';
 import { DocumentosHubScreen } from '../screens/DocumentosHubScreen';
+import { ImovelDetalheScreen } from '../screens/ImovelDetalheScreen';
+import { SelecionarImovelScreen } from '../screens/SelecionarImovelScreen';
 import { CadastroScreen } from '../screens/CadastroScreen';
 import { DemarcacaoScreen } from '../screens/DemarcacaoScreen';
 import { DocumentosScreen } from '../screens/DocumentosScreen';
@@ -60,6 +62,10 @@ export function Router() {
     case 'config':
       return <ConfigScreen />;
     // ── Wizard / detalhe ─────────────────────────────────────────────────────
+    case 'imovel-detalhe':
+      return <ImovelDetalheScreen imovelId={route.imovelId} />;
+    case 'selecionar-imovel':
+      return <SelecionarImovelScreen />;
     case 'cadastro':
       return <CadastroScreen imovelId={route.imovelId} />;
     case 'demarcacao':

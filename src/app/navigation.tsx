@@ -17,6 +17,8 @@ export type Route =
   | { name: 'painel' }
   | { name: 'config' }
   // ── Telas de detalhe / wizard ─────────────────────────────────────────────
+  | { name: 'imovel-detalhe'; imovelId: string }
+  | { name: 'selecionar-imovel' }
   | { name: 'cadastro'; imovelId?: string }
   | { name: 'demarcacao'; imovelId: string }
   | { name: 'documentos'; imovelId: string }
