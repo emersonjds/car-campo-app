@@ -98,7 +98,7 @@ Shared:
 
 ## Agentes
 
-`.claude/agents/`: **front** (RN/Expo/perf/offline), **pixel** (UX rural mobile), **geo** (geometria/GPS/GeoJSON), **bug** (quality gate), **qa** (E2E mobile/Maestro), **redteam** (segurança), **scribe** (docs/microcopy).
+`.claude/agents/`: **front** (RN/Expo/perf/offline), **pixel** (UX rural mobile), **geo** (geometria/GPS/GeoJSON), **ambiental** (regularização/CAR), **scribe** (docs/microcopy).
 
 ## MCP
 
