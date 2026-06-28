@@ -100,6 +100,8 @@ export interface ImovelDados {
   modulosFiscais?: number;
   /** Uso predominante do solo (ex.: Soja, Milho, Gado). Rótulo no card. */
   uso?: string;
+  /** Número de registro no CAR (formato UF-IBGE-hash). */
+  carNumero?: string;
 }
 
 export interface Imovel {

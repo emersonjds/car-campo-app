@@ -36,20 +36,25 @@ function geo(vertices: LngLat[]): ImovelGeometry {
  *   2) Imóvel "limpo" pendente — floresta em Feliz Natal/MT, sem sobreposição.
  *   3) Imóvel já aprovado — cerrado no Oeste da Bahia (estado aprovado na lista).
  */
+// Datas fixas (epoch ms) para a demo — evita "agora" não-determinístico nos seeds.
+const D = (y: number, m: number, d: number) => Date.UTC(y, m - 1, d);
+
 export const DEMO_IMOVEIS_SEED: NovoImovel[] = [
   {
     perfil: 'produtor',
     produtor: {
-      nome: 'Raimundo Nonato da Silva',
+      nome: 'José da Silva',
       cpfCnpj: '123.456.789-00',
       telefone: '66999990001',
     },
     imovel: {
-      nome: 'Fazenda Boa Esperança',
+      nome: 'Sítio Boa Esperança',
       municipio: 'Sorriso',
       uf: 'MT',
       matricula: '12.345',
       modulosFiscais: 4,
+      uso: 'Soja',
+      carNumero: 'MT-5107925-A1B2.C3D4.E5F6.0001',
     },
     // Atual (re-demarcado, maior ao sul) × anterior (registrado, menor) → Δ +~7 ha.
     geometry: geo(rota('sorriso-soja')),
@@ -69,13 +74,22 @@ export const DEMO_IMOVEIS_SEED: NovoImovel[] = [
       motivo: 'medicao',
       detalhe: 'Acréscimo de área ao sul após nova caminhada — pede conferência de terreno.',
     },
+    // Técnico que foi a campo refazer a metragem e acompanhou o produtor.
+    visitaAgendada: {
+      agendadaEm: D(2026, 5, 12),
+      dataVisita: D(2026, 5, 20),
+      periodo: 'manha',
+      horario: '08:00',
+      analista: 'Eng. Agr. Marcos Tavares (SEMA-MT)',
+      observacao: 'Reconferência do perímetro sul junto ao produtor.',
+    },
   },
   {
     perfil: 'produtor',
     produtor: {
-      nome: 'Benedita Alves de Souza',
-      cpfCnpj: '987.654.321-00',
-      telefone: '66999990002',
+      nome: 'José da Silva',
+      cpfCnpj: '123.456.789-00',
+      telefone: '66999990001',
     },
     imovel: {
       nome: 'Sítio Reserva Verde',
@@ -83,6 +97,8 @@ export const DEMO_IMOVEIS_SEED: NovoImovel[] = [
       uf: 'MT',
       matricula: '67.890',
       modulosFiscais: 2,
+      uso: 'Pecuária',
+      carNumero: 'MT-5103601-7788.99AA.BBCC.0002',
     },
     geometry: geo(rota('feliz-natal-floresta')),
     documentos: [],
@@ -91,9 +107,9 @@ export const DEMO_IMOVEIS_SEED: NovoImovel[] = [
   {
     perfil: 'produtor',
     produtor: {
-      nome: 'Cooperativa AgroOeste',
-      cpfCnpj: '12.345.678/0001-90',
-      telefone: '77999990003',
+      nome: 'José da Silva',
+      cpfCnpj: '123.456.789-00',
+      telefone: '66999990001',
     },
     imovel: {
       nome: 'Sítio Cerrado Bahia',
@@ -101,10 +117,40 @@ export const DEMO_IMOVEIS_SEED: NovoImovel[] = [
       uf: 'BA',
       matricula: '24.680',
       modulosFiscais: 6,
+      uso: 'Soja irrigada',
+      carNumero: 'BA-2922656-1122.3344.5566.0003',
     },
     geometry: geo(rota('oeste-bahia-cerrado')),
     documentos: [],
     status: 'enviado',
-    validacao: { status: 'aprovado', analista: 'Analista', updatedAt: 0 },
+    validacao: { status: 'aprovado', analista: 'Téc. Amb. Luiza Prado', updatedAt: D(2026, 4, 8) },
+    visitaAgendada: {
+      agendadaEm: D(2026, 3, 28),
+      dataVisita: D(2026, 4, 5),
+      periodo: 'tarde',
+      horario: '14:00',
+      analista: 'Téc. Amb. Luiza Prado',
+      observacao: 'Conferência de campo concluída — perímetro aprovado.',
+    },
+  },
+  {
+    perfil: 'produtor',
+    produtor: {
+      nome: 'José da Silva',
+      cpfCnpj: '123.456.789-00',
+      telefone: '66999990001',
+    },
+    imovel: {
+      nome: 'Fazenda Santa Luzia',
+      municipio: 'Sorriso',
+      uf: 'MT',
+      matricula: '33.221',
+      modulosFiscais: 5,
+      uso: 'Milho',
+      carNumero: 'MT-5107925-D4E5.F6A1.B2C3.0004',
+    },
+    geometry: geo(rota('sorriso-fazendeiro')),
+    documentos: [],
+    status: 'enviado',
   },
 ];
