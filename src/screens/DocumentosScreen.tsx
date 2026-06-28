@@ -22,6 +22,7 @@ import {
   sincronizarDocumentos,
   avaliarRegularidade,
   listarDocumentosPropriedade,
+  solicitacaoMetragem,
   CATALOGO_DIGITAL,
 } from '../lib/docHub';
 import type { ItemDocumento as ItemDocumentoModel, DocStatus } from '../lib/docHub';
@@ -402,6 +403,7 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
   const reg = avaliarRegularidade(imovel);
   const region = calcRegion(imovel.geometry.points);
   const itens = listarDocumentosPropriedade(imovel, Date.now());
+  const solMetragem = solicitacaoMetragem(imovel);
   // docs de tipos não-digitais (foto-divisa, rg, outro) não cabem no catálogo →
   // exibidos em seção própria abaixo
   const outrosDocs = documentos.filter((d) => !CATALOGO_DIGITAL[d.tipo].digital);
@@ -473,6 +475,17 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
           <View style={[s.banner, reg.nivel === 'critico' ? s.bannerCritico : s.bannerPendente]}>
             <Text style={s.bannerTitulo}>{bannerTitulo}</Text>
             {bannerDetalhe ? <Text style={s.bannerDetalhe}>{bannerDetalhe}</Text> : null}
+          </View>
+        ) : null}
+
+        {/* 3b. Card "Nova metragem" */}
+        {solMetragem ? (
+          <View style={s.cardMetragem}>
+            <Ionicons name="warning-outline" size={20} color={colors.aviso} />
+            <View style={s.cardMetragemInfo}>
+              <Text style={s.cardMetragemTitulo}>Nova metragem detectada</Text>
+              <Text style={s.cardMetragemMsg}>{solMetragem.mensagem}</Text>
+            </View>
           </View>
         ) : null}
 
@@ -690,6 +703,22 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+
+  cardMetragem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    backgroundColor: '#FFF7E6',
+    borderLeftWidth: 4,
+    borderLeftColor: colors.aviso,
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    marginBottom: 16,
+  },
+  cardMetragemInfo: { flex: 1, gap: 4 },
+  cardMetragemTitulo: { fontSize: 13, fontWeight: '700', color: colors.aviso },
+  cardMetragemMsg: { fontSize: 12, color: colors.inkText, lineHeight: 18 },
 
   btnAdicionar: { marginTop: 4, marginBottom: 16 },
 
