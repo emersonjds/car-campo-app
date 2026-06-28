@@ -27,6 +27,7 @@ export function CadastroScreen({ imovelId }: { imovelId?: string }) {
   const [modulos, setModulos] = useState('');
   const [produtorNome, setProdutorNome] = useState('');
   const [cpfCnpj, setCpfCnpj] = useState('');
+  const [carNumero, setCarNumero] = useState('');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -49,6 +50,7 @@ export function CadastroScreen({ imovelId }: { imovelId?: string }) {
         setUf(im.imovel.uf);
         setMatricula(im.imovel.matricula ?? '');
         setModulos(im.imovel.modulosFiscais ? String(im.imovel.modulosFiscais) : '');
+        setCarNumero(im.imovel.carNumero ?? '');
         setProdutorNome(im.produtor.nome);
         setCpfCnpj(im.produtor.cpfCnpj);
       }
@@ -81,6 +83,8 @@ export function CadastroScreen({ imovelId }: { imovelId?: string }) {
           uf: uf.trim().toUpperCase(),
           matricula: matricula.trim() || undefined,
           modulosFiscais: modulos ? Number(modulos.replace(',', '.')) : undefined,
+          carNumero: carNumero.trim() || undefined,
+          uso: existing?.imovel.uso,
         },
         geometry: existing?.geometry ?? { points: [], area_ha: 0, perimetro_m: 0 },
         documentos: existing?.documentos ?? [],
@@ -116,6 +120,7 @@ export function CadastroScreen({ imovelId }: { imovelId?: string }) {
                 <Field label="UF" value={uf} onChangeText={(t) => setUf(t.toUpperCase().slice(0, 2))} placeholder="MT" autoCapitalize="characters" />
               </View>
             </View>
+            <Field label="Número do CAR (opcional)" value={carNumero} onChangeText={setCarNumero} placeholder="UF-IBGE-..." autoCapitalize="characters" />
             {analista && (
               <View style={s.row}>
                 <View style={{ flex: 2 }}>
