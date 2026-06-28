@@ -261,20 +261,6 @@ export function HomeScreen() {
                 navigate(imoveis.length > 1 ? { name: 'selecionar-imovel' } : { name: 'cadastro' })
               }
             />
-            <ActionBtn
-              icon="document-text-outline"
-              label="Consultar Documentos"
-              onPress={() => switchTab({ name: 'documentos-hub' })}
-            />
-            <ActionBtn
-              icon="map-outline"
-              label="Visualizar Mapas"
-              onPress={() =>
-                primario
-                  ? navigate({ name: 'demarcacao', imovelId: primario.id })
-                  : navigate({ name: 'cadastro' })
-              }
-            />
 
             <Text style={[s.sectionTitle, s.sectionMt]}>Histórico de Medições</Text>
 
