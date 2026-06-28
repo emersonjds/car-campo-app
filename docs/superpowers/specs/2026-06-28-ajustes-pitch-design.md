@@ -86,6 +86,50 @@ store e faz best-effort `submitPerimeter`. Extrair o núcleo para
 chamado tanto pela Revisão quanto pelo botão do checklist. A UI de escolha de
 motivo (Alert) permanece em cada tela.
 
+## E. Remover toda a parte do analista (foco no produtor)
+
+Foco agora é o fazendeiro: ele gera uma **documentação provisória** para
+confrontar na visita técnica. A figura do analista sai do app.
+
+Decisões:
+- **Login:** manter só o do produtor (gov.br mock). Remover o caminho de
+  analista (matrícula+senha). A sessão/identidade do produtor continua (usada
+  no pré-preenchimento e no PDF).
+- **Visitas:** `VisitasScreen` e `AgendarVisitaScreen` ficam como visão do
+  **produtor** (ele solicita e acompanha a visita que vai confrontar com a doc
+  provisória). Ajustar textos que falem em "analista/fila do analista".
+- **Apagar de vez** os arquivos exclusivos do analista.
+
+Apagar (analista-only, confirmado pelo grafo de imports):
+- `src/screens/ValidacaoScreen.tsx`
+- `src/screens/PainelScreen.tsx`
+- `src/screens/ConferenciaLabScreen.tsx`
+
+Manter (compartilhado com telas do produtor que ficam — NÃO apagar):
+- `src/lib/conferencia.ts`, `src/lib/alteracao.ts`, `src/lib/delta.ts`,
+  `src/lib/credito.ts`, `src/lib/docHub.ts` (usados por Demarcação, Revisão,
+  Visitas, AnáliseAmbiental, etc.).
+
+Desligar o perfil analista:
+- `src/types.ts`: `Perfil = 'produtor'` (remover `'analista'`).
+- `src/app/TabBar.tsx`: remover `TABS_ANALISTA`; `tabsForPerfil` sempre
+  `TABS_PRODUTOR`.
+- `src/app/Router.tsx`: remover rotas `validacao`, `painel`, `conferencia-lab`
+  e o branch por perfil em `medicoes` (sempre `MedicoesScreen`); remover os
+  imports correspondentes.
+- `src/app/navigation.tsx`: remover os `RouteName` `validacao`/`painel`/
+  `conferencia-lab` e referências de perfil analista.
+- `src/auth/*`: remover o método de login por matrícula (analista) do
+  `AuthContext`/`mockAuthProvider`/`types`, mantendo o gov.br do produtor.
+- `src/screens/LoginScreen.tsx`: remover a UI de login do analista.
+- `src/screens/ConfigScreen.tsx`: remover o ramo de identidade do analista.
+- `src/lib/seed.demo.ts`: remover seeds que só servem ao analista, se houver.
+- Textos: trocar "fila do analista" por algo neutro ("solicitação enviada")
+  em `RevisaoScreen`, `visita.ts`, `VisitasScreen`, `AgendarVisitaScreen`.
+
+Critério de pronto: `npx tsc --noEmit` PASS sem imports/símbolos órfãos, e o
+app abre direto no fluxo do produtor (sem nenhuma aba/rota de analista).
+
 ## Não-objetivos
 
 - Não mexer no cálculo geodésico, captura GPS ou validação topológica.
