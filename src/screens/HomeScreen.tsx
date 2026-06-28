@@ -2,13 +2,15 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import MapView, { Polygon } from 'react-native-maps';
 import { Screen } from '../app/Screen';
 import { useNav } from '../app/navigation';
 import { useAuth } from '../auth/AuthContext';
-import { Card, EmptyState, FAB, MetricBlock, StatusChip } from '../ui';
+import { Card, EmptyState, MetricBlock, StatusChip } from '../ui';
 import { colors } from '../theme/colors';
 import { text } from '../theme/typography';
 import { listImoveis } from '../lib/store';
+import type { LngLat } from '../lib/geo';
 import type { Imovel } from '../types';
 
 // ── helpers ────────────────────────────────────────────────────────────────────
@@ -38,6 +40,51 @@ const DOC_LABEL: Record<string, string> = {
   'foto-divisa': 'Foto de Divisa',
   outro:        'Documento',
 };
+
+// Região de satélite que enquadra o perímetro do imóvel (ou um fallback em MT).
+function regionForPoints(points: LngLat[]) {
+  if (points.length === 0) {
+    return { latitude: -12.545, longitude: -55.711, latitudeDelta: 0.02, longitudeDelta: 0.02 };
+  }
+  const lats = points.map((p) => p.latitude);
+  const lngs = points.map((p) => p.longitude);
+  const minLat = Math.min(...lats), maxLat = Math.max(...lats);
+  const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
+  return {
+    latitude: (minLat + maxLat) / 2,
+    longitude: (minLng + maxLng) / 2,
+    // 1.6× de folga ao redor do polígono; mínimo evita zoom absurdo em terreno pequeno.
+    latitudeDelta: Math.max((maxLat - minLat) * 1.6, 0.008),
+    longitudeDelta: Math.max((maxLng - minLng) * 1.6, 0.008),
+  };
+}
+
+/** Hero do card: satélite real do terreno, estático (sem gestos), com o perímetro. */
+function TerrenoHero({ points }: { points: LngLat[] }) {
+  const region = regionForPoints(points);
+  return (
+    <MapView
+      style={s.satelite}
+      mapType="satellite"
+      initialRegion={region}
+      liteMode
+      scrollEnabled={false}
+      zoomEnabled={false}
+      rotateEnabled={false}
+      pitchEnabled={false}
+      pointerEvents="none"
+    >
+      {points.length >= 3 && (
+        <Polygon
+          coordinates={points}
+          strokeColor={colors.branco}
+          strokeWidth={2}
+          fillColor="rgba(45,90,39,0.35)"
+        />
+      )}
+    </MapView>
+  );
+}
 
 type ChipStatus = 'regularizado' | 'aviso' | 'critico' | 'info';
 
@@ -137,14 +184,9 @@ export function HomeScreen() {
 
             {primario && (
               <Card style={s.terrenoCard}>
-                {/* Placeholder de foto satélite */}
-                <View style={s.satelite}>
-                  <Ionicons
-                    name="map-outline"
-                    size={40}
-                    color={colors.branco}
-                    style={{ opacity: 0.45 }}
-                  />
+                {/* Satélite real do terreno + perímetro */}
+                <View style={s.satWrap}>
+                  <TerrenoHero points={primario.geometry.points} />
                   <View style={s.chipWrap}>
                     <StatusChip status={resolveChip(primario)} />
                   </View>
@@ -307,11 +349,8 @@ export function HomeScreen() {
           </>
         )}
 
-        {/* Espaço para o FAB não cobrir o último item */}
         <View style={s.fabSpace} />
       </ScrollView>
-
-      <FAB onPress={() => navigate({ name: 'cadastro' })} />
     </Screen>
   );
 }
@@ -339,12 +378,8 @@ const s = StyleSheet.create({
 
   // Card Meus Terrenos — padding zerado para a imagem sangrar até a borda.
   terrenoCard: { padding: 0, overflow: 'hidden', marginBottom: 16 },
-  satelite: {
-    height: 160,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  satWrap: { height: 160, backgroundColor: colors.primary },
+  satelite: { ...StyleSheet.absoluteFill },
   chipWrap: { position: 'absolute', top: 12, right: 12 },
   terrenoRow: {
     flexDirection: 'row',
