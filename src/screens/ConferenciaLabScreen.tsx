@@ -18,7 +18,8 @@ import { Screen } from '../app/Screen';
 import { useNav } from '../app/navigation';
 import { type LngLat } from '../lib/geo';
 import { analisarSobreposicoes, type AnaliseAmbiental } from '../lib/overlay';
-import { DEMO_CAMADAS, DEMO_PERIMETRO_ANTERIOR } from '../lib/refLayers.demo';
+import { DEMO_CAMADAS } from '../lib/refLayers.demo';
+import { DEMO_ROUTES } from '../sim/routes';
 import { decisaoSugerida } from '../lib/alteracao';
 import {
   gerarPainelAvisos,
@@ -41,12 +42,18 @@ const SCREEN_HEIGHT = Dimensions.get('window').height;
 // o resto (topologia, avisos, decisão) aparece ao rolar.
 const MAP_HEIGHT = Math.max(280, Math.floor(SCREEN_HEIGHT * 0.46));
 
-const ROTA_FAZENDEIRO = 'sorriso-fazendeiro';
-const ROTA_ANALISTA = 'sorriso-soja';
+// O FAZENDEIRO declara/mede o perímetro MAIOR (pega mais terra, inclui a faixa sul
+// que sobrepõe embargo); o ANALISTA mede o oficial, MENOR. A diferença (faixa que o
+// fazendeiro declarou a mais) é o que gera o questionamento.
+const ROTA_FAZENDEIRO = 'sorriso-soja';
+const ROTA_ANALISTA = 'sorriso-fazendeiro';
 const SIM_SPEED = 4;
 
-// Perímetro DECLARADO pelo fazendeiro (referência estática + comparação).
-const DECLARADO = DEMO_PERIMETRO_ANTERIOR;
+const rotaVertices = (id: string): LngLat[] =>
+  DEMO_ROUTES.find((r) => r.id === id)?.vertices ?? [];
+
+// Perímetro DECLARADO pelo fazendeiro (referência estática + comparação) = o maior.
+const DECLARADO = rotaVertices(ROTA_FAZENDEIRO);
 
 const toLatLng = (p: LngLat) => ({ latitude: p.latitude, longitude: p.longitude });
 
