@@ -58,3 +58,31 @@ mostrando só o que ele produz de verdade.
 - `npx tsc --noEmit` — sem erros.
 - Sem referências órfãs ao código removido (`docPdf`, funções de sync do `docHub`).
 - Não validado em emulador (preview do PDF e share sheet dependem de device/dev build).
+
+---
+
+## Adendo — link público do PDF (car-geo-api)
+
+Resolve o pedido "gerar um link que eu clico para acessar o PDF". O PDF preliminar
+(gerado offline no app, com CPF mascarado) é enviado à CAR Geo API, que devolve uma URL
+pública para abrir no navegador ou compartilhar.
+
+**Contrato**
+- `POST /documentos` (público) — `{ pdf_base64, nome? }` → `201 { id, url, nome, createdAt }`.
+  Valida tamanho (≤ 8 MB), `bodyLimit` de 12 MB na rota.
+- `GET /documentos/:id` (público) — serve o PDF `application/pdf` inline; `404` se não
+  existir (com guarda de UUID para evitar erro de cast).
+
+**Backend** (`car-geo-api/apps/api`, ⚠️ repositório **não versionado** — alterações não
+commitadas):
+- `src/lib/documents.ts` (novo) — tabela `documento` (bytea no Postgres existente, sem dep
+  nova): `ensureDocumentSchema`, `saveDocument`, `getDocument`.
+- `src/routes/index.ts` — rotas `POST /documentos` e `GET /documentos/:id`.
+- `src/server.ts` — `ensureDocumentSchema()` no boot.
+
+**App**:
+- `src/lib/export.ts` — `uploadPDFLink(imovel)`: gera o PDF, lê base64, posta e retorna a URL.
+- `DocumentosScreen` / `RevisaoScreen` — ação "Gerar link" (Abrir no navegador / Compartilhar).
+
+**Verificação**: `tsc --noEmit` limpo nos dois repos. **Não validado em runtime**
+(exige `yarn db:up` + API no ar + envio real do device).
