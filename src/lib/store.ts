@@ -6,11 +6,12 @@ import { DEMO_IMOVEIS_SEED } from './seed.demo';
 
 const IMOVEIS_KEY = '@car-campo/imoveis';
 const PERFIL_KEY = '@car-campo/perfil';
-// Versão do seed de demo. Bumpar SEED_VERSION re-semeia no próximo load (desde
-// que o usuário não tenha criado imóveis próprios) — usado quando os dados de
-// demo mudam (ex.: novo campo alertaDivergencia).
+// Versão do seed de demo. Bumpar SEED_VERSION reseta os imóveis para o conjunto
+// canônico de demo no próximo load — descartando dados antigos/de teste. Como é
+// um app de demonstração, o bump é uma ação deliberada de "resetar para o estado
+// limpo" (ex.: passar a ter exatamente 4 sítios com geometria/CAR/técnico).
 const SEED_KEY = '@car-campo/seed-version';
-const SEED_VERSION = '2';
+const SEED_VERSION = '3';
 
 /** id simples, sem dependências nativas (evita uuid). */
 function genId(): string {
@@ -41,20 +42,16 @@ async function ensureSeeded(): Promise<void> {
   seedPromise = (async () => {
     const ver = await AsyncStorage.getItem(SEED_KEY);
     if (ver === SEED_VERSION) return;
-    const current = await readAll();
-    // (Re)semeia só quando não há imóveis criados pelo usuário (todos são de seed).
-    const apenasSeed = current.every((i) => i.id.startsWith('seed_'));
-    if (apenasSeed) {
-      const base = Date.now();
-      const seeded: Imovel[] = DEMO_IMOVEIS_SEED.map((novo, i) => ({
-        ...novo,
-        id: `seed_${i}`,
-        status: novo.status ?? 'rascunho',
-        createdAt: base - i * 1000,
-        updatedAt: base - i * 1000,
-      }));
-      await writeAll(seeded);
-    }
+    // Reset para o conjunto canônico de demo (descarta dados de testes antigos).
+    const base = Date.now();
+    const seeded: Imovel[] = DEMO_IMOVEIS_SEED.map((novo, i) => ({
+      ...novo,
+      id: `seed_${i}`,
+      status: novo.status ?? 'rascunho',
+      createdAt: base - i * 1000,
+      updatedAt: base - i * 1000,
+    }));
+    await writeAll(seeded);
     await AsyncStorage.setItem(SEED_KEY, SEED_VERSION);
   })();
   return seedPromise;
