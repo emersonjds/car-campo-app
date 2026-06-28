@@ -100,50 +100,6 @@ export function interpolate(a: LngLat, b: LngLat, t: number): LngLat {
   };
 }
 
-/**
- * Rumo inicial (azimute) de a para b, em graus geográficos (0–360°, 0 = Norte).
- * Fórmula esférica — adequada para imóveis rurais.
- */
-export function bearingDeg(a: LngLat, b: LngLat): number {
-  const lat1 = toRad(a.latitude);
-  const lat2 = toRad(b.latitude);
-  const dLon = toRad(b.longitude - a.longitude);
-  const y = Math.sin(dLon) * Math.cos(lat2);
-  const x =
-    Math.cos(lat1) * Math.sin(lat2) -
-    Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
-  return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
-}
-
-/**
- * Ponto de destino a partir de `from`, dado rumo (graus) e distância (m).
- * Fórmula geodésica esférica (direct problem). Resultado em WGS84 lon/lat.
- */
-export function destinationPoint(
-  from: LngLat,
-  bearingDeg: number,
-  distanceM: number,
-): LngLat {
-  const theta = toRad(bearingDeg);
-  const d = distanceM / EARTH_RADIUS_M; // distância angular em radianos
-  const lat1 = toRad(from.latitude);
-  const lon1 = toRad(from.longitude);
-  const lat2 = Math.asin(
-    Math.sin(lat1) * Math.cos(d) + Math.cos(lat1) * Math.sin(d) * Math.cos(theta),
-  );
-  const lon2 =
-    lon1 +
-    Math.atan2(
-      Math.sin(theta) * Math.sin(d) * Math.cos(lat1),
-      Math.cos(d) - Math.sin(lat1) * Math.sin(lat2),
-    );
-  return {
-    // normaliza longitude para [-180, 180]
-    longitude: (((lon2 * 180) / Math.PI + 540) % 360) - 180,
-    latitude: (lat2 * 180) / Math.PI,
-  };
-}
-
 // ---------------------------------------------------------------------------
 // Topologia de polígono — detecção de auto-interseção
 // ---------------------------------------------------------------------------
