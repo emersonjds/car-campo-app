@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -612,7 +612,8 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
 
   const { status: chipStatus, label: chipLabel } = chipProps(imovel);
   const checklist = buildChecklist(imovel);
-  const reg = useMemo(() => avaliarRegularidade(imovel), [imovel]);
+  // ponytail: chamada direta (pura, O(docs)); useMemo aqui seria hook após early-return → Rules of Hooks
+  const reg = avaliarRegularidade(imovel);
   const firstImageDoc = documentos.find((d) => !!d.uri && ehImagem(d));
   const areaStr = `${imovel.geometry.area_ha.toFixed(2)} ha`;
   const protoco = imovel.imovel.matricula
