@@ -65,19 +65,31 @@ const SIM_SPEED = 4;
 // Perímetro DECLARADO pelo fazendeiro (referência estática + comparação).
 const DECLARADO = DEMO_PERIMETRO_ANTERIOR;
 
-const REGION = {
-  latitude: DECLARADO[0]!.latitude,
-  longitude: DECLARADO[0]!.longitude,
-  latitudeDelta: 0.012,
-  longitudeDelta: 0.012,
-};
-
 const toLatLng = (p: LngLat) => ({ latitude: p.latitude, longitude: p.longitude });
 
 // ponytail: todas as camadas oficiais usam a mesma cor canônica (Dados Governo = vermelho).
 const CAMADA_POLYS = DEMO_CAMADAS.map((c) => ({
   coords: (c.rings[0] ?? []).map((coord) => ({ latitude: coord[1] ?? 0, longitude: coord[0] ?? 0 })),
 }));
+
+type LatLng = { latitude: number; longitude: number };
+
+// Região que enquadra TODA a geometria (declarado + camadas) com folga — antes
+// centralizava no 1º vértice e a geometria ficava jogada num canto.
+function regionFromCoords(coords: LatLng[]) {
+  const lats = coords.map((c) => c.latitude);
+  const lngs = coords.map((c) => c.longitude);
+  const latitude = (Math.min(...lats) + Math.max(...lats)) / 2;
+  const longitude = (Math.min(...lngs) + Math.max(...lngs)) / 2;
+  return {
+    latitude,
+    longitude,
+    latitudeDelta: Math.max((Math.max(...lats) - Math.min(...lats)) * 1.6, 0.01),
+    longitudeDelta: Math.max((Math.max(...lngs) - Math.min(...lngs)) * 1.6, 0.01),
+  };
+}
+
+const REGION = regionFromCoords([...DECLARADO.map(toLatLng), ...CAMADA_POLYS.flatMap((c) => c.coords)]);
 
 // ponytail: cores por tone — usando tokens canônicos.
 const sevColor: Record<Severidade, string> = {
@@ -106,6 +118,16 @@ export function ConferenciaLabScreen({ imovelId, car }: { imovelId?: string; car
   const simFaz = useSimulatedWalk(); // avatar do fazendeiro (Medição Produtor)
   const simAna = useSimulatedWalk(); // avatar do analista (Medição Analista)
   const mapRef = useRef<MapView>(null);
+  const regiaoRef = useRef(REGION); // região atual (para os botões +/−)
+
+  const zoom = (fator: number) => {
+    const r = regiaoRef.current;
+    mapRef.current?.animateToRegion(
+      { ...r, latitudeDelta: r.latitudeDelta * fator, longitudeDelta: r.longitudeDelta * fator },
+      220,
+    );
+  };
+  const recentralizar = () => mapRef.current?.animateToRegion(REGION, 300);
 
   const [imovelNome, setImovelNome] = useState<string | null>(null);
   const [aceite, setAceite] = useState<Aceite>(null);
@@ -275,7 +297,14 @@ export function ConferenciaLabScreen({ imovelId, car }: { imovelId?: string; car
       {/* Mapa imersivo num container próprio (igual ao produtor): o mapa preenche
           o container e fica livre para arrastar; os overlays ficam nos cantos. */}
       <View style={s.mapWrap}>
-      <MapView ref={mapRef} style={StyleSheet.absoluteFill} initialRegion={REGION} mapType="satellite" showsCompass>
+      <MapView
+        ref={mapRef}
+        style={StyleSheet.absoluteFill}
+        initialRegion={REGION}
+        mapType="satellite"
+        showsCompass
+        onRegionChangeComplete={(r) => { regiaoRef.current = r; }}
+      >
 
         {/* (1) Dados Governo — contorno vermelho, sem preenchimento */}
         {CAMADA_POLYS.map((c, i) =>
@@ -366,6 +395,19 @@ export function ConferenciaLabScreen({ imovelId, car }: { imovelId?: string; car
           {imovelNome ? `Medindo: ${imovelNome}` : car ? `CAR ${car}` : 'Analista mede por cima do declarado'}
         </Text>
         {statusTexto && <Text style={s.mapStatus} numberOfLines={1}>{statusTexto}</Text>}
+      </View>
+
+      {/* Controles de mapa: + / − / recentralizar (canto sup. direito) */}
+      <View style={s.mapControls}>
+        <TouchableOpacity style={s.mapBtn} onPress={() => zoom(0.5)} activeOpacity={0.8} accessibilityLabel="Aproximar">
+          <Text style={s.mapBtnTxt}>＋</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={s.mapBtn} onPress={() => zoom(2)} activeOpacity={0.8} accessibilityLabel="Afastar">
+          <Text style={s.mapBtnTxt}>−</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={s.mapBtn} onPress={recentralizar} activeOpacity={0.8} accessibilityLabel="Centralizar">
+          <Text style={s.mapBtnIcon}>⊕</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Legenda compacta no canto inf. esq. — só as cores dos desenhos */}
@@ -615,6 +657,24 @@ const s = StyleSheet.create({
   mapTitleH: { fontSize: 15, fontFamily: fonts.extraBold, color: colors.inkText },
   mapTitleSub: { fontSize: 11, fontFamily: fonts.regular, color: colors.mutedText, marginTop: 1 },
   mapStatus: { fontSize: 11, fontFamily: fonts.bold, color: colors.primary, marginTop: 3 },
+
+  // Controles +/−/centralizar (canto sup. direito do mapa)
+  mapControls: { position: 'absolute', top: 10, right: 10, gap: 6 },
+  mapBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 11,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 3,
+  },
+  mapBtnTxt: { fontSize: 22, fontFamily: fonts.bold, color: colors.inkText, lineHeight: 26 },
+  mapBtnIcon: { fontSize: 18, color: colors.inkText, lineHeight: 22 },
 
   // Legenda compacta no canto inferior esquerdo do mapa
   legendOverlay: {
