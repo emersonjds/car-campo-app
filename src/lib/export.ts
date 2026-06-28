@@ -410,28 +410,43 @@ export async function exportPDF(imovel: Imovel): Promise<void> {
   });
 }
 
+export interface LinkMedicao {
+  /** Código curto (6 chars) para consultar a medição na web. */
+  codigo: string;
+  /** URL direta da página de visualização do PDF. */
+  viewUrl: string;
+  /** URL da página de consulta (CPF + código). */
+  consultaUrl: string;
+}
+
 /**
- * Gera o PDF (CPF mascarado — LGPD), envia em base64 para a CAR Geo API e retorna
- * a URL pública para o produtor abrir no navegador ou compartilhar.
+ * Gera o PDF (CPF mascarado — LGPD), envia em base64 para a CAR Geo API e
+ * retorna o código + as URLs de visualização e consulta. O CPF do produtor
+ * (dígitos) vai junto só para a API gerar o hash de consulta — não é salvo cru.
  * Requer conexão; lança erro descritivo se a API não responder.
  */
-export async function uploadPDFLink(imovel: Imovel): Promise<string> {
+export async function uploadPDFLink(imovel: Imovel): Promise<LinkMedicao> {
   const { uri } = await Print.printToFileAsync({
     html: buildHTML(imovel, /* maskPii */ true),
     width: 595,
     height: 842,
   });
   const pdf_base64 = await FileSystem.readAsStringAsync(uri, { encoding: 'base64' });
+  const cpf = imovel.produtor.cpfCnpj.replace(/\D/g, '');
   const res = await fetch(`${API_BASE_URL}/documentos`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ pdf_base64, nome: `medicao_${imovel.imovel.nome}` }),
+    body: JSON.stringify({ pdf_base64, nome: `medicao_${imovel.imovel.nome}`, cpf }),
   });
   if (!res.ok) {
     throw new Error('Não foi possível gerar o link agora. Tente novamente com internet.');
   }
-  const { url } = (await res.json()) as { url: string };
-  return `${url}/ver`;
+  const data = (await res.json()) as { url: string; codigo?: string; view_url?: string };
+  return {
+    codigo: data.codigo ?? '',
+    viewUrl: data.view_url ?? `${data.url}/ver`,
+    consultaUrl: `${API_BASE_URL}/consulta`,
+  };
 }
 
 /**
