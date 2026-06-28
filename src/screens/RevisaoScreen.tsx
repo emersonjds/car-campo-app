@@ -1,6 +1,6 @@
 // Offline-first: nunca bloqueia o produtor por falta de rede.
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { Screen } from '../app/Screen';
 import { WizardSteps } from '../app/WizardSteps';
 import { useNav } from '../app/navigation';
@@ -9,7 +9,7 @@ import { areaHectares, perimeterM, validatePerimeter } from '../lib/geo';
 import { submitPerimeter } from '../lib/api';
 import { analisarAlteracaoImovel } from '../lib/alteracao';
 import { DEMO_CAMADAS } from '../lib/refLayers.demo';
-import { exportPDF, previewPDF } from '../lib/export';
+import { exportPDF, previewPDF, uploadPDFLink } from '../lib/export';
 import {
   Badge,
   Card,
@@ -42,7 +42,7 @@ function maskCpfCnpj(value: string): string {
 }
 
 // Qual botão de ação está carregando agora
-type ActiveAction = 'pdf-view' | 'pdf-share' | 'visita' | null;
+type ActiveAction = 'pdf-view' | 'pdf-share' | 'pdf-link' | 'visita' | null;
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
@@ -105,6 +105,22 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
   const handleExportPDF = useCallback(() => {
     if (!imovel) return;
     withAction('pdf-share', () => exportPDF(imovel));
+  }, [imovel, withAction]);
+
+  const handleGerarLink = useCallback(() => {
+    if (!imovel) return;
+    withAction('pdf-link', async () => {
+      const url = await uploadPDFLink(imovel);
+      Alert.alert(
+        'Link gerado',
+        url,
+        [
+          { text: 'Abrir', onPress: () => Linking.openURL(url) },
+          { text: 'Compartilhar', onPress: () => Share.share({ message: url }) },
+          { text: 'Fechar', style: 'cancel' },
+        ],
+      );
+    });
   }, [imovel, withAction]);
 
   // IMPORTANTE: este useMemo precisa vir ANTES dos early returns abaixo, senão a
@@ -304,6 +320,13 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
             <SecondaryButton
               label={activeAction === 'pdf-share' ? 'Gerando PDF…' : 'Baixar / Enviar PDF'}
               onPress={handleExportPDF}
+              disabled={isBusy}
+            />
+          </View>
+          <View style={[s.btnRow, { marginTop: 8 }]}>
+            <SecondaryButton
+              label={activeAction === 'pdf-link' ? 'Gerando link…' : 'Gerar link do PDF'}
+              onPress={handleGerarLink}
               disabled={isBusy}
             />
           </View>

@@ -23,6 +23,7 @@ import * as Print from 'expo-print';
 import { Share } from 'react-native';
 import { toGeoJSONFeature, areaHectares, perimeterM, type LngLat } from './geo';
 import type { Imovel } from '../types';
+import { API_BASE_URL } from './config';
 
 // ---------------------------------------------------------------------------
 // Utilitários internos
@@ -399,6 +400,29 @@ export async function exportPDF(imovel: Imovel): Promise<void> {
     dialogTitle: 'Documento preliminar de metragem',
     UTI: 'com.adobe.pdf',
   });
+}
+
+/**
+ * Gera o PDF (CPF mascarado — LGPD), envia em base64 para a CAR Geo API e retorna
+ * a URL pública para o produtor abrir no navegador ou compartilhar.
+ * Requer conexão; lança erro descritivo se a API não responder.
+ */
+export async function uploadPDFLink(imovel: Imovel): Promise<string> {
+  const { uri } = await Print.printToFileAsync({
+    html: buildHTML(imovel, /* maskPii */ true),
+    width: 595,
+    height: 842,
+  });
+  const pdf_base64 = await FileSystem.readAsStringAsync(uri, { encoding: 'base64' });
+  const res = await fetch(`${API_BASE_URL}/documentos`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pdf_base64, nome: `medicao_${imovel.imovel.nome}` }),
+  });
+  if (!res.ok) {
+    throw new Error('Não foi possível gerar o link agora. Tente novamente com internet.');
+  }
+  return (await res.json()).url as string;
 }
 
 /**
