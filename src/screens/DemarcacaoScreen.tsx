@@ -194,6 +194,9 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
   const [mode, setMode] = useState<Mode>('sim');
   const [selectedRouteId, setSelectedRouteId] = useState(DEMO_ROUTES[0]!.id);
   const [saving, setSaving] = useState(false);
+  // Esconde os markers (vértices/avatar) durante o print do mapa, pro snapshot
+  // sair limpo — o polígono e os números são redesenhados no PDF pelo overlay.
+  const [capturing, setCapturing] = useState(false);
   const [appResultado, setAppResultado] = useState<AppResultado | null>(null);
 
   // Hooks de captura (ambos sempre ativos — lei dos hooks)
@@ -295,8 +298,12 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
       let croquiSnapshot: string | undefined;
       try {
         const region = croquiSnapshotRegion(activePoints);
-        if (mapRef.current && region) {
-          const b64 = await mapRef.current.takeSnapshot({
+        const map = mapRef.current;
+        if (map && region) {
+          setCapturing(true);
+          // deixa os markers (vértices/avatar) sumirem do mapa nativo antes do print
+          await new Promise((r) => setTimeout(r, 220));
+          const b64 = await map.takeSnapshot({
             width: 840,
             height: 560,
             region,
@@ -308,6 +315,8 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
         }
       } catch {
         /* snapshot falhou — o PDF cai no satélite Esri */
+      } finally {
+        setCapturing(false);
       }
 
       const updated = await updateImovel(imovelId, {
@@ -438,7 +447,7 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
               fillColor="rgba(27,107,58,0.18)" strokeWidth={2} />
           )}
 
-          {activePoints.map((p, i) => (
+          {!capturing && activePoints.map((p, i) => (
             <Marker key={`v-${i}`} coordinate={toLatLng(p)}
               anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
               <View style={s.vertexDot}>
@@ -447,7 +456,7 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
             </Marker>
           ))}
 
-          {activeAvatar && <AvatarMarker coordinate={activeAvatar} pulse={pulseAnim} />}
+          {activeAvatar && !capturing && <AvatarMarker coordinate={activeAvatar} pulse={pulseAnim} />}
         </MapView>
 
         <AreaHUD area={area} perimeter={perimeter} hasPoints={canSave} />

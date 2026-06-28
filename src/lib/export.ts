@@ -231,9 +231,9 @@ function buildHTML(imovel: Imovel, maskPii: boolean): string {
   // o produtor mediu) > satélite Esri > esquemático offline.
   const snap = imovel.croquiSnapshot ?? null;
   const esri = snap ? null : croquiSatUrl(points);
-  // snapshot do mapa já traz os marcadores numerados (pins) → não redesenho os
-  // números (evita duplicar); só o contorno do polígono. Esri não tem nada → tudo.
-  const svgCroqui = buildSVGCroqui(points, snap ?? esri, /* saturate */ !snap, /* dots */ !snap);
+  // O snapshot é capturado sem markers (mapa limpo) → desenho polígono + números
+  // no overlay nos dois casos. Saturo só o Esri (o print do mapa já é real).
+  const svgCroqui = buildSVGCroqui(points, snap ?? esri, /* saturate */ !snap, /* dots */ true);
   const croquiTitulo = snap ? 'sobre o mapa da medição' : esri ? 'imagem de satélite' : 'esquemático';
 
   const vertexRows = points
