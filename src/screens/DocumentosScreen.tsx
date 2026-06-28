@@ -18,8 +18,31 @@ import { deleteDocumentFile, pickDocument, pickFromLibrary, takePhoto } from '..
 import { Button, EmptyState } from '../ui';
 import { colors } from '../theme/colors';
 import type { Documento, DocumentoTipo, Imovel } from '../types';
-import { sincronizarDocumentos, avaliarRegularidade, CATALOGO_DIGITAL } from '../lib/docHub';
+import {
+  sincronizarDocumentos,
+  avaliarRegularidade,
+  listarDocumentosPropriedade,
+  CATALOGO_DIGITAL,
+} from '../lib/docHub';
+import type { ItemDocumento as ItemDocumentoModel, DocStatus } from '../lib/docHub';
 import { abrirDocumentoDigital } from '../lib/docPdf';
+
+const BADGE_LABEL: Record<DocStatus, string> = {
+  'em-dia':   'Em dia',
+  'vencendo': 'Vencendo',
+  'vencido':  'Vencido',
+  'pendente': 'Pendente',
+  'ausente':  'Ausente',
+};
+
+type BadgeCores = { bg: string; text: string };
+const BADGE_CORES: Record<DocStatus, BadgeCores> = {
+  'em-dia':   { bg: colors.verdeBg, text: colors.primary },
+  'vencendo': { bg: '#FFF7E6',      text: colors.aviso },
+  'vencido':  { bg: '#FDECEC',      text: colors.critico },
+  'pendente': { bg: '#FFF7E6',      text: colors.aviso },
+  'ausente':  { bg: '#F5F5F5',      text: colors.mutedText },
+};
 
 function calcRegion(points: Array<{ latitude: number; longitude: number }>) {
   if (points.length < 3) return null;
@@ -75,7 +98,93 @@ function fmtDate(ts: number): string {
   });
 }
 
-function ItemDocumento({
+// Linha de documento com status badge, ações Visualizar/Compartilhar e "Como obter".
+function DocRow({
+  item,
+  onAbrir,
+  onRemover,
+}: {
+  item: ItemDocumentoModel;
+  onAbrir: (doc: Documento) => void;
+  onRemover: (doc: Documento) => void;
+}) {
+  const cores = BADGE_CORES[item.status];
+
+  return (
+    <View style={s.itemDoc}>
+      <View style={[s.thumb, s.thumbPdf]}>
+        <Ionicons name="document-text-outline" size={22} color={colors.primary} />
+      </View>
+      <View style={s.itemInfo}>
+        <View style={s.itemNomeRow}>
+          <Text style={s.itemNome} numberOfLines={1}>{item.label}</Text>
+          <View style={[s.badge, { backgroundColor: cores.bg }]}>
+            <Text style={[s.badgeTxt, { color: cores.text }]}>{BADGE_LABEL[item.status]}</Text>
+          </View>
+        </View>
+        {item.orgao ? <Text style={s.itemOrgao}>{item.orgao}</Text> : null}
+        <Text style={s.itemDetalhe}>{item.detalhe}</Text>
+        {item.doc ? (
+          <View style={s.acoes}>
+            <TouchableOpacity
+              onPress={() => onAbrir(item.doc!)}
+              style={s.btnAcao}
+              accessibilityRole="button"
+              accessibilityLabel={`Visualizar ${item.label}`}
+            >
+              <Text style={s.btnAcaoTxt}>Visualizar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => onAbrir(item.doc!)}
+              style={s.btnAcao}
+              accessibilityRole="button"
+              accessibilityLabel={`Compartilhar ${item.label}`}
+            >
+              <Text style={s.btnAcaoTxt}>Compartilhar</Text>
+            </TouchableOpacity>
+            {item.doc.origem === 'manual' ? (
+              <TouchableOpacity
+                onPress={() =>
+                  Alert.alert(
+                    'Remover documento',
+                    `Deseja remover "${item.label}"? Esta ação não pode ser desfeita.`,
+                    [
+                      { text: 'Cancelar', style: 'cancel' },
+                      { text: 'Remover', style: 'destructive', onPress: () => onRemover(item.doc!) },
+                    ],
+                  )
+                }
+                style={s.btnRemoverSmall}
+                accessibilityRole="button"
+                accessibilityLabel={`Remover ${item.label}`}
+                hitSlop={8}
+              >
+                <Ionicons name="close" size={14} color={colors.critico} />
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        ) : (
+          <TouchableOpacity
+            onPress={() =>
+              Alert.alert(
+                'Como obter',
+                `${item.orgao}\n\n${item.detalhe}\n\nAcesse o app Meu Imóvel Rural (gov.br) para baixar seus documentos.`,
+              )
+            }
+            style={s.btnComoObter}
+            accessibilityRole="button"
+            accessibilityLabel={`Como obter ${item.label}`}
+          >
+            <Text style={s.btnComoObterTxt}>Como obter</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </View>
+  );
+}
+
+// Linha simples para docs manuais de tipos não-digitais (foto, RG, etc.)
+function ManualDocRow({
   doc,
   onRemover,
   onPress,
@@ -86,18 +195,7 @@ function ItemDocumento({
 }) {
   const imagem = !!doc.uri && ehImagem(doc);
   const geotagged = doc.tipo === 'foto-divisa' && doc.lat != null && doc.lng != null;
-  const label = CATALOGO_DIGITAL[doc.tipo].label;
-
-  function confirmarRemocao() {
-    const msg =
-      doc.origem === 'govbr'
-        ? `Deseja remover "${label}" da lista? Pode restaurar em "Atualizar documentos do gov.br".`
-        : `Deseja remover "${label}"? Esta ação não pode ser desfeita.`;
-    Alert.alert('Remover documento', msg, [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Remover', style: 'destructive', onPress: () => onRemover(doc) },
-    ]);
-  }
+  const label = CATALOGO_DIGITAL[doc.tipo]?.label ?? doc.nome;
 
   return (
     <View style={s.itemDoc}>
@@ -109,12 +207,7 @@ function ItemDocumento({
         accessibilityLabel={`Abrir ${label}`}
       >
         {imagem ? (
-          <Image
-            source={{ uri: doc.uri! }}
-            style={s.thumb}
-            resizeMode="cover"
-            accessibilityLabel=""
-          />
+          <Image source={{ uri: doc.uri! }} style={s.thumb} resizeMode="cover" accessibilityLabel="" />
         ) : (
           <View style={[s.thumb, s.thumbPdf]}>
             <Ionicons
@@ -125,25 +218,18 @@ function ItemDocumento({
           </View>
         )}
         <View style={s.itemInfo}>
-          <View style={s.itemNomeRow}>
-            <Text style={s.itemNome} numberOfLines={1}>
-              {label}
-            </Text>
-            {doc.origem === 'govbr' ? (
-              <View style={s.badgeGovBr}>
-                <Text style={s.badgeGovBrTxt}>gov.br</Text>
-              </View>
-            ) : null}
-          </View>
-          {doc.origem === 'govbr' && doc.orgao ? (
-            <Text style={s.itemOrgao}>{doc.orgao}</Text>
-          ) : null}
+          <Text style={s.itemNome} numberOfLines={1}>{label}</Text>
           {geotagged ? <Text style={s.itemGeo}>com localização</Text> : null}
         </View>
       </TouchableOpacity>
       <TouchableOpacity
         style={s.btnRemover}
-        onPress={confirmarRemocao}
+        onPress={() =>
+          Alert.alert('Remover documento', `Deseja remover "${label}"? Esta ação não pode ser desfeita.`, [
+            { text: 'Cancelar', style: 'cancel' },
+            { text: 'Remover', style: 'destructive', onPress: () => onRemover(doc) },
+          ])
+        }
         accessibilityRole="button"
         accessibilityLabel={`Remover ${label}`}
         hitSlop={8}
@@ -312,30 +398,33 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
     );
   }
 
-  // ponytail: chamada direta (pura); useMemo aqui seria hook após early-return → Rules of Hooks
+  // ponytail: chamadas diretas (puras); useMemo aqui seria hook após early-return → Rules of Hooks
   const reg = avaliarRegularidade(imovel);
   const region = calcRegion(imovel.geometry.points);
+  const itens = listarDocumentosPropriedade(imovel, Date.now());
+  // docs de tipos não-digitais (foto-divisa, rg, outro) não cabem no catálogo →
+  // exibidos em seção própria abaixo
+  const outrosDocs = documentos.filter((d) => !CATALOGO_DIGITAL[d.tipo].digital);
 
-  // govbr primeiro (ordem do catálogo), manuais por createdAt desc
-  const docsOrdenados = [
-    ...documentos
-      .filter((d) => d.origem === 'govbr')
-      .sort((a, b) => ORDEM_TIPOS.indexOf(a.tipo) - ORDEM_TIPOS.indexOf(b.tipo)),
-    ...documentos
-      .filter((d) => d.origem !== 'govbr')
-      .sort((a, b) => b.createdAt - a.createdAt),
-  ];
+  const nVencidos = itens.filter((i) => i.status === 'vencido').length;
+  const nPendentes = itens.filter((i) => i.status === 'pendente').length;
 
   const bannerTitulo =
     reg.nivel === 'critico'
       ? 'Regularização crítica — acesso a crédito bloqueado.'
       : 'Documentos faltando podem impedir crédito rural.';
+  const bannerContagemParts = [
+    nVencidos > 0 ? `${nVencidos} vencido${nVencidos > 1 ? 's' : ''}` : null,
+    nPendentes > 0 ? `${nPendentes} pendente${nPendentes > 1 ? 's' : ''}` : null,
+  ].filter(Boolean);
   const bannerDetalhe =
-    reg.docsObrigatoriosFaltando.length > 0
-      ? `Falta: ${reg.docsObrigatoriosFaltando.map((t) => CATALOGO_DIGITAL[t].label).join(', ')}`
-      : reg.haEmRisco > 0
-        ? `~${reg.haEmRisco.toFixed(1)} ha não regularizados.`
-        : null;
+    bannerContagemParts.length > 0
+      ? bannerContagemParts.join(' · ')
+      : reg.docsObrigatoriosFaltando.length > 0
+        ? `Falta: ${reg.docsObrigatoriosFaltando.map((t) => CATALOGO_DIGITAL[t].label).join(', ')}`
+        : reg.haEmRisco > 0
+          ? `~${reg.haEmRisco.toFixed(1)} ha não regularizados.`
+          : null;
 
   return (
     <Screen title={imovel.imovel.nome}>
@@ -387,7 +476,7 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
           </View>
         ) : null}
 
-        {/* 4. Lista de documentos */}
+        {/* 4. Lista de documentos do catálogo digital */}
         <Text style={s.secaoTitulo}>Seus documentos</Text>
 
         {sincronizando ? (
@@ -395,23 +484,35 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
             <ActivityIndicator color={colors.primary} size="small" />
             <Text style={s.busyTexto}>Buscando seus documentos no gov.br…</Text>
           </View>
-        ) : docsOrdenados.length === 0 ? (
-          <EmptyState
-            title="Nenhum documento ainda"
-            hint="Adicione a matrícula, a foto da divisa ou o CCIR para ter tudo num lugar só."
-          />
         ) : (
           <View style={s.listaDoc}>
-            {docsOrdenados.map((doc) => (
-              <ItemDocumento
-                key={doc.id}
-                doc={doc}
+            {itens.map((item) => (
+              <DocRow
+                key={item.tipo}
+                item={item}
+                onAbrir={abrirDocumento}
                 onRemover={removerDoc}
-                onPress={abrirDocumento}
               />
             ))}
           </View>
         )}
+
+        {/* 4b. Fotos e outros (não-digitais) */}
+        {outrosDocs.length > 0 ? (
+          <>
+            <Text style={s.secaoTituloSec}>Fotos e outros</Text>
+            <View style={s.listaDoc}>
+              {outrosDocs.map((doc) => (
+                <ManualDocRow
+                  key={doc.id}
+                  doc={doc}
+                  onRemover={removerDoc}
+                  onPress={abrirDocumento}
+                />
+              ))}
+            </View>
+          </>
+        ) : null}
 
         {/* 5. Botão "+ Adicionar documento" */}
         <Button
@@ -510,6 +611,15 @@ const s = StyleSheet.create({
     marginTop: 20,
     marginBottom: 12,
   },
+  secaoTituloSec: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.mutedText,
+    marginTop: 16,
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
 
   busyRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginVertical: 12 },
   busyTexto: { fontSize: 13, color: colors.mutedText },
@@ -542,6 +652,35 @@ const s = StyleSheet.create({
     paddingVertical: 2,
   },
   badgeGovBrTxt: { fontSize: 11, fontWeight: '700', color: colors.primary },
+
+  // status badge (DocRow)
+  badge: { borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 },
+  badgeTxt: { fontSize: 11, fontWeight: '700' },
+
+  itemDetalhe: { fontSize: 12, color: colors.mutedText, marginTop: 1 },
+
+  acoes: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 },
+  btnAcao: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  btnAcaoTxt: { fontSize: 12, fontWeight: '600', color: colors.primary },
+
+  btnRemoverSmall: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#fde8e8',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 2,
+  },
+
+  btnComoObter: { marginTop: 6, alignSelf: 'flex-start' },
+  btnComoObterTxt: { fontSize: 12, fontWeight: '600', color: colors.mutedText, textDecorationLine: 'underline' },
 
   btnRemover: {
     width: 36,
