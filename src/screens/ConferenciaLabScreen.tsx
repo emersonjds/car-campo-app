@@ -1,16 +1,3 @@
-// Conferência de Terreno do ANALISTA.
-//
-// O analista faz uma NOVA MEDIÇÃO por cima do mapa do fazendeiro. A tela mostra,
-// num só mapa de satélite, 3 camadas:
-//   (1) Dados Governo — camadas OFICIAIS (TI/UC, embargo, desmate, queimada, APP/rio,
-//       CAR vizinho): contorno vermelho, sem preenchimento (colors.critico).
-//   (2) Medição Produtor — perímetro DECLARADO pelo fazendeiro: azul preenchido (colors.tertiary).
-//   (3) Medição Analista — re-medição conferida: verde (colors.primary).
-// A área de DIFERENÇA aparece em âmbar (acrescido) / azul-escuro (suprimido).
-//
-// A simulação anima DOIS avatares (F/fazendeiro × A/analista) a 4x, com perímetros
-// que divergem de propósito. Resultado: painel de avisos, topologia, sobreposições
-// e ações (recusar / agendar / aceitar, encaminhar a órgão, anexar documentos).
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
@@ -49,8 +36,6 @@ import { fonts } from '../theme/typography';
 import type { Documento, ValidacaoStatus } from '../types';
 import type { Severidade } from '../lib/overlay';
 
-// ---------- constantes ----------
-
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 // Mapa imersivo (igual à tela do produtor): domina a 1ª dobra — só mapa + legenda;
 // o resto (topologia, avisos, decisão) aparece ao rolar.
@@ -58,7 +43,6 @@ const MAP_HEIGHT = Math.max(280, Math.floor(SCREEN_HEIGHT * 0.46));
 
 const ROTA_FAZENDEIRO = 'sorriso-fazendeiro';
 const ROTA_ANALISTA = 'sorriso-soja';
-/** Velocidade fixa da simulação (4x) */
 const SIM_SPEED = 4;
 
 // Perímetro DECLARADO pelo fazendeiro (referência estática + comparação).
@@ -99,7 +83,6 @@ const sevColor: Record<Severidade, string> = {
 const toneColor = { ok: colors.primary, aviso: colors.aviso, alerta: colors.critico } as const;
 const toneBg    = { ok: '#e2f3e8', aviso: '#fdf4e3', alerta: '#fce8e7' } as const;
 
-/** Combina o status das duas simulações num único estado de UI. */
 function combinarStatus(a: SimStatus, b: SimStatus): SimStatus {
   if (a === 'done' && b === 'done') return 'done';
   if (a === 'walking' || b === 'walking') return 'walking';
@@ -108,8 +91,6 @@ function combinarStatus(a: SimStatus, b: SimStatus): SimStatus {
 }
 
 type Aceite = ValidacaoStatus | null;
-
-// ---------- tela ----------
 
 export function ConferenciaLabScreen({ imovelId, car }: { imovelId?: string; car?: string }) {
   const { switchTab, goBack } = useNav();
@@ -132,7 +113,6 @@ export function ConferenciaLabScreen({ imovelId, car }: { imovelId?: string; car
   const [aceite, setAceite] = useState<Aceite>(null);
   const [encaminhado, setEncaminhado] = useState(false);
   const [docs, setDocs] = useState<Documento[]>([]);
-  // Decisão em confirmação no modal (reprovado/aprovado) ou null.
   const [confirmando, setConfirmando] = useState<ValidacaoStatus | null>(null);
   const [nota, setNota] = useState('');
 
@@ -147,21 +127,18 @@ export function ConferenciaLabScreen({ imovelId, car }: { imovelId?: string; car
     };
   }, [imovelId]);
 
-  const conferido = simAna.points; // re-medição do analista
+  const conferido = simAna.points;
   const status = combinarStatus(simFaz.status, simAna.status);
   const mostrarDelta = status === 'paused' || status === 'done';
 
-  // Topologia (declarado × conferido) + anéis de diferença para o mapa.
   const delta = useAlteracaoDelta(DECLARADO, conferido, DEMO_CAMADAS, 'offline-demo', conferido.length >= 3);
   const relatorio = delta.relatorio;
 
-  // Camadas oficiais tocadas pela re-medição.
   const analise = useMemo<AnaliseAmbiental | null>(
     () => (conferido.length >= 3 ? analisarSobreposicoes(conferido, DEMO_CAMADAS, 'offline-demo') : null),
     [conferido],
   );
 
-  // Painel de avisos ("o que revisitar").
   const painel = useMemo<PainelAvisos>(
     () => gerarPainelAvisos(conferido, analise, relatorio),
     [conferido, analise, relatorio],
@@ -177,7 +154,6 @@ export function ConferenciaLabScreen({ imovelId, car }: { imovelId?: string; car
   const conferidoCoords = conferido.length >= 3 ? conferido.map(toLatLng) : null;
   const decisao = relatorio ? decisaoSugerida(relatorio.severidade) : null;
 
-  // ---------- controles das duas simulações ----------
   const iniciar = () => {
     simFaz.setSpeed(SIM_SPEED);
     simAna.setSpeed(SIM_SPEED);
@@ -203,7 +179,6 @@ export function ConferenciaLabScreen({ imovelId, car }: { imovelId?: string; car
           ? { label: '▶ Retomar', onPress: () => { simFaz.resume(); simAna.resume(); } }
           : { label: '↺ Refazer', onPress: iniciar };
 
-  // ---------- ações do analista ----------
   const abrirDecisao = (st: ValidacaoStatus) => {
     setNota('');
     setConfirmando(st);
@@ -274,8 +249,6 @@ export function ConferenciaLabScreen({ imovelId, car }: { imovelId?: string; car
   return (
     // Sem title/subtitle → só a app-bar fina, igual à tela de medição do produtor.
     <Screen>
-      {/* Mapa imersivo num container próprio (igual ao produtor): o mapa preenche
-          o container e fica livre para arrastar; os overlays ficam nos cantos. */}
       <View style={s.mapWrap}>
       <MapView
         ref={mapRef}
@@ -286,7 +259,6 @@ export function ConferenciaLabScreen({ imovelId, car }: { imovelId?: string; car
         onRegionChangeComplete={(r) => { regiaoRef.current = r; }}
       >
 
-        {/* (1) Dados Governo — contorno vermelho, sem preenchimento */}
         {CAMADA_POLYS.map((c, i) =>
           c.coords.length >= 3 ? (
             <Polygon
@@ -299,7 +271,6 @@ export function ConferenciaLabScreen({ imovelId, car }: { imovelId?: string; car
           ) : null,
         )}
 
-        {/* (2) Medição Produtor (declarado) — azul preenchido */}
         <Polygon
           coordinates={DECLARADO.map(toLatLng)}
           strokeColor={colors.tertiary}
@@ -321,7 +292,6 @@ export function ConferenciaLabScreen({ imovelId, car }: { imovelId?: string; car
             ) : null,
           )}
 
-        {/* (3) Medição Analista (conferido) — verde */}
         {conferidoCoords && (
           <Polygon
             coordinates={conferidoCoords}
@@ -331,7 +301,6 @@ export function ConferenciaLabScreen({ imovelId, car }: { imovelId?: string; car
           />
         )}
 
-        {/* Trilha do fazendeiro — azul (consistente com Medição Produtor) */}
         {simFaz.points.length > 1 && (
           <Polyline
             coordinates={simFaz.points.map(toLatLng)}
@@ -339,7 +308,6 @@ export function ConferenciaLabScreen({ imovelId, car }: { imovelId?: string; car
             strokeWidth={2}
           />
         )}
-        {/* Trilha do analista — verde (consistente com Medição Analista) */}
         {simAna.points.length > 1 && (
           <Polyline
             coordinates={simAna.points.map(toLatLng)}
@@ -348,7 +316,6 @@ export function ConferenciaLabScreen({ imovelId, car }: { imovelId?: string; car
           />
         )}
 
-        {/* Avatar F — azul (Medição Produtor) */}
         {simFaz.avatar && (
           <Marker coordinate={toLatLng(simFaz.avatar)} anchor={{ x: 0.5, y: 0.5 }}>
             <View style={[s.avatar, { backgroundColor: colors.tertiary, borderColor: colors.tertiary }]}>
@@ -356,7 +323,6 @@ export function ConferenciaLabScreen({ imovelId, car }: { imovelId?: string; car
             </View>
           </Marker>
         )}
-        {/* Avatar A — verde (Medição Analista) */}
         {simAna.avatar && (
           <Marker coordinate={toLatLng(simAna.avatar)} anchor={{ x: 0.5, y: 0.5 }}>
             <View style={[s.avatar, { backgroundColor: colors.primary, borderColor: colors.primary }]}>
@@ -377,7 +343,6 @@ export function ConferenciaLabScreen({ imovelId, car }: { imovelId?: string; car
         {statusTexto && <Text style={s.mapStatus} numberOfLines={1}>{statusTexto}</Text>}
       </View>
 
-      {/* Controles de mapa: + / − / recentralizar (canto sup. direito) */}
       <View style={s.mapControls}>
         <TouchableOpacity style={s.mapBtn} onPress={() => zoom(0.5)} activeOpacity={0.8} accessibilityLabel="Aproximar">
           <Text style={s.mapBtnTxt}>＋</Text>
@@ -390,7 +355,6 @@ export function ConferenciaLabScreen({ imovelId, car }: { imovelId?: string; car
         </TouchableOpacity>
       </View>
 
-      {/* Legenda compacta no canto inf. esq. — só as cores dos desenhos */}
       <View style={s.legendOverlay} pointerEvents="none">
         <LegendLine cor={colors.critico} label="Dados governo" outlined />
         <LegendLine cor={colors.tertiary} label="Medição produtor" />
@@ -411,14 +375,12 @@ export function ConferenciaLabScreen({ imovelId, car }: { imovelId?: string; car
 
         {relatorio && decisao && (
           <>
-            {/* Situação / decisão sugerida */}
             <View style={[s.banner, { backgroundColor: toneBg[decisao.tone], borderColor: toneColor[decisao.tone] }]}>
               <Text style={[s.bannerTitle, { color: toneColor[decisao.tone] }]}>{decisao.titulo}</Text>
               <Text style={s.bannerText}>{decisao.detalhe}</Text>
               {decisao.prazo && <Text style={[s.bannerPrazo, { color: toneColor[decisao.tone] }]}>Prazo sugerido: {decisao.prazo}</Text>}
             </View>
 
-            {/* Topologia */}
             <View style={s.card}>
               <Text style={s.cardTitle}>Topologia · declarado × conferido</Text>
               <View style={s.tripleRow}>
@@ -438,7 +400,6 @@ export function ConferenciaLabScreen({ imovelId, car }: { imovelId?: string; car
               )}
             </View>
 
-            {/* Painel de avisos: o que revisitar */}
             <View style={s.card}>
               <Text style={s.cardTitle}>O que revisitar nesta medição</Text>
               {painel.avisos.length > 0 ? (
@@ -462,7 +423,6 @@ export function ConferenciaLabScreen({ imovelId, car }: { imovelId?: string; car
               <DecisaoChip label="Aceitar medição" tone="ok"     ativo={aceite === 'aprovado'}  onPress={() => abrirDecisao('aprovado')} />
             </View>
 
-            {/* Encaminhar a órgão */}
             <TouchableOpacity style={s.acaoCard} activeOpacity={0.85} onPress={encaminhar}>
               <View style={{ flex: 1 }}>
                 <Text style={s.acaoTitle}>Encaminhar alerta a órgão responsável</Text>
@@ -473,7 +433,6 @@ export function ConferenciaLabScreen({ imovelId, car }: { imovelId?: string; car
               <Text style={s.acaoIcon}>{'→'}</Text>
             </TouchableOpacity>
 
-            {/* Anexar documentos */}
             <TouchableOpacity style={s.acaoCard} activeOpacity={0.85} onPress={anexar}>
               <View style={{ flex: 1 }}>
                 <Text style={s.acaoTitle}>Anexar documentos de validação</Text>
@@ -487,14 +446,11 @@ export function ConferenciaLabScreen({ imovelId, car }: { imovelId?: string; car
         )}
       </ScrollView>
 
-      {/* Rodapé: Limpar (compacto) · ação principal (flex) — botões irmãos com a
-          mesma base (mesma altura, sem wrappers assimétricos). */}
       <View style={[s.footer, { paddingBottom: insets.bottom + 16 }]}>
         <Button label="Limpar" variant="secondary" onPress={limpar} disabled={status === 'idle'} style={s.btnLimpar} />
         <Button label={acaoPrincipal.label} variant="primary" onPress={acaoPrincipal.onPress} />
       </View>
 
-      {/* Modal de confirmação: recusar / aceitar medição */}
       <Modal visible={confirmando != null} transparent animationType="slide" onRequestClose={() => setConfirmando(null)}>
         <Pressable style={s.mBackdrop} onPress={() => setConfirmando(null)}>
           <Pressable style={s.mSheet} onPress={() => {}}>
@@ -541,8 +497,6 @@ export function ConferenciaLabScreen({ imovelId, car }: { imovelId?: string; car
     </Screen>
   );
 }
-
-// ---------- sub-componentes ----------
 
 /**
  * Linha da legenda compacta sobre o mapa.
@@ -596,8 +550,6 @@ function DecisaoChip({ label, tone, ativo, onPress }: { label: string; tone: 'ok
   );
 }
 
-// ---------- estilos ----------
-
 const s = StyleSheet.create({
   panel: { flex: 1, backgroundColor: colors.branco },
   panelContent: { padding: 14, paddingBottom: 28 },
@@ -625,7 +577,6 @@ const s = StyleSheet.create({
   mapTitleSub: { fontSize: 11, fontFamily: fonts.regular, color: colors.mutedText, marginTop: 1 },
   mapStatus: { fontSize: 11, fontFamily: fonts.bold, color: colors.primary, marginTop: 3 },
 
-  // Controles +/−/centralizar (canto sup. direito do mapa)
   mapControls: { position: 'absolute', top: 10, right: 10, gap: 6 },
   mapBtn: {
     width: 40,
@@ -643,7 +594,6 @@ const s = StyleSheet.create({
   mapBtnTxt: { fontSize: 22, fontFamily: fonts.bold, color: colors.inkText, lineHeight: 26 },
   mapBtnIcon: { fontSize: 18, color: colors.inkText, lineHeight: 22 },
 
-  // Legenda compacta no canto inferior esquerdo do mapa
   legendOverlay: {
     position: 'absolute',
     bottom: 10,
@@ -725,7 +675,6 @@ const s = StyleSheet.create({
   acaoSub: { fontSize: 12, fontFamily: fonts.regular, color: colors.mutedText, marginTop: 2 },
   acaoIcon: { fontSize: 20, fontFamily: fonts.extraBold, color: colors.primary },
 
-  // Avatares no mapa
   avatar: { width: 28, height: 28, borderRadius: 14, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
   avatarLabel: { fontSize: 12, fontFamily: fonts.extraBold },
 
@@ -749,7 +698,6 @@ const s = StyleSheet.create({
   // Limpar tem largura fixa (override do flex:1 da base); a ação principal mantém flex:1.
   btnLimpar: { flex: 0, width: 112 },
 
-  // Modal de confirmação da decisão
   mBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
   mSheet: {
     backgroundColor: colors.branco,

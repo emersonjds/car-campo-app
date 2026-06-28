@@ -156,7 +156,6 @@ export function CalendarModal({
           <Text style={s.title}>{title}</Text>
           {subtitle ? <Text style={s.subtitle}>{subtitle}</Text> : null}
 
-          {/* Cabeçalho de mês */}
           <View style={s.monthRow}>
             <TouchableOpacity
               style={[s.navBtn, !podeVoltar && s.navBtnOff]}
@@ -171,14 +170,12 @@ export function CalendarModal({
             </TouchableOpacity>
           </View>
 
-          {/* Dias da semana */}
           <View style={s.weekRow}>
             {DIAS_SEMANA.map((d, i) => (
               <Text key={i} style={s.weekDay}>{d}</Text>
             ))}
           </View>
 
-          {/* Grade */}
           <View style={s.grid}>
             {celulas.map((dia, i) => {
               if (dia == null) return <View key={i} style={s.cell} />;
@@ -202,7 +199,6 @@ export function CalendarModal({
             })}
           </View>
 
-          {/* Período */}
           <View style={s.periodoRow}>
             {(['manha', 'tarde'] as const).map((p) => (
               <TouchableOpacity
@@ -218,7 +214,6 @@ export function CalendarModal({
             ))}
           </View>
 
-          {/* Ações */}
           <View style={s.actions}>
             <TouchableOpacity style={s.cancelBtn} onPress={onClose} activeOpacity={0.8}>
               <Text style={s.cancelTxt}>Cancelar</Text>

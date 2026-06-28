@@ -1,8 +1,3 @@
-// Tela de Demarcação — Passo 2 do wizard.
-// Layout imersivo: mapa ocupa quase toda a tela; HUD sobreposto translúcido;
-// seletor de rota só quando idle; topo e rodapé finos.
-// Suporta GPS real (usePerimeterTracker) e Simulação (useSimulatedWalk).
-// Offline-first: grava geometry localmente via updateImovel; nunca bloqueia por rede.
 import React, {
   useCallback,
   useEffect,
@@ -37,11 +32,7 @@ import { derivarAPP, appDentroDoImovel, type AppResultado } from '../lib/app';
 import { DEMO_HIDROGRAFIA, DEMO_CAMADAS } from '../lib/refLayers.demo';
 import { analisarAlteracaoImovel } from '../lib/alteracao';
 
-// ---------- tipos ----------
-
 type Mode = 'gps' | 'sim';
-
-// ---------- helpers ----------
 
 const toLatLng = (p: LngLat) => ({ latitude: p.latitude, longitude: p.longitude });
 
@@ -98,8 +89,6 @@ const APP_POLY_COORDS = APP_CAMADAS_DEMO.map((feat) =>
   (feat.rings[0] ?? []).map((c) => ({ latitude: c[1] ?? 0, longitude: c[0] ?? 0 })),
 );
 
-// ---------- sub-componentes HUD ----------
-
 function AvatarMarker({ coordinate, pulse }: { coordinate: LngLat; pulse: Animated.Value }) {
   const ringScale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 2.6] });
   const ringOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.7, 0] });
@@ -115,7 +104,6 @@ function AvatarMarker({ coordinate, pulse }: { coordinate: LngLat; pulse: Animat
   );
 }
 
-/** Card ÁREA ATUAL — compacto, sobreposto ao mapa. */
 function AreaHUD({ area, perimeter, hasPoints }: { area: number; perimeter: number; hasPoints: boolean }) {
   return (
     <View style={s.areaCard}>
@@ -136,7 +124,6 @@ function AreaHUD({ area, perimeter, hasPoints }: { area: number; perimeter: numb
   );
 }
 
-/** Chips Precisão GPS + Acelerômetro — compactos, sobrepostos. */
 function SensorChips({ accuracy }: { accuracy: number | null | undefined }) {
   return (
     <View style={s.chipsRow}>
@@ -165,7 +152,6 @@ function SensorChips({ accuracy }: { accuracy: number | null | undefined }) {
 
 type RegionLike = typeof DEFAULT_REGION;
 
-/** +/−, centralizar, camadas — coluna direita do mapa. */
 function MapControls({
   mapRef,
   regionRef,
@@ -201,8 +187,6 @@ function MapControls({
   );
 }
 
-// ---------- tela principal ----------
-
 export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
   const { navigate } = useNav();
   const insets = useSafeAreaInsets();
@@ -226,7 +210,6 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
   const activePoints: LngLat[] = mode === 'sim' ? sim.points : tracker.points;
   const activeAvatar: LngLat | null = mode === 'sim' ? sim.avatar : tracker.current;
 
-  // ---------- efeito: carrega imóvel ----------
   // O produtor mede ÀS CEGAS — não exibe o perímetro registrado.
   useEffect(() => {
     let alive = true;
@@ -234,7 +217,6 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
     return () => { alive = false; };
   }, [imovelId]);
 
-  // ---------- efeito: animação de pulso ----------
   useEffect(() => {
     if (activeAvatar) {
       pulseRef.current?.stop();
@@ -253,7 +235,6 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeAvatar !== null]);
 
-  // ---------- efeito: segue avatar no mapa (throttled 1 Hz) ----------
   useEffect(() => {
     if (!activeAvatar || !mapRef.current) return;
     const now = Date.now();
@@ -265,7 +246,6 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
     );
   }, [activeAvatar]);
 
-  // ---------- APP ao vivo (debounce 500 ms) ----------
   useEffect(() => {
     if (activePoints.length < 3) { setAppResultado(null); return; }
     const t = setTimeout(() => {
@@ -277,8 +257,6 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
     return () => clearTimeout(t);
   }, [activePoints]);
 
-  // ---------- derivados ----------
-
   const trailBase = useMemo(() => activePoints.map(toLatLng), [activePoints]);
   const lastTrailPt = trailBase[trailBase.length - 1];
   const polygonCoords = useMemo(
@@ -289,8 +267,6 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
   const perimeter = useMemo(() => perimeterM(activePoints), [activePoints]);
   const validations = useMemo(() => validatePerimeterLocal(activePoints), [activePoints]);
   const canSave = activePoints.length >= 3;
-
-  // ---------- handlers (mecânica intacta) ----------
 
   const handleModeChange = useCallback((m: Mode) => {
     if (m === mode) return;
@@ -339,8 +315,6 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
 
   const handleSave = useCallback(() => { if (canSave) doSave(); }, [canSave, doSave]);
 
-  // ---------- ação primária ----------
-
   let primaryLabel: string;
   let primaryPress: () => void;
   let primaryDisabled: boolean | undefined;
@@ -367,24 +341,18 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
     }
   }
 
-  // Seletor de rota só antes de iniciar (colapsa durante/depois)
   const showRoutePanel = mode === 'sim' && sim.status === 'idle';
   const showProgress = mode === 'sim' && (sim.status === 'walking' || sim.status === 'paused');
-  // Camadas ambientais de demonstração (rio/nascente + APP) — só na rota Sorriso.
   const showEnvLayers = mode === 'sim' && selectedRouteId === DEMO_ROUTES[0]!.id;
   // Medindo ativamente? Se não, e já dá pra fechar, "Finalizar" vira a ação primária.
   const medindo = sim.status === 'walking' || tracker.status === 'tracking' || tracker.status === 'requesting';
   const finalizarPrimario = canSave && !medindo;
 
-  // ---------- JSX ----------
-
   return (
     // Screen sem title/subtitle → apenas a app-bar fina (sem pageHead)
     // O indicador de passo fica no slot `right` da app-bar, sem altura extra
     <Screen right={<StepBadge />}>
-      {/* ── Toggle GPS/Sim + Mapa + overlays ──────────────────────────── */}
       <View style={s.mapContainer}>
-        {/* Toggle modo compacto — sobre o mapa, topo-esquerdo abaixo da gap do card */}
         <View style={s.modeToggle}>
           <TouchableOpacity
             style={[s.modeTab, mode === 'gps' && s.modeTabActive]}
@@ -412,7 +380,6 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
           showsScale
           onRegionChangeComplete={(r) => { currentRegionRef.current = r; }}
         >
-          {/* Hidrografia e APP (só rota SORRISO_SOJA) */}
           {mode === 'sim' && selectedRouteId === DEMO_ROUTES[0]!.id && (
             <>
               {APP_POLY_COORDS.map((coords, i) =>
@@ -433,25 +400,21 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
             </>
           )}
 
-          {/* Trail estático */}
           {trailBase.length > 1 && (
             <Polyline coordinates={trailBase} strokeColor={colors.verdeClaro}
               strokeWidth={3} lineDashPattern={[8, 4]} />
           )}
 
-          {/* Segmento vivo */}
           {activeAvatar !== null && lastTrailPt !== undefined && (
             <Polyline coordinates={[lastTrailPt, toLatLng(activeAvatar)]}
               strokeColor={colors.verdeClaro} strokeWidth={3} lineDashPattern={[8, 4]} />
           )}
 
-          {/* Polígono */}
           {polygonCoords && (
             <Polygon coordinates={polygonCoords} strokeColor={colors.verde}
               fillColor="rgba(27,107,58,0.18)" strokeWidth={2} />
           )}
 
-          {/* Vértices */}
           {activePoints.map((p, i) => (
             <Marker key={`v-${i}`} coordinate={toLatLng(p)}
               anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
@@ -461,20 +424,15 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
             </Marker>
           ))}
 
-          {/* Avatar */}
           {activeAvatar && <AvatarMarker coordinate={activeAvatar} pulse={pulseAnim} />}
         </MapView>
 
-        {/* HUD: card de área (topo-esquerdo) */}
         <AreaHUD area={area} perimeter={perimeter} hasPoints={canSave} />
 
-        {/* HUD: chips de sensor */}
         <SensorChips accuracy={mode === 'gps' ? tracker.current?.accuracy : null} />
 
-        {/* HUD: controles de mapa (coluna direita) */}
         <MapControls mapRef={mapRef} regionRef={currentRegionRef} onCenter={handleCenterMap} />
 
-        {/* HUD: legenda das camadas ambientais (explica a linha azul + APP) */}
         {showEnvLayers && (
           <View style={s.legend}>
             <View style={s.legendItem}>
@@ -488,7 +446,6 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
           </View>
         )}
 
-        {/* HUD: linha de progresso (fina, topo do mapa, só durante caminhada) */}
         {showProgress && (
           <View style={s.progressWrap}>
             <View style={s.progressTrack}>
@@ -501,7 +458,6 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
           </View>
         )}
 
-        {/* HUD: hint GPS idle */}
         {mode === 'gps' && (tracker.status === 'idle' || tracker.status === 'denied') && (
           <View style={[s.gpsHint, tracker.status === 'denied' && s.gpsHintDenied]}>
             <Text style={s.gpsHintText}>
@@ -514,7 +470,6 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
 
       </View>
 
-      {/* ── Rodapé sólido: rota (idle) + status + botões ──────────────── */}
       <View style={[s.footer, { paddingBottom: insets.bottom + 16 }]}>
         {showRoutePanel && (
           <View style={s.routeRow}>
@@ -555,7 +510,6 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
         <View style={s.footerBtns}>
           {finalizarPrimario ? (
             <>
-              {/* Pronto pra fechar: "Finalizar" é a ação principal (verde). */}
               <Button
                 label="Finalizar Perimetro"
                 variant="primary"
@@ -574,8 +528,7 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
             </>
           ) : (
             <>
-              {/* Ainda medindo/ocioso: o controle é a ação principal. */}
-              <Button
+                <Button
                 label={primaryLabel}
                 variant="primary"
                 onPress={primaryPress}
@@ -600,21 +553,16 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
   );
 }
 
-/** Indicador de passo inline na app-bar (sem altura extra). */
 function StepBadge() {
   return <Text style={s.stepBadge}>2 / 4</Text>;
 }
 
-// ---------- estilos ----------
-
 const s = StyleSheet.create({
 
-  // ── Mapa + overlays (flex:1 — domina a tela) ────────────────────────────────
   mapContainer: {
     flex: 1,
   },
 
-  // Toggle GPS/Sim compacto (absoluto no topo-esquerdo do mapa, z sobre o mapa)
   modeToggle: {
     position: 'absolute',
     top: 10,
@@ -637,7 +585,6 @@ const s = StyleSheet.create({
   modeTabText: { fontSize: 11, fontWeight: '700', color: colors.muted },
   modeTabTextActive: { color: colors.branco },
 
-  // HUD: card de área (abaixo do toggle, deixa espaço à direita para os controles)
   areaCard: {
     position: 'absolute',
     top: 50, // abaixo do toggle GPS/Sim (~10 + 32 + 8)
@@ -671,7 +618,6 @@ const s = StyleSheet.create({
   perimeterLabel: { fontSize: 10, color: colors.mutedText, lineHeight: 13 },
   perimeterValue: { fontSize: 13, fontWeight: '700', color: colors.inkText },
 
-  // HUD: chips (abaixo do card de área)
   chipsRow: {
     position: 'absolute',
     top: 130, // ~50 toggle + ~70 card height + 10 gap
@@ -699,7 +645,6 @@ const s = StyleSheet.create({
   chipLabel: { fontSize: 10, color: colors.mutedText, lineHeight: 13 },
   chipValue: { fontSize: 12, fontWeight: '700', color: colors.inkText },
 
-  // HUD: controles de mapa (coluna direita)
   mapControls: {
     position: 'absolute',
     top: 10,
@@ -720,7 +665,6 @@ const s = StyleSheet.create({
     elevation: 3,
   },
 
-  // HUD: linha de progresso (fina, sobre o mapa)
   progressWrap: {
     position: 'absolute',
     top: 188, // abaixo dos chips (~130 + ~48 chip height + 10)
@@ -749,7 +693,6 @@ const s = StyleSheet.create({
     minWidth: 38,
   },
 
-  // HUD: badges de validação (base do mapa, lado esquerdo)
   hudBadges: {
     position: 'absolute',
     bottom: 76,
@@ -760,7 +703,6 @@ const s = StyleSheet.create({
     gap: 5,
   },
 
-  // HUD: card de APP ao vivo
   appCard: {
     position: 'absolute',
     bottom: 108,
@@ -783,7 +725,6 @@ const s = StyleSheet.create({
   appFeicao: { fontSize: 11, color: colors.muted, paddingLeft: 4, marginBottom: 1 },
   appZero: { fontSize: 11, color: colors.verde, fontStyle: 'italic' },
 
-  // HUD: seletor de rota (base do mapa, só quando idle)
   routePanel: {
     position: 'absolute',
     bottom: 12,
@@ -823,7 +764,6 @@ const s = StyleSheet.create({
   routeChipTextActive: { color: colors.branco },
   routeChipBioma: { fontSize: 9.5, fontWeight: '600', color: colors.verde, marginTop: 1 },
 
-  // HUD: hint GPS idle/denied
   gpsHint: {
     position: 'absolute',
     bottom: 12,
@@ -837,7 +777,6 @@ const s = StyleSheet.create({
   gpsHintDenied: { backgroundColor: 'rgba(251,234,233,0.94)' },
   gpsHintText: { fontSize: 13, fontWeight: '600', color: colors.inkText, textAlign: 'center', lineHeight: 18 },
 
-  // HUD: cue de conclusão
   doneCue: {
     position: 'absolute',
     bottom: 12,
@@ -850,7 +789,6 @@ const s = StyleSheet.create({
   },
   doneCueText: { color: colors.verde, fontWeight: '700', fontSize: 12, lineHeight: 17, textAlign: 'center' },
 
-  // HUD: legenda das camadas ambientais (rio/nascente + APP)
   // bottom:20 garante que fique acima da borda do rodapé sem margem negativa
   legend: {
     position: 'absolute',
@@ -872,7 +810,6 @@ const s = StyleSheet.create({
   legendSquare: { width: 12, height: 12, borderRadius: 3, borderWidth: 1 },
   legendText: { fontSize: 11, fontWeight: '700', color: colors.inkText },
 
-  // ── Rodapé sólido (rota + status + botões) ──────────────────────────────────
   // marginTop:-20 foi removido — era a causa raiz da colisão com a legenda.
   // O efeito "folha" agora vem dos cantos arredondados + sombra ascendente,
   // sem overlap sobre o mapContainer.
@@ -896,7 +833,6 @@ const s = StyleSheet.create({
   footerBtn: { flexGrow: 0, minHeight: 52, paddingVertical: 12 },
   footerBtnSecond: { marginTop: 10 },
 
-  // ── Step badge na app-bar ────────────────────────────────────────────────────
   stepBadge: {
     fontSize: 11,
     fontWeight: '700',
@@ -907,7 +843,6 @@ const s = StyleSheet.create({
     paddingVertical: 3,
   },
 
-  // ── Avatar ───────────────────────────────────────────────────────────────────
   avatarWrap: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   avatarRing: {
     position: 'absolute', width: 36, height: 36, borderRadius: 18,
@@ -921,7 +856,6 @@ const s = StyleSheet.create({
   },
   avatarEmoji: { fontSize: 18, lineHeight: 22 },
 
-  // ── Vértices ─────────────────────────────────────────────────────────────────
   vertexDot: {
     width: 22, height: 22, borderRadius: 11, backgroundColor: colors.verde,
     borderWidth: 2, borderColor: colors.branco, alignItems: 'center', justifyContent: 'center',

@@ -1,10 +1,3 @@
-// Aba "Visitas" (analista) — o hub de trabalho de campo.
-//
-// Junta, numa fila única e priorizada, as ÚLTIMAS MEDIÇÕES dos produtores que
-// exigem atenção, com seus AVISOS ("o que revisitar": demarcação errada, queimada,
-// invasão de TI, embargo, divergência de área...) e duas ações diretas:
-//   • Agendar visita de campo.
-//   • Contatar o produtor pelo WhatsApp para combinar a visita.
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Screen } from '../app/Screen';
@@ -162,7 +155,6 @@ function VisitaCard({
         Última medição: {imovel.geometry.area_ha.toFixed(1)} ha · {imovel.geometry.points.length} vértices
       </Text>
 
-      {/* Avisos: o que revisitar */}
       <View style={s.avisos}>
         {topo.map((a: AvisoConferencia, i) => (
           <View key={`${a.codigo}-${i}`} style={s.avisoRow}>
@@ -199,7 +191,6 @@ function VisitaCard({
         </Text>
       )}
 
-      {/* Ações de campo */}
       <View style={s.acoes}>
         <TouchableOpacity style={[s.btn, s.btnAgendar]} activeOpacity={0.85} onPress={onAgendar}>
           <Text style={s.btnAgendarTxt}>{imovel.visitaAgendada ? 'Reagendar' : 'Agendar visita'}</Text>

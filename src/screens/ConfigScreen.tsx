@@ -1,4 +1,3 @@
-// Aba "Perfil" — mostra a identidade logada (produtor ou analista) e permite sair.
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Screen } from '../app/Screen';
 import { useAuth } from '../auth/AuthContext';

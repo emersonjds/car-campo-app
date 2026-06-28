@@ -137,7 +137,6 @@ export function densifyRoute(vertices: LngLat[], stepM = 8): LngLat[] {
       path.push(interpolate(a, b, s / numSteps));
     }
   }
-  // ponto de fechamento explícito
   path.push({ longitude: vertices[0]!.longitude, latitude: vertices[0]!.latitude });
   return path;
 }

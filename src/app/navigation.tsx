@@ -1,11 +1,8 @@
-// Navegação leve baseada em estado (sem react-navigation nativo) + contexto de perfil.
-// Offline-first, dev-build leve. Uma pilha simples cobre o fluxo do wizard.
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { Perfil } from '../types';
 import { useAuth } from '../auth/AuthContext';
 
 export type Route =
-  // ── Abas v2 (4 abas por persona) ──────────────────────────────────────────
   | { name: 'dashboard' }       // produtor: aba 1 → HomeScreen
   | { name: 'medicoes' }        // ambos: aba 2 → MedicoesScreen / ValidacaoScreen
   | { name: 'documentos-hub' }  // ambos: aba 3 → DocumentosHubScreen
@@ -17,7 +14,6 @@ export type Route =
   | { name: 'painel' }
   | { name: 'notificacoes' }
   | { name: 'config' }
-  // ── Telas de detalhe / wizard ─────────────────────────────────────────────
   | { name: 'imovel-detalhe'; imovelId: string }
   | { name: 'selecionar-imovel' }
   | { name: 'cadastro'; imovelId?: string }
@@ -33,7 +29,6 @@ export type RouteName = Route['name'];
 
 /** Rotas que são "abas" de topo (mostram a barra inferior, sem botão voltar). */
 export const TAB_ROOTS: RouteName[] = [
-  // v2 (4 abas por persona)
   'dashboard', 'medicoes', 'documentos-hub', 'perfil',
   // legadas (mantidas para navegações internas como PainelScreen → visitas)
   'home', 'validacao', 'visitas', 'painel', 'config',

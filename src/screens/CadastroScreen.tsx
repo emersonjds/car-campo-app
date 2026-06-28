@@ -1,4 +1,3 @@
-// Wizard passo 1 — Cadastro do imóvel. Cria/edita o registro e navega para a demarcação.
 import { useEffect, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Screen } from '../app/Screen';

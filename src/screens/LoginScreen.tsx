@@ -1,4 +1,3 @@
-// Tela de login por persona — sem credenciais. Tocar no card entra direto.
 import { useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -25,7 +24,6 @@ export function LoginScreen() {
   return (
     <SafeAreaView style={s.safe}>
       <View style={s.root}>
-        {/* Logo */}
         <View style={s.header}>
           <View style={s.logoMark}>
             <Ionicons name="leaf" size={38} color={colors.branco} />
@@ -35,7 +33,6 @@ export function LoginScreen() {
           <Text style={s.tagline}>Sua terra, sua gestão, em um só lugar.</Text>
         </View>
 
-        {/* Cards de persona */}
         <View style={s.body}>
           <Text style={s.euSou}>Eu sou:</Text>
           <PersonaCard
@@ -56,14 +53,11 @@ export function LoginScreen() {
           />
         </View>
 
-        {/* Rodapé LGPD */}
         <Text style={s.lgpd}>Seus dados ficam protegidos neste aparelho (LGPD).</Text>
       </View>
     </SafeAreaView>
   );
 }
-
-// ─── Subcomponente ───────────────────────────────────────────────────────────
 
 function PersonaCard({
   titulo,
@@ -104,8 +98,6 @@ function PersonaCard({
   );
 }
 
-// ─── Estilos ─────────────────────────────────────────────────────────────────
-
 const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.neutral },
   root: {
@@ -115,7 +107,6 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
   },
 
-  // Header / logo
   header: { alignItems: 'center', paddingTop: 16 },
   logoMark: {
     width: 76,
@@ -153,7 +144,6 @@ const s = StyleSheet.create({
     lineHeight: 22,
   },
 
-  // Cards
   body: { gap: 14 },
   euSou: {
     fontSize: 12,
@@ -199,7 +189,6 @@ const s = StyleSheet.create({
     lineHeight: 18,
   },
 
-  // Footer
   lgpd: {
     fontSize: 12,
     color: colors.mutedText,

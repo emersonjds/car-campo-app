@@ -1,4 +1,3 @@
-// Escala tipográfica Inter — CAR Campo v2.
 // Requer que useFonts carregue essas famílias no App.tsx antes de renderizar.
 // Fallback automático para system font se o load falhar.
 

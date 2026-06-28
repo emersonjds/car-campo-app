@@ -1,4 +1,3 @@
-// Aba "Triagem" (analista) — revisa a geometria de cada imóvel e aprova/reprova.
 import { useCallback, useEffect, useState } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Screen } from '../app/Screen';
@@ -117,7 +116,6 @@ export function ValidacaoScreen() {
           // Badge NOVO vem de alertaDivergencia (único campo com flag `visto`).
           const alertaNovo = item.alertaDivergencia != null && !item.alertaDivergencia.visto;
 
-          // Cores do alerta unificado: derivam de decAlt quando disponível.
           const alertaBg = decAlt ? altBg[decAlt.tone] : '#fce8e7';
           const alertaBorderColor = decAlt ? altColor[decAlt.tone] : colors.critico;
           const alertaTextColor = decAlt ? altColor[decAlt.tone] : colors.critico;
@@ -155,7 +153,6 @@ export function ValidacaoScreen() {
                 </TouchableOpacity>
               )}
 
-              {/* Corpo — toque abre o imóvel na tela de revisão */}
               <TouchableOpacity activeOpacity={0.85} onPress={() => abrirImovel(item)}>
                 <View style={s.head}>
                   <Text style={s.titulo} numberOfLines={1}>
@@ -176,7 +173,6 @@ export function ValidacaoScreen() {
                   {item.geometry.area_ha.toFixed(2)} ha · {item.geometry.points.length} vértices
                 </Text>
 
-                {/* Checagem geométrica */}
                 {v.problemas.length > 0 ? (
                   v.problemas.map((p, idx) => (
                     <Text key={`p-${idx}`} style={s.problema}>
@@ -192,7 +188,6 @@ export function ValidacaoScreen() {
                   </Text>
                 ))}
 
-                {/* Sobreposição como chips coloridos por severidade */}
                 {analise && analise.sobreposicoes.length > 0 ? (
                   <View style={s.chips}>
                     <Text style={[s.chipsIcone, { color: temCritico ? colors.critico : colors.aviso }]}>
@@ -229,10 +224,8 @@ export function ValidacaoScreen() {
                 )}
               </TouchableOpacity>
 
-              {/* Divisor */}
               <View style={s.divider} />
 
-              {/* Ações secundárias — menores, em linha, foco baixo */}
               <View style={s.secundarias}>
                 <TouchableOpacity
                   style={s.secundariaBtn}
@@ -251,7 +244,6 @@ export function ValidacaoScreen() {
                 </TouchableOpacity>
               </View>
 
-              {/* Decisão principal — foco visual máximo */}
               <View style={s.actions}>
                 <SecondaryButton label="Reprovar" onPress={() => setValidacao(item, 'reprovado')} />
                 <View style={{ width: 10 }} />
@@ -313,7 +305,6 @@ const s = StyleSheet.create({
   alertaTitulo: { flex: 1, fontSize: 13, fontFamily: fonts.extraBold, lineHeight: 17 },
   alertaSub: { fontSize: 11, fontFamily: fonts.regular, color: colors.mutedText, marginTop: 3, lineHeight: 15 },
 
-  // Chips de sobreposição ambiental
   chips: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6, marginTop: 8 },
   chipsIcone: { fontSize: 13, fontFamily: fonts.bold },
   chip: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1 },
@@ -321,7 +312,6 @@ const s = StyleSheet.create({
   chipAviso: { backgroundColor: '#fdf4e3', borderColor: '#c07a1a' },
   chipText: { fontSize: 11, fontFamily: fonts.extraBold },
 
-  // Conferência solicitada — chip inline
   confChip: {
     alignSelf: 'flex-start',
     marginTop: 8,
@@ -334,10 +324,7 @@ const s = StyleSheet.create({
   },
   confChipText: { fontSize: 11, fontFamily: fonts.bold, color: colors.aviso },
 
-  // Divisor visual entre corpo e ações
   divider: { height: 1, backgroundColor: colors.line, marginVertical: 12 },
-
-  // Ações secundárias — linha única, menor destaque visual
   secundarias: { flexDirection: 'row', marginBottom: 4 },
   secundariaBtn: { flex: 1, minHeight: 44, justifyContent: 'center', alignItems: 'center' },
   secundariaBtnText: { fontSize: 13, fontFamily: fonts.bold, color: colors.primary },

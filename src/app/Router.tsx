@@ -1,5 +1,3 @@
-// Renderiza a tela ativa a partir da rota. Cada tela é independente e carrega
-// seus próprios dados do store pelo imovelId.
 import { ActivityIndicator, View } from 'react-native';
 import { colors } from '../theme/colors';
 import { useNav } from './navigation';
@@ -41,7 +39,6 @@ export function Router() {
   }
 
   switch (route.name) {
-    // ── Abas v2 ──────────────────────────────────────────────────────────────
     case 'dashboard':
       return <HomeScreen />;
     case 'medicoes':
@@ -51,7 +48,6 @@ export function Router() {
       return <DocumentosHubScreen />;
     case 'perfil':
       return <ConfigScreen />;
-    // ── Abas legadas ─────────────────────────────────────────────────────────
     case 'home':
       return <HomeScreen />;
     case 'validacao':
@@ -64,7 +60,6 @@ export function Router() {
       return <NotificacoesScreen />;
     case 'config':
       return <ConfigScreen />;
-    // ── Wizard / detalhe ─────────────────────────────────────────────────────
     case 'imovel-detalhe':
       return <ImovelDetalheScreen imovelId={route.imovelId} />;
     case 'selecionar-imovel':

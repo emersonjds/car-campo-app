@@ -1,6 +1,3 @@
-// Tela de Análise Ambiental — cruza o perímetro do imóvel com camadas oficiais
-// (TI, UC, embargo IBAMA, desmatamento PRODES, APP, CAR vizinho) e exibe aptidão
-// de crédito rural. Offline-first: usa DEMO_CAMADAS quando sem rede.
 import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Screen } from '../app/Screen';
@@ -25,10 +22,6 @@ import {
 import { colors } from '../theme/colors';
 import type { Imovel } from '../types';
 
-// ---------------------------------------------------------------------------
-// Helpers de display
-// ---------------------------------------------------------------------------
-
 function fonteLabel(fonte: AnaliseAmbiental['fonteDados']): string {
   if (fonte === 'online') return 'Dados oficiais online (WFS governamental)';
   if (fonte === 'cache') return 'Dados em cache local';
@@ -44,10 +37,6 @@ function scoreBarColor(score: number): string {
 /** Estimativa de ha por módulo fiscal (referência conservadora; confirmar no CCIR). */
 const MF_HA_REF = 20;
 
-// ---------------------------------------------------------------------------
-// Estilos de severidade para os cartões de sobreposição
-// ---------------------------------------------------------------------------
-
 interface SevStyle { bg: string; border: string; text: string }
 
 function sevStyle(sev: Sobreposicao['severidade']): SevStyle {
@@ -57,10 +46,6 @@ function sevStyle(sev: Sobreposicao['severidade']): SevStyle {
     case 'info':    return { bg: colors.verdeBg, border: colors.line, text: colors.muted };
   }
 }
-
-// ---------------------------------------------------------------------------
-// Sub-componentes
-// ---------------------------------------------------------------------------
 
 function SobreposicaoCard({ item }: { item: Sobreposicao }) {
   const st = sevStyle(item.severidade);
@@ -124,10 +109,6 @@ function LinhaCard({ linha }: { linha: LinhaCredito }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Tela principal
-// ---------------------------------------------------------------------------
-
 export function AnaliseAmbientalScreen({ imovelId }: { imovelId: string }) {
   const { goBack } = useNav();
 
@@ -172,7 +153,6 @@ export function AnaliseAmbientalScreen({ imovelId }: { imovelId: string }) {
     return () => { alive = false; };
   }, [imovelId]);
 
-  // ---- Carregando ----
   if (fase === 'loading') {
     return (
       <Screen title="Análise Ambiental" subtitle="Verificando camadas…">
@@ -186,7 +166,6 @@ export function AnaliseAmbientalScreen({ imovelId }: { imovelId: string }) {
     );
   }
 
-  // ---- Erro ----
   if (fase === 'error' || !imovel || !analise || !credito) {
     return (
       <Screen title="Análise Ambiental">
@@ -203,7 +182,6 @@ export function AnaliseAmbientalScreen({ imovelId }: { imovelId: string }) {
     );
   }
 
-  // ---- Dados derivados ----
   const points = imovel.geometry.points;
   const areaCalc = areaHectares(points);
   const perimCalc = perimeterM(points);
@@ -216,7 +194,6 @@ export function AnaliseAmbientalScreen({ imovelId }: { imovelId: string }) {
     <Screen title="Análise Ambiental" subtitle={imovel.imovel.nome}>
       <ScrollView contentContainerStyle={sc.scroll} showsVerticalScrollIndicator={false}>
 
-        {/* ---- Banner de status ---- */}
         <View style={[sc.banner, analise.ok ? sc.bannerOk : sc.bannerCritico]}>
           <Text style={[sc.bannerTitulo, { color: analise.ok ? colors.verde : colors.alerta }]}>
             {analise.ok
@@ -228,7 +205,6 @@ export function AnaliseAmbientalScreen({ imovelId }: { imovelId: string }) {
           <Text style={sc.bannerFonte}>{fonteLabel(analise.fonteDados)}</Text>
         </View>
 
-        {/* ---- Aviso de incerteza posicional do GPS ---- */}
         {analise.incertezaPosicional_m != null && analise.incertezaPosicional_m > 5 ? (
           <View style={sc.gpsWarn}>
             <Text style={sc.gpsWarnText}>
@@ -238,7 +214,6 @@ export function AnaliseAmbientalScreen({ imovelId }: { imovelId: string }) {
           </View>
         ) : null}
 
-        {/* ---- Medidas ---- */}
         <Card style={sc.card}>
           <SectionTitle>Medidas do imóvel</SectionTitle>
           <View style={sc.statsRow}>
@@ -258,7 +233,6 @@ export function AnaliseAmbientalScreen({ imovelId }: { imovelId: string }) {
           ) : null}
         </Card>
 
-        {/* ---- Lista de sobreposições ---- */}
         <Card style={sc.card}>
           <SectionTitle>Sobreposições identificadas</SectionTitle>
           {analise.sobreposicoes.length === 0 ? (
@@ -273,11 +247,9 @@ export function AnaliseAmbientalScreen({ imovelId }: { imovelId: string }) {
           )}
         </Card>
 
-        {/* ---- Crédito rural ---- */}
         <Card style={sc.card}>
           <SectionTitle>O que sua terra destrava</SectionTitle>
 
-          {/* Score com barra */}
           <View style={sc.scoreRow}>
             <Text style={[sc.scoreNum, { color: barColor }]}>{credito.score}</Text>
             <Text style={sc.scoreLabel}>/100 — conformidade ambiental</Text>
@@ -288,7 +260,6 @@ export function AnaliseAmbientalScreen({ imovelId }: { imovelId: string }) {
             />
           </View>
 
-          {/* Elegibilidade geral */}
           <View style={sc.elegRow}>
             <Badge tone={credito.elegivelGeral ? 'ok' : 'aviso'}>
               {credito.elegivelGeral
@@ -297,7 +268,6 @@ export function AnaliseAmbientalScreen({ imovelId }: { imovelId: string }) {
             </Badge>
           </View>
 
-          {/* Bloqueios */}
           {credito.bloqueios.length > 0 ? (
             <View style={sc.bloqWrap}>
               <Text style={sc.bloqTitulo}>Impedimentos:</Text>
@@ -307,11 +277,9 @@ export function AnaliseAmbientalScreen({ imovelId }: { imovelId: string }) {
             </View>
           ) : null}
 
-          {/* Linhas de crédito */}
           <Text style={sc.linhasTitulo}>Linhas de crédito:</Text>
           {credito.linhas.map((l) => <LinhaCard key={l.id} linha={l} />)}
 
-          {/* Recomendações */}
           {credito.recomendacoes.length > 0 ? (
             <View style={sc.recsWrap}>
               <Text style={sc.recsTitulo}>Próximos passos:</Text>
@@ -321,11 +289,9 @@ export function AnaliseAmbientalScreen({ imovelId }: { imovelId: string }) {
             </View>
           ) : null}
 
-          {/* Disclaimer legal */}
           <Text style={sc.disclaimer}>{credito.disclaimer}</Text>
         </Card>
 
-        {/* ---- Botão voltar ---- */}
         <View style={sc.btnWrap}>
           <SecondaryButton label="Voltar" onPress={goBack} />
         </View>
@@ -335,14 +301,9 @@ export function AnaliseAmbientalScreen({ imovelId }: { imovelId: string }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Estilos
-// ---------------------------------------------------------------------------
-
 const sc = StyleSheet.create({
   scroll: { padding: 16, paddingBottom: 40 },
 
-  // Estados de loading / erro
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 28 },
   loadText: { fontSize: 15, color: colors.muted, textAlign: 'center', lineHeight: 22 },
   errTitle: { fontSize: 17, fontWeight: '800', color: colors.ink, textAlign: 'center' },
@@ -354,14 +315,12 @@ const sc = StyleSheet.create({
     lineHeight: 20,
   },
 
-  // Banner de status
   banner: { borderRadius: 14, padding: 16, marginBottom: 12, borderWidth: 1.5 },
   bannerOk: { backgroundColor: '#e6f4ec', borderColor: colors.verde },
   bannerCritico: { backgroundColor: '#fce8e7', borderColor: colors.alerta },
   bannerTitulo: { fontSize: 16, fontWeight: '800', lineHeight: 22 },
   bannerFonte: { fontSize: 11, color: colors.muted, marginTop: 4 },
 
-  // Aviso GPS
   gpsWarn: {
     backgroundColor: '#fdf4e3',
     borderRadius: 10,
@@ -372,7 +331,6 @@ const sc = StyleSheet.create({
   },
   gpsWarnText: { fontSize: 12, color: colors.aviso, lineHeight: 18 },
 
-  // Medidas
   card: { marginBottom: 12 },
   statsRow: { flexDirection: 'row', marginTop: 4 },
   statGap: { width: 8 },
@@ -384,7 +342,6 @@ const sc = StyleSheet.create({
     fontStyle: 'italic',
   },
 
-  // Sobreposição individual
   sobCard: { borderRadius: 12, borderWidth: 1.5, padding: 12, marginBottom: 10 },
   sobHead: {
     flexDirection: 'row',
@@ -397,7 +354,6 @@ const sc = StyleSheet.create({
   sobFonte: { fontSize: 10, color: colors.muted, marginTop: 3, fontStyle: 'italic' },
   sobMsg: { fontSize: 12, lineHeight: 18, marginTop: 6 },
 
-  // Score
   scoreRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
@@ -414,10 +370,8 @@ const sc = StyleSheet.create({
     overflow: 'hidden',
   },
 
-  // Elegibilidade
   elegRow: { marginBottom: 14 },
 
-  // Bloqueios
   bloqWrap: {
     backgroundColor: '#fce8e7',
     borderRadius: 10,
@@ -432,7 +386,6 @@ const sc = StyleSheet.create({
     marginBottom: 4,
   },
 
-  // Linhas de crédito
   linhasTitulo: {
     fontSize: 14,
     fontWeight: '800',
@@ -457,7 +410,6 @@ const sc = StyleSheet.create({
   linhaMotivo: { fontSize: 12, color: colors.muted, lineHeight: 18 },
   linhaTeto: { fontSize: 12, color: colors.verde, fontWeight: '700', marginTop: 4 },
 
-  // Recomendações
   recsWrap: {
     backgroundColor: colors.verdeBg,
     borderRadius: 10,
@@ -468,7 +420,6 @@ const sc = StyleSheet.create({
   recsTitulo: { fontSize: 13, fontWeight: '800', color: colors.ink, marginBottom: 6 },
   recItem: { fontSize: 12, color: colors.ink, lineHeight: 18, marginBottom: 4 },
 
-  // Disclaimer
   disclaimer: {
     fontSize: 10,
     color: colors.muted,

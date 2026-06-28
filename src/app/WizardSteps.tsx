@@ -1,4 +1,3 @@
-// Indicador de progresso do wizard de 4 passos (Cadastro → Demarcação → Documentos → Revisão).
 import { StyleSheet, Text, View } from 'react-native';
 import { colors } from '../theme/colors';
 

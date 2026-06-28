@@ -1,5 +1,3 @@
-// Tela de Revisão — passo 4/4 do wizard de demarcação do imóvel.
-// Exibe resumo, validação geométrica, exportação e envio à CAR Geo API.
 // Offline-first: nunca bloqueia o produtor por falta de rede.
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -24,10 +22,6 @@ import {
 import { colors } from '../theme/colors';
 import type { Imovel, MotivoVisita, SolicitacaoVisita } from '../types';
 
-// ---------------------------------------------------------------------------
-// Utilitários internos
-// ---------------------------------------------------------------------------
-
 /**
  * Mascara CPF/CNPJ para exibição na tela (LGPD — dado sensível).
  * Mesma lógica de export.ts; duplicada para evitar importar função privada.
@@ -51,10 +45,6 @@ function maskCpfCnpj(value: string): string {
 // Qual botão de ação está carregando agora
 type ActiveAction = 'geojson' | 'pdf' | 'share' | 'submit' | 'visita' | null;
 
-// ---------------------------------------------------------------------------
-// Componente interno de linha de dado (label + valor)
-// ---------------------------------------------------------------------------
-
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <View style={s.infoRow}>
@@ -66,10 +56,6 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Tela principal
-// ---------------------------------------------------------------------------
-
 export function RevisaoScreen({ imovelId }: { imovelId: string }) {
   const { navigate, goBack, switchTab } = useNav();
 
@@ -80,7 +66,6 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
   const [loadingImovel, setLoadingImovel] = useState(true);
   const [activeAction, setActiveAction] = useState<ActiveAction>(null);
 
-  // Carrega o imóvel ao montar
   useEffect(() => {
     let alive = true;
     getImovel(imovelId).then((im) => {
@@ -174,7 +159,6 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
     });
   }, [imovel, imovelId, switchTab, withAction]);
 
-  // ---- Análise ambiental resumida (offline, instantânea) ----
   // IMPORTANTE: este useMemo precisa vir ANTES dos early returns abaixo, senão a
   // contagem de hooks muda entre renders (Rules of Hooks). `imovel` é nullable aqui.
   const analiseResumo = useMemo(
@@ -185,13 +169,11 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
     [imovel],
   );
 
-  // Comparação com o perímetro registrado anterior (delta de re-demarcação).
   const alteracaoResumo = useMemo(
     () => (imovel ? analisarAlteracaoImovel(imovel, DEMO_CAMADAS, 'offline-demo') : null),
     [imovel],
   );
 
-  // Produtor solicita a visita/conferência do técnico (proativa).
   const handleSolicitarVisita = useCallback(() => {
     if (!imovel) return;
     const r = alteracaoResumo?.relatorio;
@@ -224,7 +206,6 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
     ]);
   }, [imovel, alteracaoResumo, withAction]);
 
-  // ---- Estado: carregando ----
   if (loadingImovel) {
     return (
       <Screen title="Revisão" subtitle="Confira, exporte e envie">
@@ -236,7 +217,6 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
     );
   }
 
-  // ---- Estado: imóvel não encontrado ----
   if (!imovel) {
     return (
       <Screen title="Revisão" subtitle="Confira, exporte e envie">
@@ -256,7 +236,6 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
 
   const points = imovel.geometry.points;
 
-  // ---- Estado: demarcação incompleta ----
   if (points.length < 3) {
     return (
       <Screen title="Revisão" subtitle="Confira, exporte e envie">
@@ -276,7 +255,6 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
     );
   }
 
-  // ---- Dados derivados ----
   const validation = validatePerimeter(points);
   const area = areaHectares(points).toFixed(4);
   const perim = Number(perimeterM(points).toFixed(0)).toLocaleString('pt-BR');
@@ -291,7 +269,6 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
       <WizardSteps active={3} />
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
 
-        {/* --- Dados do Imóvel --- */}
         <Card style={s.card}>
           <SectionTitle>Dados do Imóvel</SectionTitle>
           <InfoRow label="Nome" value={dados.nome} />
@@ -304,7 +281,6 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
           ) : null}
         </Card>
 
-        {/* --- Produtor --- */}
         <Card style={s.card}>
           <SectionTitle>Produtor</SectionTitle>
           <InfoRow label="Nome" value={produtor.nome} />
@@ -312,7 +288,6 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
           <InfoRow label="CPF / CNPJ" value={cpfDisplay} />
         </Card>
 
-        {/* --- Medidas --- */}
         <Card style={s.card}>
           <SectionTitle>Medidas do imóvel</SectionTitle>
           <View style={s.statsRow}>
@@ -324,7 +299,6 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
           </View>
         </Card>
 
-        {/* --- Documentos --- */}
         <Card style={s.card}>
           <SectionTitle>
             {`Documentos anexados (${documentos.length})`}
@@ -343,7 +317,6 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
           )}
         </Card>
 
-        {/* --- Validação geométrica --- */}
         {(validation.problemas.length > 0 || validation.avisos.length > 0) ? (
           <Card style={s.card}>
             <SectionTitle>Validação do contorno</SectionTitle>
@@ -362,7 +335,6 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
           </Card>
         ) : null}
 
-        {/* --- Exportar / Compartilhar --- */}
         <Card style={s.card}>
           <SectionTitle>Exportar / Compartilhar</SectionTitle>
           <View style={s.btnRow}>
@@ -388,7 +360,6 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
           </View>
         </Card>
 
-        {/* --- Análise Ambiental --- */}
         <Card style={s.card}>
           <SectionTitle>Análise Ambiental</SectionTitle>
           {analiseResumo === null ? (
@@ -431,7 +402,6 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
           )}
         </Card>
 
-        {/* --- Comparação com registro anterior --- */}
         {alteracaoResumo && (
           <Card style={s.card}>
             <SectionTitle>Comparação com registro anterior</SectionTitle>
@@ -472,7 +442,6 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
               </>
             )}
 
-            {/* Solicitar visita/conferência do técnico (proativa do produtor) */}
             {imovel.solicitacaoVisita ? (
               <View style={s.visitaFeita}>
                 <Text style={s.visitaFeitaText}>
@@ -493,7 +462,6 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
           </Card>
         )}
 
-        {/* --- Envio --- */}
         <View style={s.submitSection}>
           {!validation.ok ? (
             <Text style={s.blockMsg}>
@@ -520,10 +488,6 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Estilos
-// ---------------------------------------------------------------------------
-
 const s = StyleSheet.create({
   scroll: {
     padding: 16,
@@ -533,7 +497,6 @@ const s = StyleSheet.create({
     marginBottom: 12,
   },
 
-  // Estados de erro / loading
   center: {
     flex: 1,
     alignItems: 'center',
@@ -562,7 +525,6 @@ const s = StyleSheet.create({
     lineHeight: 20,
   },
 
-  // Linha de informação (label + valor)
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -585,7 +547,6 @@ const s = StyleSheet.create({
     paddingLeft: 12,
   },
 
-  // Stats
   statsRow: {
     flexDirection: 'row',
     marginTop: 6,
@@ -594,7 +555,6 @@ const s = StyleSheet.create({
     width: 8,
   },
 
-  // Documentos
   docRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -615,7 +575,6 @@ const s = StyleSheet.create({
     fontStyle: 'italic',
   },
 
-  // Validação
   validRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -633,7 +592,6 @@ const s = StyleSheet.create({
     fontWeight: '700',
   },
 
-  // Botões
   btnRow: {
     marginTop: 10,
   },
@@ -650,7 +608,6 @@ const s = StyleSheet.create({
     lineHeight: 18,
   },
 
-  // Análise ambiental resumida
   analiseBannerCritico: {
     backgroundColor: '#fce8e7',
     borderRadius: 10,
@@ -699,7 +656,6 @@ const s = StyleSheet.create({
     marginTop: 4,
   },
 
-  // Comparação com registro anterior
   cmpOk: {
     fontSize: 13,
     color: colors.verde,

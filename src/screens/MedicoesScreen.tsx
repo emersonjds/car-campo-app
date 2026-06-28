@@ -1,4 +1,3 @@
-// Hub de Medições (produtor) — lista imóveis + acesso ao fluxo de demarcação.
 // Analista cai em ValidacaoScreen pela mesma rota 'medicoes' (ver Router.tsx).
 import { useCallback, useEffect, useState } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -18,7 +17,6 @@ export function MedicoesScreen() {
   useEffect(() => { load(); }, [load]);
 
   function abrirImovel(im: Imovel) {
-    // Se já tem polígono fechado → revisão; senão → tela de demarcação.
     navigate(
       im.geometry.points.length >= 3
         ? { name: 'revisao',    imovelId: im.id }

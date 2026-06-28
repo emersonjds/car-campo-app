@@ -1,4 +1,3 @@
-// Dashboard do Produtor — CAR Campo v2 (AgroMedição).
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   FlatList,
@@ -22,8 +21,6 @@ import { text } from '../theme/typography';
 import { listImoveis } from '../lib/store';
 import type { LngLat } from '../lib/geo';
 import type { Imovel } from '../types';
-
-// ── helpers ────────────────────────────────────────────────────────────────────
 
 function fmtData(ms: number): string {
   return new Date(ms).toLocaleDateString('pt-BR', {
@@ -69,7 +66,6 @@ function regionForPoints(points: LngLat[]) {
   };
 }
 
-/** Hero do card: satélite real do terreno, estático (sem gestos), com o perímetro. */
 function TerrenoHero({ points }: { points: LngLat[] }) {
   const region = regionForPoints(points);
   return (
@@ -105,7 +101,6 @@ function resolveChip(im: Imovel): ChipStatus {
   return im.status === 'enviado' ? 'info' : 'aviso';
 }
 
-/** Card de um imóvel — usado no carrossel horizontal "Meus Terrenos". */
 function TerrenoCard({ im, width, onPress }: { im: Imovel; width: number; onPress: () => void }) {
   return (
     <TouchableOpacity activeOpacity={0.9} onPress={onPress} accessibilityRole="button" accessibilityLabel={`Ver detalhes de ${im.imovel.nome}`}>
@@ -151,7 +146,6 @@ function TerrenoCard({ im, width, onPress }: { im: Imovel; width: number; onPres
   );
 }
 
-// Botão de ação com ícone — exclusivo do dashboard.
 // ponytail: mantido local; exportar para ui/index quando outra tela precisar.
 function ActionBtn({
   icon,
@@ -184,8 +178,6 @@ function ActionBtn({
   );
 }
 
-// ── Tela ───────────────────────────────────────────────────────────────────────
-
 export function HomeScreen() {
   const { navigate, switchTab } = useNav();
   const { sessao } = useAuth();
@@ -200,7 +192,6 @@ export function HomeScreen() {
   const primario = imoveis[0] ?? null;
   // Documentos do imóvel principal, limitado a 3 para não sobrecarregar.
   const docs = primario?.documentos.slice(0, 3) ?? [];
-  // Histórico: imóveis com geometria demarcada.
   const medicoes = imoveis.filter((im) => im.geometry.points.length >= 3);
 
   // Carrossel "Meus Terrenos" — largura proporcional à tela, com peek do próximo.
@@ -218,7 +209,6 @@ export function HomeScreen() {
         contentContainerStyle={s.scroll}
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Saudação ───────────────────────────────────────── */}
         <View style={s.greeting}>
           <Text style={s.greetingSub}>Bem-vindo ao seu painel,</Text>
           <Text style={s.greetingName}>
@@ -233,7 +223,6 @@ export function HomeScreen() {
           />
         ) : (
           <>
-            {/* ── Meus Terrenos ───────────────────────────────── */}
             <View style={s.sectionHeader}>
               <Text style={s.sectionTitle}>Meus Terrenos</Text>
               {imoveis.length > 1 && (
@@ -275,7 +264,6 @@ export function HomeScreen() {
                   style={s.carousel}
                   contentContainerStyle={s.carouselContent}
                 />
-                {/* Pontinhos indicadores de página */}
                 <View style={s.dots}>
                   {imoveis.map((im, i) => (
                     <View key={im.id} style={[s.dot, i === terrenoIdx && s.dotActive]} />
@@ -284,7 +272,6 @@ export function HomeScreen() {
               </>
             )}
 
-            {/* ── Ações Rápidas ────────────────────────────────── */}
             <Text style={[s.sectionTitle, s.sectionMt]}>Ações Rápidas</Text>
             <ActionBtn
               icon="locate-outline"
@@ -309,7 +296,6 @@ export function HomeScreen() {
               }
             />
 
-            {/* ── Documentos Recentes ──────────────────────────── */}
             <Text style={[s.sectionTitle, s.sectionMt]}>Documentos Recentes</Text>
 
             {docs.length === 0 ? (
@@ -355,7 +341,6 @@ export function HomeScreen() {
               </Card>
             )}
 
-            {/* ── Histórico de Medições ────────────────────────── */}
             <Text style={[s.sectionTitle, s.sectionMt]}>Histórico de Medições</Text>
 
             {medicoes.length === 0 ? (
@@ -411,17 +396,13 @@ export function HomeScreen() {
   );
 }
 
-// ── Estilos ────────────────────────────────────────────────────────────────────
-
 const s = StyleSheet.create({
   scroll: { padding: 16, flexGrow: 1 },
 
-  // Saudação
   greeting:     { marginBottom: 20 },
   greetingSub:  { ...text.body, color: colors.mutedText },
   greetingName: { ...text.headline, color: colors.inkText, marginTop: 2 },
 
-  // Cabeçalho de seção
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -455,7 +436,6 @@ const s = StyleSheet.create({
   terrenoNome:  { ...text.headlineSm, fontSize: 18, lineHeight: 23, color: colors.inkText, flexShrink: 1 },
   terrenoLoc:   { ...text.caption, color: colors.mutedText, marginTop: 2 },
 
-  // Bloco de hectares compacto (substitui o MetricBlock grande).
   hectaresBox: {
     backgroundColor: colors.verdeBg,
     borderRadius: 12,
@@ -466,7 +446,6 @@ const s = StyleSheet.create({
   hectaresLbl: { fontSize: 10, fontWeight: '700', color: colors.mutedText, letterSpacing: 0.5 },
   hectaresVal: { fontSize: 20, fontWeight: '800', color: colors.inkText, marginTop: 1 },
 
-  // Linha Solo / Última Medição / CAR
   metaRow: {
     flexDirection: 'row',
     paddingHorizontal: 14,
@@ -480,7 +459,6 @@ const s = StyleSheet.create({
   metaLbl: { ...text.caption, color: colors.mutedText, marginBottom: 2 },
   metaVal: { ...text.bodySemibold, color: colors.inkText },
 
-  // Ações Rápidas
   actionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -506,7 +484,6 @@ const s = StyleSheet.create({
   actionLabel:        { ...text.bodySemibold, color: colors.inkText, flex: 1 },
   actionLabelPrimary: { color: colors.branco },
 
-  // Documentos Recentes
   divider: { height: 1, backgroundColor: colors.line, marginVertical: 10 },
   docRow: {
     flexDirection: 'row',
@@ -524,7 +501,6 @@ const s = StyleSheet.create({
     paddingVertical: 8,
   },
 
-  // Histórico de Medições
   historicoCard: { marginBottom: 10 },
   historicoHead: {
     flexDirection: 'row',

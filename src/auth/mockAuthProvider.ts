@@ -1,6 +1,3 @@
-// Implementação MOCK do AuthProvider para a demo do hackathon.
-// gov.br: resolve uma identidade demo com selo de confiabilidade.
-// matrícula: valida formato + lista mock de analistas.
 import type { AuthProvider } from './AuthProvider';
 import type { Sessao } from './types';
 import { clearSession, loadSession, saveSession } from './secureSession';
@@ -59,7 +56,6 @@ export const mockAuthProvider: AuthProvider = {
       // Reutiliza o fluxo gov.br com CPF de demo — sem pedir credenciais.
       return mockAuthProvider.loginGovBr('00000000000');
     }
-    // Analista: sessão mock com o primeiro registro da lista.
     const sessao: Sessao = {
       perfil: 'analista',
       method: 'matricula',

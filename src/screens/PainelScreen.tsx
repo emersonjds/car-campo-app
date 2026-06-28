@@ -1,4 +1,3 @@
-// Painel do Analista — redesign AgroMedição v2 (A1).
 // Dados reais do store local (offline-first); sem chamadas a motores pesados aqui —
 // usa alertaDivergencia (já persistido pelo produtor) para não travar a UI.
 // ponytail: alertaDivergencia é o campo certo; analisarAlteracaoImovel fica no lab.
@@ -11,8 +10,6 @@ import { Card, SectionTitle, StatusChip } from '../ui';
 import { colors } from '../theme/colors';
 import { listImoveis } from '../lib/store';
 import type { Imovel } from '../types';
-
-// ─── helpers ──────────────────────────────────────────────────────────────────
 
 const DIAS_SEMANA = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'] as const;
 
@@ -35,8 +32,6 @@ function tempoAtras(ts: number): string {
   const dias = Math.floor(d / 86_400_000);
   return dias === 1 ? 'Ontem' : `Há ${dias}d`;
 }
-
-// ─── componente ───────────────────────────────────────────────────────────────
 
 export function PainelScreen() {
   const { navigate } = useNav();
@@ -93,7 +88,6 @@ export function PainelScreen() {
     <Screen title="Painel do Analista" subtitle={subtitulo} showBack={false}>
       <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
 
-        {/* ── Filtrar + Nova Medição ── */}
         <View style={s.acoes}>
           <TouchableOpacity style={s.btnFiltrar} activeOpacity={0.8}>
             <Ionicons name="filter-outline" size={16} color={colors.inkText} />
@@ -111,7 +105,6 @@ export function PainelScreen() {
 
         {/* Alertas de Divergência agora moram na central de Notificações (sino). */}
 
-        {/* ── Média de Divergência ── */}
         <Card style={s.cardMedia}>
           <Text style={s.mediaLabel}>MÉDIA DE DIVERGÊNCIA</Text>
           <View style={s.mediaRow}>
@@ -129,7 +122,6 @@ export function PainelScreen() {
           </Text>
         </Card>
 
-        {/* ── Pendências de Validação ── */}
         <Card style={s.cardSection}>
           <View style={s.sectionHeader}>
             <Text style={s.sectionTitleText}>Pendências de Validação</Text>
@@ -178,7 +170,6 @@ export function PainelScreen() {
           )}
         </Card>
 
-        {/* ── Visitas Agendadas ── */}
         <Card style={s.cardSection}>
           <View style={s.sectionHeader}>
             <Text style={s.sectionTitleText}>Visitas Agendadas</Text>
@@ -192,7 +183,6 @@ export function PainelScreen() {
             </View>
           </View>
 
-          {/* Mini-calendário */}
           <View style={s.calendario}>
             {semana.map((d, i) => {
               const isHoje =
@@ -211,7 +201,6 @@ export function PainelScreen() {
             })}
           </View>
 
-          {/* Itens de visita */}
           {m.visitasAgendadas.length === 0 ? (
             <Text style={s.emptyText}>Nenhuma visita agendada esta semana.</Text>
           ) : (
@@ -248,7 +237,6 @@ export function PainelScreen() {
         <View style={s.bottomSpacer} />
       </ScrollView>
 
-      {/* Modal Nova Medição: informa o CAR → cai no mapa para medir */}
       <Modal visible={carModal} transparent animationType="slide" onRequestClose={() => setCarModal(false)}>
         <Pressable style={s.mBackdrop} onPress={() => setCarModal(false)}>
           <Pressable style={s.mSheet} onPress={() => {}}>
@@ -287,12 +275,9 @@ export function PainelScreen() {
   );
 }
 
-// ─── estilos ──────────────────────────────────────────────────────────────────
-
 const s = StyleSheet.create({
   content: { padding: 16 },
 
-  // Ações
   acoes: { flexDirection: 'row', gap: 10, marginBottom: 16 },
   btnFiltrar: {
     flexDirection: 'row',
@@ -319,7 +304,6 @@ const s = StyleSheet.create({
   },
   btnNovaMedicaoText: { fontSize: 15, fontWeight: '800', color: colors.branco },
 
-  // Modal Nova Medição (bottom-sheet — mesmo padrão da Conferência)
   mBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
   mSheet: {
     backgroundColor: colors.branco,
@@ -349,7 +333,6 @@ const s = StyleSheet.create({
   mOkDisabled: { opacity: 0.45 },
   mOkTxt: { fontSize: 15, fontWeight: '800', color: colors.branco },
 
-  // Média de Divergência
   cardMedia: { marginBottom: 14 },
   mediaLabel: {
     fontSize: 11,
@@ -367,7 +350,6 @@ const s = StyleSheet.create({
   mediaValue: { fontSize: 38, fontWeight: '800', color: colors.inkText },
   mediaHint: { fontSize: 12, color: colors.mutedText, marginTop: 6 },
 
-  // Seções genéricas
   cardSection: { marginBottom: 14 },
   sectionHeader: {
     flexDirection: 'row',
@@ -377,7 +359,6 @@ const s = StyleSheet.create({
   },
   sectionTitleText: { fontSize: 17, fontWeight: '800', color: colors.ink },
 
-  // Pendências
   pendenciaItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -406,7 +387,6 @@ const s = StyleSheet.create({
   },
   verTodasText: { fontSize: 14, fontWeight: '700', color: colors.primary },
 
-  // Calendário
   calNavRow: { flexDirection: 'row', gap: 8 },
   calendario: {
     flexDirection: 'row',
@@ -428,7 +408,6 @@ const s = StyleSheet.create({
   diaNum: { fontSize: 16, fontWeight: '800', color: colors.inkText, marginTop: 2 },
   diaHojeText: { color: colors.branco },
 
-  // Visitas
   visitaItem: { flexDirection: 'row', gap: 12, marginBottom: 12 },
   visitaBar: { width: 3, borderRadius: 2, backgroundColor: colors.aviso },
   visitaBarOnline: { backgroundColor: colors.tertiary },

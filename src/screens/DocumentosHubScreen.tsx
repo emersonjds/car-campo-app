@@ -1,5 +1,3 @@
-// Hub de Documentos — lista imóveis com Card visual v2.
-// Toque → DocumentosScreen (detalhe por-imóvel). Rota 'documentos-hub'.
 import { useCallback, useEffect, useState } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Screen } from '../app/Screen';
@@ -63,7 +61,6 @@ export function DocumentosHubScreen() {
               accessibilityLabel={`Documentos de ${item.imovel.nome || 'imóvel sem nome'}`}
             >
               <Card style={s.card}>
-                {/* Nome + chip */}
                 <View style={s.cardHeader}>
                   <Text style={s.nome} numberOfLines={1}>
                     {item.imovel.nome || 'Imóvel sem nome'}
@@ -71,12 +68,10 @@ export function DocumentosHubScreen() {
                   <StatusChip status={chip.status} label={chip.label} />
                 </View>
 
-                {/* Localização */}
                 <Text style={s.sub} numberOfLines={1}>
                   {localizacao}
                 </Text>
 
-                {/* Rodapé do card: docs + área */}
                 <View style={s.cardFooter}>
                   <View style={s.docsBadge}>
                     <Text style={s.docsCount}>

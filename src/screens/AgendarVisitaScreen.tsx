@@ -1,8 +1,3 @@
-// Tela completa de agendamento de visita técnica (analista).
-// Mockup: design/analista/02-agendar-visita.png · Spec: A2
-//
-// Fluxo: VisitasScreen → toca "Agendar visita" → navega aqui com imovelId.
-// Persiste em VisitaAgendada (dataVisita, horario, periodo, observacao) via updateImovel.
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
@@ -27,7 +22,6 @@ import { gerarPainelAvisos } from '../lib/conferencia';
 import { DEMO_CAMADAS } from '../lib/refLayers.demo';
 import type { Imovel } from '../types';
 
-// ─── Slots de horário ─────────────────────────────────────────────────────────
 // ponytail: slots hardcoded — não há API de disponibilidade real; trocar por fetch quando tiver.
 const SLOTS = [
   { id: '08:00', label: '08:00 AM', disabled: false },
@@ -38,12 +32,10 @@ const SLOTS = [
   { id: '17:30', label: '05:30 PM', disabled: true },
 ] as const;
 
-/** Deriva período do dia a partir do slot (h < 12 = manhã). */
 function periodoDeSlot(slot: string): 'manha' | 'tarde' {
   return parseInt(slot.split(':')[0]!, 10) < 12 ? 'manha' : 'tarde';
 }
 
-/** "terça-feira, 15 de Outubro" */
 function labelData(ts: number): string {
   const d = new Date(ts);
   const dias = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
@@ -51,8 +43,6 @@ function labelData(ts: number): string {
     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
   return `Para ${dias[d.getDay()]}, ${d.getDate()} de ${meses[d.getMonth()]}`;
 }
-
-// ─── Tela ─────────────────────────────────────────────────────────────────────
 
 export function AgendarVisitaScreen({ imovelId }: { imovelId: string }) {
   const { goBack } = useNav();
@@ -65,7 +55,6 @@ export function AgendarVisitaScreen({ imovelId }: { imovelId: string }) {
   useEffect(() => {
     getImovel(imovelId).then((im) => {
       setImovel(im);
-      // Pré-preenche com agendamento anterior, se houver.
       if (im?.visitaAgendada?.dataVisita) setDataSel(im.visitaAgendada.dataVisita);
       if (im?.visitaAgendada?.horario) setSlotSel(im.visitaAgendada.horario);
       if (im?.visitaAgendada?.observacao) setObs(im.visitaAgendada.observacao);
@@ -101,8 +90,6 @@ export function AgendarVisitaScreen({ imovelId }: { imovelId: string }) {
     }
   }, [imovel, dataSel, slotSel, obs, goBack]);
 
-  // ─── Derivações de exibição ────────────────────────────────────────────────
-
   const nomeLocal = imovel?.imovel.nome || 'Imóvel';
   const endLocal = [imovel?.imovel.municipio, imovel?.imovel.uf].filter(Boolean).join(' · ') || 'Sem localização cadastrada';
 
@@ -120,8 +107,6 @@ export function AgendarVisitaScreen({ imovelId }: { imovelId: string }) {
 
   const podeConfirmar = dataSel != null && slotSel != null && !salvando;
 
-  // ─── Loading ───────────────────────────────────────────────────────────────
-
   if (!imovel) {
     return (
       <Screen title="Agendar Visita" subtitle="Carregando...">
@@ -131,8 +116,6 @@ export function AgendarVisitaScreen({ imovelId }: { imovelId: string }) {
       </Screen>
     );
   }
-
-  // ─── Render ────────────────────────────────────────────────────────────────
 
   return (
     <Screen
@@ -144,7 +127,6 @@ export function AgendarVisitaScreen({ imovelId }: { imovelId: string }) {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Banner de ação ─────────────────────────────────────────────── */}
         <View style={s.banner}>
           <Text style={s.bannerLabel}>AÇÃO NECESSÁRIA</Text>
           <Text style={s.bannerTitulo}>Agendar Visita Técnica</Text>
@@ -153,7 +135,6 @@ export function AgendarVisitaScreen({ imovelId }: { imovelId: string }) {
           </Text>
         </View>
 
-        {/* ── Calendário inline ──────────────────────────────────────────── */}
         <Card style={s.calCard}>
           <CalendarPicker
             value={dataSel}
@@ -162,7 +143,6 @@ export function AgendarVisitaScreen({ imovelId }: { imovelId: string }) {
           />
         </Card>
 
-        {/* ── Observações ────────────────────────────────────────────────── */}
         <Card style={s.section}>
           <Text style={s.sectionLabel}>Observações sobre a Divergência</Text>
           <TextInput
@@ -177,7 +157,6 @@ export function AgendarVisitaScreen({ imovelId }: { imovelId: string }) {
           />
         </Card>
 
-        {/* ── Horários disponíveis ───────────────────────────────────────── */}
         <Card style={s.section}>
           <Text style={s.sectionLabel}>Horários Disponíveis</Text>
           <Text style={s.dataLabel}>
@@ -203,7 +182,6 @@ export function AgendarVisitaScreen({ imovelId }: { imovelId: string }) {
           </View>
         </Card>
 
-        {/* ── Local da visita ─────────────────────────────────────────────── */}
         <View style={s.localCard}>
           <View style={s.localHeader}>
             <Text style={s.localChip}>LOCAL DA VISITA</Text>
@@ -223,7 +201,6 @@ export function AgendarVisitaScreen({ imovelId }: { imovelId: string }) {
           </View>
         </View>
 
-        {/* ── Confirmar ──────────────────────────────────────────────────── */}
         <Button
           label={salvando ? 'Salvando...' : 'Confirmar Agendamento'}
           onPress={confirmar}
@@ -237,13 +214,10 @@ export function AgendarVisitaScreen({ imovelId }: { imovelId: string }) {
   );
 }
 
-// ─── Estilos ─────────────────────────────────────────────────────────────────
-
 const s = StyleSheet.create({
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   scroll: { padding: 16, gap: 14, paddingBottom: 36 },
 
-  // Banner "AÇÃO NECESSÁRIA"
   banner: { paddingVertical: 4 },
   bannerLabel: {
     ...text.label,
@@ -261,7 +235,6 @@ const s = StyleSheet.create({
     lineHeight: 22,
   },
 
-  // Cards de seção
   calCard: { padding: 16 },
   section: { padding: 16, gap: 10 },
   sectionLabel: {
@@ -270,7 +243,6 @@ const s = StyleSheet.create({
     color: colors.ink,
   },
 
-  // TextArea de observações
   textarea: {
     minHeight: 100,
     borderWidth: 1,
@@ -283,14 +255,12 @@ const s = StyleSheet.create({
     backgroundColor: colors.neutral,
   },
 
-  // Label de data selecionada (acima dos slots)
   dataLabel: {
     fontSize: 13,
     color: colors.muted,
     fontWeight: '600',
   },
 
-  // Grade de slots 2×3
   slotsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -329,7 +299,6 @@ const s = StyleSheet.create({
     color: colors.muted,
   },
 
-  // Card LOCAL DA VISITA
   localCard: {
     borderRadius: 16,
     overflow: 'hidden',
@@ -376,7 +345,6 @@ const s = StyleSheet.create({
     fontWeight: '500',
   },
 
-  // Botão confirmar
   btnConfirmar: {
     flex: undefined,
     marginTop: 4,

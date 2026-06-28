@@ -1,4 +1,3 @@
-// Tela intermediária: produtor escolhe qual propriedade vai (re)medir.
 // Exibida quando o usuário toca "Iniciar Nova Medição" e já tem >1 imóvel.
 import { useCallback, useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -52,7 +51,6 @@ export function SelecionarImovelScreen() {
           </TouchableOpacity>
         ))}
 
-        {/* Opção de cadastro de imóvel novo */}
         <TouchableOpacity
           activeOpacity={0.85}
           onPress={() => navigate({ name: 'cadastro' })}
@@ -96,7 +94,6 @@ const s = StyleSheet.create({
   hectaresUnit: { ...text.caption, color: colors.mutedText },
   carNum: { ...text.caption, color: colors.mutedText },
 
-  // Card "Cadastrar novo"
   newCard: { borderStyle: 'dashed', borderColor: colors.primary },
   newIcon: {
     width: 40,

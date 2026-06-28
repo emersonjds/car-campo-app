@@ -1,4 +1,3 @@
-// Notificações — central de alertas e atualizações de campo do analista.
 // Feed multi-tipo agrupado em HOJE / ANTERIORES. Os itens de divergência são
 // derivados de dados reais (alertaDivergencia); os demais são exemplos de demo
 // para ilustrar o fluxo (documento recebido, visita confirmada, sistema, lembrete).

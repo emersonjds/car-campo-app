@@ -1,5 +1,3 @@
-// Hook de simulação de caminhada: anima um avatar percorrendo uma rota demo,
-// emitindo posição suave e acumulando vértices como se fossem capturas GPS.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { distanceM, type LngLat } from '../lib/geo';
 import { DEMO_ROUTES, type DemoRoute } from './routes';
@@ -24,7 +22,6 @@ export interface UseSimulatedWalk {
   setSpeed: (s: 1 | 2 | 4) => void;
 }
 
-// ---------- constantes de animação ----------
 /** Intervalo de tick em ms — ~30 fps. */
 const TICK_MS = 30;
 /**
@@ -35,8 +32,6 @@ const TICK_MS = 30;
 const BASE_STEP_FRACTION = 0.125; // steps/tick @ 1x speed
 const STEP_M = 8; // metros entre pontos densificados
 const ACCURACY_M = 5; // precisão simulada (m)
-
-// ---------- helpers internos ----------
 
 /** Constrói o caminho denso e registra quais índices são vértices originais. */
 function buildWalkData(route: DemoRoute): { path: LngLat[]; vertexIndices: number[] } {
@@ -64,13 +59,10 @@ function buildWalkData(route: DemoRoute): { path: LngLat[]; vertexIndices: numbe
       });
     }
   }
-  // ponto de fechamento
   path.push({ ...vertices[0]!, accuracy: ACCURACY_M });
 
   return { path, vertexIndices };
 }
-
-// ---------- hook ----------
 
 export function useSimulatedWalk(): UseSimulatedWalk {
   const [status, setStatus] = useState<SimStatus>('idle');
@@ -139,7 +131,6 @@ export function useSimulatedWalk(): UseSimulatedWalk {
     }, TICK_MS);
   }, [clearTick]);
 
-  // Limpa o timer ao desmontar
   useEffect(() => {
     return () => {
       clearTick();
@@ -161,7 +152,6 @@ export function useSimulatedWalk(): UseSimulatedWalk {
       nextVertexRef.current = 0;
       accumRef.current = 0;
 
-      // Reseta state
       setPoints([]);
       setProgress(0);
       setAvatar(path[0] ?? null);

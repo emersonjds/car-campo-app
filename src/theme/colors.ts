@@ -1,8 +1,6 @@
-// Paleta AgroMedição — CAR Campo v2.
 // Tokens canônicos do novo design system + aliases para as telas existentes
 // (não remover aliases enquanto a migração de telas estiver em curso).
 export const colors = {
-  // ── Canônicos ──────────────────────────────────────────────────────────────
   primary:   '#2D5A27', // verde principal — botões, cabeçalho, marca
   secondary: '#8B5E3C', // terra/marrom — acento, ícones secundários
   tertiary:  '#00A8E8', // azul — info, precisão L2, links
@@ -21,7 +19,6 @@ export const colors = {
   acrescido: '#f59e0b', // área acrescida
   suprimido: '#2579c7', // área suprimida / hidrografia / APP
 
-  // ── Aliases de compatibilidade (telas existentes usam estes nomes) ─────────
   // ponytail: mantidos como cópias de valor (não referência) para o objeto ser
   // serializável pelo Metro bundler. Remover após a migração completa das telas.
   verde:      '#2D5A27', // → primary

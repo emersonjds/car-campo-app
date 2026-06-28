@@ -1,6 +1,3 @@
-// Componentes de UI compartilhados — CAR Campo v2.
-// Pensados para uso ao ar livre (alvos grandes, contraste alto, legível sob sol)
-// e públicos de baixa familiaridade digital.
 import { Ionicons } from '@expo/vector-icons';
 import { ReactNode } from 'react';
 import {
@@ -15,8 +12,6 @@ import {
   ViewStyle,
 } from 'react-native';
 import { colors } from '../theme/colors';
-
-// ─── Button ───────────────────────────────────────────────────────────────────
 
 type ButtonVariant = 'primary' | 'secondary' | 'inverted' | 'outlined';
 
@@ -90,13 +85,9 @@ export function SecondaryButton({
   return <Button label={label} onPress={onPress} variant="secondary" disabled={disabled} />;
 }
 
-// ─── Card ─────────────────────────────────────────────────────────────────────
-
 export function Card({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
   return <View style={[ui.card, style]}>{children}</View>;
 }
-
-// ─── SearchInput ──────────────────────────────────────────────────────────────
 
 export function SearchInput({
   value,
@@ -120,8 +111,6 @@ export function SearchInput({
     </View>
   );
 }
-
-// ─── StatusChip ───────────────────────────────────────────────────────────────
 
 type ChipStatus = 'regularizado' | 'critico' | 'aviso' | 'info';
 
@@ -147,8 +136,6 @@ export function StatusChip({ status, label }: { status: ChipStatus; label?: stri
   );
 }
 
-// ─── MetricBlock ──────────────────────────────────────────────────────────────
-
 export function MetricBlock({
   label,
   value,
@@ -166,8 +153,6 @@ export function MetricBlock({
     </View>
   );
 }
-
-// ─── CircleAction ─────────────────────────────────────────────────────────────
 
 type CircleTone = 'primary' | 'secondary' | 'tertiary' | 'danger';
 
@@ -199,8 +184,6 @@ export function CircleAction({
     </TouchableOpacity>
   );
 }
-
-// ─── FAB ──────────────────────────────────────────────────────────────────────
 
 export function FAB({
   onPress,
@@ -291,10 +274,7 @@ export function EmptyState({ title, hint }: { title: string; hint?: string }) {
   );
 }
 
-// ─── StyleSheet ───────────────────────────────────────────────────────────────
-
 export const ui = StyleSheet.create({
-  // Button
   btn:            { minHeight: 52, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flex: 1 },
   btnPrimary:     { backgroundColor: colors.primary },
   btnPrimaryText: { color: colors.branco, fontWeight: '800', fontSize: 16 },
@@ -306,29 +286,23 @@ export const ui = StyleSheet.create({
   btnOutlinedText: { color: colors.primary, fontWeight: '800', fontSize: 16 },
   btnDisabled:    { opacity: 0.45 },
 
-  // Card
   card: { backgroundColor: colors.branco, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: colors.line },
 
-  // SearchInput
   searchWrap:  { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.branco, borderWidth: 1, borderColor: colors.line, borderRadius: 12, paddingHorizontal: 12, minHeight: 46 },
   searchIcon:  { marginRight: 8 },
   searchInput: { flex: 1, fontSize: 15, color: colors.ink },
 
-  // StatusChip
   chip:     { alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
   chipText: { fontSize: 12, fontWeight: '700' },
 
-  // MetricBlock
   metricBlock:    { backgroundColor: colors.verdeBg, borderRadius: 12, padding: 14, alignItems: 'center' },
   metricLabel:    { fontSize: 11, fontWeight: '700', color: colors.mutedText, textTransform: 'uppercase', letterSpacing: 0.6 },
   metricValue:    { fontSize: 26, fontWeight: '800', color: colors.inkText, marginTop: 2 },
   metricSublabel: { fontSize: 11, color: colors.mutedText, marginTop: 2 },
 
-  // CircleAction / FAB
   circle: { alignItems: 'center', justifyContent: 'center' },
   fab:    { position: 'absolute', bottom: 24, right: 24, width: 60, height: 60, borderRadius: 30, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', elevation: 6, shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.2, shadowRadius: 6 },
 
-  // Legacy
   sectionTitle: { fontSize: 17, fontWeight: '800', color: colors.ink, marginBottom: 10 },
   label:        { fontSize: 13, fontWeight: '700', color: colors.muted, marginBottom: 6 },
   fieldWrap:    { marginBottom: 14 },

@@ -1,6 +1,3 @@
-// Análise de Confrontação — visão do PRODUTOR (P3).
-// Reutiliza a lógica de lib/alteracao.ts + lib/delta.ts e apresenta
-// o resultado no layout do mockup design/produtor/03-analise-confrontacao.png.
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -93,14 +90,12 @@ export function AlteracaoDetalheScreen({ imovelId }: { imovelId: string }) {
 
   return (
     <Screen title="Análise de Confrontação" subtitle={imovel.imovel.nome || 'Imóvel sem nome'}>
-      {/* Mapa topo — full-bleed, sem padding lateral */}
       <View style={s.mapContainer}>
         <MapView
           style={StyleSheet.absoluteFill}
           initialRegion={region}
           mapType="terrain"
         >
-          {/* Perímetro do produtor — azul (tertiary), conforme A1 */}
           {novoCoords.length >= 3 && (
             <Polygon
               coordinates={novoCoords}
@@ -109,7 +104,6 @@ export function AlteracaoDetalheScreen({ imovelId }: { imovelId: string }) {
               strokeWidth={2}
             />
           )}
-          {/* Dados Governo (baseline CAR) — vermelho sem preenchimento, conforme A1 */}
           {showDadosGoverno && anteriorCoords.length >= 3 && (
             <Polygon
               coordinates={anteriorCoords}
@@ -120,7 +114,6 @@ export function AlteracaoDetalheScreen({ imovelId }: { imovelId: string }) {
           )}
         </MapView>
 
-        {/* Banner de status sobrepostos ao mapa */}
         {bannerText !== null && (
           <View style={[s.statusBanner, { borderColor: bannerColor }]}>
             <Ionicons name="alert-circle-outline" size={15} color={bannerColor} />
@@ -128,7 +121,6 @@ export function AlteracaoDetalheScreen({ imovelId }: { imovelId: string }) {
           </View>
         )}
 
-        {/* Toggle "Dados Governo" — canto inferior esquerdo do mapa */}
         <TouchableOpacity
           style={s.toggleRow}
           onPress={() => setShowDadosGoverno((v) => !v)}
@@ -141,14 +133,12 @@ export function AlteracaoDetalheScreen({ imovelId }: { imovelId: string }) {
         </TouchableOpacity>
       </View>
 
-      {/* Conteúdo rolável */}
       <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
         <Text style={s.headline}>Análise de Confrontação</Text>
         <Text style={s.headlineSub}>
           Relatório gerado automaticamente via análise geoespacial multitemporal.
         </Text>
 
-        {/* Área Produtor */}
         <Card>
           <Text style={s.areaLabel}>ÁREA PRODUTOR</Text>
           <View style={s.areaRow}>
@@ -163,7 +153,6 @@ export function AlteracaoDetalheScreen({ imovelId }: { imovelId: string }) {
           </View>
         </Card>
 
-        {/* Área Governo */}
         <Card>
           <Text style={s.areaLabel}>ÁREA GOVERNO</Text>
           <View style={s.areaRow}>
@@ -175,7 +164,6 @@ export function AlteracaoDetalheScreen({ imovelId }: { imovelId: string }) {
           </Text>
         </Card>
 
-        {/* Métricas de delta */}
         <Card>
           <Text style={s.sectionLabel}>DIFERENÇA DETECTADA</Text>
           <View style={s.metricsRow}>
@@ -203,7 +191,6 @@ export function AlteracaoDetalheScreen({ imovelId }: { imovelId: string }) {
           )}
         </Card>
 
-        {/* Recomendação */}
         <Card>
           <Text style={s.sectionLabel}>RECOMENDAÇÃO</Text>
           <Text style={s.recomendacao}>{r.recomendacao}</Text>
@@ -217,8 +204,6 @@ export function AlteracaoDetalheScreen({ imovelId }: { imovelId: string }) {
     </Screen>
   );
 }
-
-// ─── Coluna de métrica de delta ───────────────────────────────────────────────
 
 function DeltaCol({
   label,
@@ -240,13 +225,10 @@ function DeltaCol({
   );
 }
 
-// ─── Estilos ─────────────────────────────────────────────────────────────────
-
 const s = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   semAlt: { ...text.body, color: colors.mutedText, textAlign: 'center' },
 
-  // Mapa
   mapContainer: { height: MAP_HEIGHT },
 
   statusBanner: {
@@ -291,12 +273,10 @@ const s = StyleSheet.create({
   checkboxOn: { backgroundColor: colors.critico, borderColor: colors.critico },
   toggleLabel: { fontSize: 13, fontWeight: '600', color: colors.inkText },
 
-  // Conteúdo
   content:     { padding: 16, paddingBottom: 32, gap: 12 },
   headline:    { ...text.headline, color: colors.primary, marginBottom: 2 },
   headlineSub: { ...text.body, color: colors.mutedText, marginBottom: 4 },
 
-  // Cards de área
   areaLabel:    { ...text.label, color: colors.mutedText, marginBottom: 4 },
   areaRow:      { flexDirection: 'row', alignItems: 'flex-end' },
   areaValue:    { fontSize: 40, fontWeight: '800', color: colors.inkText, lineHeight: 46 },
@@ -305,7 +285,6 @@ const s = StyleSheet.create({
   precisionText:{ fontSize: 13, fontWeight: '600', color: colors.tertiary },
   baselineNote: { ...text.caption, color: colors.mutedText, marginTop: 6 },
 
-  // Card de diferença
   sectionLabel:  { ...text.label, color: colors.mutedText, marginBottom: 10 },
   metricsRow:    { flexDirection: 'row', justifyContent: 'space-between' },
   deltaCol:      { flex: 1, alignItems: 'center' },

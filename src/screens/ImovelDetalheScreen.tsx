@@ -1,5 +1,3 @@
-// Tela de detalhe de imóvel — vista pelo produtor ao tocar num card no dashboard.
-// Mostra dados cadastrais, medidas, mapa de satélite e histórico de visita técnica.
 import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import MapView, { Polygon } from 'react-native-maps';
@@ -12,9 +10,6 @@ import { Card, SecondaryButton, SectionTitle, StatusChip } from '../ui';
 import { colors } from '../theme/colors';
 import type { Imovel } from '../types';
 
-// ── helpers ────────────────────────────────────────────────────────────────────
-
-// Copiado de HomeScreen — enquadra o polígono com 1.6× de folga.
 function regionForPoints(points: LngLat[]) {
   if (points.length === 0) {
     return { latitude: -12.545, longitude: -55.711, latitudeDelta: 0.02, longitudeDelta: 0.02 };
@@ -31,7 +26,6 @@ function regionForPoints(points: LngLat[]) {
   };
 }
 
-// Copiado de HomeScreen — mesma lógica de derivação de status para o chip.
 type ChipStatus = 'regularizado' | 'aviso' | 'critico' | 'info';
 function resolveChip(im: Imovel): ChipStatus {
   if (im.validacao?.status === 'aprovado') return 'regularizado';
@@ -44,7 +38,6 @@ function fmtDataLonga(ms: number): string {
   return new Date(ms).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
 }
 
-// Linha rótulo/valor — mesmo padrão de RevisaoScreen.
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <View style={s.infoRow}>
@@ -53,8 +46,6 @@ function InfoRow({ label, value }: { label: string; value: string }) {
     </View>
   );
 }
-
-// ── tela ───────────────────────────────────────────────────────────────────────
 
 export function ImovelDetalheScreen({ imovelId }: { imovelId: string }) {
   const { navigate } = useNav();
@@ -71,7 +62,6 @@ export function ImovelDetalheScreen({ imovelId }: { imovelId: string }) {
     return () => { alive = false; };
   }, [imovelId]);
 
-  // ── loading ──
   if (loading) {
     return (
       <Screen title="Carregando" subtitle="Detalhes da propriedade">
@@ -82,7 +72,6 @@ export function ImovelDetalheScreen({ imovelId }: { imovelId: string }) {
     );
   }
 
-  // ── não encontrado ──
   if (!im) {
     return (
       <Screen title="Imóvel" subtitle="Detalhes da propriedade">
@@ -104,7 +93,6 @@ export function ImovelDetalheScreen({ imovelId }: { imovelId: string }) {
     <Screen title={dados.nome} subtitle="Detalhes da propriedade">
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
 
-        {/* ── Hero satélite ── */}
         <View style={s.heroWrap}>
           <MapView
             style={s.mapa}
@@ -131,7 +119,6 @@ export function ImovelDetalheScreen({ imovelId }: { imovelId: string }) {
           </View>
         </View>
 
-        {/* ── Dados do imóvel ── */}
         <Card style={s.card}>
           <SectionTitle>Dados do Imóvel</SectionTitle>
 
@@ -153,7 +140,6 @@ export function ImovelDetalheScreen({ imovelId }: { imovelId: string }) {
           ) : null}
         </Card>
 
-        {/* ── Última medição ── */}
         <Card style={s.card}>
           <SectionTitle>Última medição</SectionTitle>
           <InfoRow label="Data" value={fmtDataLonga(im.updatedAt)} />
@@ -165,7 +151,6 @@ export function ImovelDetalheScreen({ imovelId }: { imovelId: string }) {
           </View>
         </Card>
 
-        {/* ── Validação aprovada (quando existir) ── */}
         {validacao?.status === 'aprovado' && (
           <View style={s.validacaoOk}>
             <Ionicons name="checkmark-circle" size={20} color={colors.verde} />
@@ -180,7 +165,6 @@ export function ImovelDetalheScreen({ imovelId }: { imovelId: string }) {
           </View>
         )}
 
-        {/* ── Acompanhamento técnico ── */}
         <Card style={s.card}>
           <SectionTitle>Acompanhamento técnico</SectionTitle>
 
@@ -234,23 +218,18 @@ export function ImovelDetalheScreen({ imovelId }: { imovelId: string }) {
   );
 }
 
-// ── estilos ────────────────────────────────────────────────────────────────────
-
 const s = StyleSheet.create({
   scroll: { padding: 16, paddingBottom: 40 },
   card:   { marginBottom: 12 },
 
-  // Estados de loading / erro
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 28, gap: 12 },
   errorTitle: { fontSize: 17, fontWeight: '800', color: colors.ink, textAlign: 'center', marginTop: 4 },
   mutedText:  { fontSize: 14, color: colors.muted, textAlign: 'center', lineHeight: 20 },
 
-  // Hero satélite
   heroWrap:   { borderRadius: 16, overflow: 'hidden', marginBottom: 12 },
   mapa:       { height: 170 },
   chipOverlay: { position: 'absolute', top: 10, right: 10 },
 
-  // Linha label/valor (igual RevisaoScreen)
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -262,7 +241,6 @@ const s = StyleSheet.create({
   infoLabel: { fontSize: 12, fontWeight: '700', color: colors.muted, flex: 1 },
   infoValue: { fontSize: 13, color: colors.ink, textAlign: 'right', flex: 2, paddingLeft: 12 },
 
-  // CAR em destaque
   carDestaque: {
     backgroundColor: colors.verdeBg,
     borderRadius: 10,
@@ -274,10 +252,8 @@ const s = StyleSheet.create({
   carLabel:   { fontSize: 11, fontWeight: '700', color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.6 },
   carNumero:  { fontSize: 15, fontWeight: '800', color: colors.inkText, marginTop: 4, lineHeight: 20 },
 
-  // Botão
   btnRow: { marginTop: 10 },
 
-  // Validação aprovada
   validacaoOk: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -293,7 +269,6 @@ const s = StyleSheet.create({
   validacaoTitulo: { fontSize: 13, fontWeight: '800', color: colors.verde },
   validacaoSub:    { fontSize: 12, color: colors.muted, marginTop: 2 },
 
-  // Técnico responsável
   tecnicoRow:  { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
   tecnicoIcone: {
     width: 40, height: 40, borderRadius: 20,
@@ -304,11 +279,9 @@ const s = StyleSheet.create({
   tecnicoNome: { fontSize: 15, fontWeight: '800', color: colors.inkText },
   tecnicoSub:  { fontSize: 12, color: colors.muted, marginTop: 2 },
 
-  // Observação (texto longo)
   observacaoWrap:  { paddingTop: 10 },
   observacaoTexto: { fontSize: 13, color: colors.ink, lineHeight: 20, marginTop: 4 },
 
-  // Estado vazio de visita
   semVisita:      { alignItems: 'center', paddingVertical: 20, gap: 10 },
   semVisitaTexto: { fontSize: 14, color: colors.muted, textAlign: 'center', lineHeight: 20 },
 });

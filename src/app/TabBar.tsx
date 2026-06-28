@@ -1,6 +1,3 @@
-// Barra de navegação inferior — 4 abas por persona.
-//  • Produtor rural: Dashboard · Medições · Documentos · Perfil
-//  • Analista de campo: Painel · Medições · Documentos · Perfil
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -54,7 +51,6 @@ export function TabBar() {
             accessibilityState={{ selected: active }}
             accessibilityLabel={tab.label}
           >
-            {/* Pill verde ao redor do ícone quando ativo */}
             <View style={active ? s.pill : s.pillEmpty}>
               <Ionicons
                 name={active ? tab.iconActive : tab.icon}
