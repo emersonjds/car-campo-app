@@ -44,7 +44,7 @@ export const DEMO_IMOVEIS_SEED: NovoImovel[] = [
     perfil: 'produtor',
     produtor: {
       nome: 'José da Silva',
-      cpfCnpj: '123.456.789-00',
+      cpfCnpj: '111.111.111-11',
       telefone: '66999990001',
     },
     imovel: {
@@ -91,7 +91,7 @@ export const DEMO_IMOVEIS_SEED: NovoImovel[] = [
     perfil: 'produtor',
     produtor: {
       nome: 'José da Silva',
-      cpfCnpj: '123.456.789-00',
+      cpfCnpj: '111.111.111-11',
       telefone: '66999990001',
     },
     imovel: {
@@ -111,7 +111,7 @@ export const DEMO_IMOVEIS_SEED: NovoImovel[] = [
     perfil: 'produtor',
     produtor: {
       nome: 'José da Silva',
-      cpfCnpj: '123.456.789-00',
+      cpfCnpj: '111.111.111-11',
       telefone: '66999990001',
     },
     imovel: {

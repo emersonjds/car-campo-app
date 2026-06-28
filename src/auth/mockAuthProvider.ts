@@ -19,8 +19,9 @@ export const mockAuthProvider: AuthProvider = {
   },
 
   async loginPersona(_perfil: 'produtor') {
-    // Demo: login direto como produtor rural via gov.br sem pedir CPF.
-    return mockAuthProvider.loginGovBr('00000000000');
+    // Demo: login direto como produtor rural via gov.br. CPF fixo "tudo 1"
+    // para simplificar a consulta web na demonstração.
+    return mockAuthProvider.loginGovBr('11111111111');
   },
 
   async logout() {
