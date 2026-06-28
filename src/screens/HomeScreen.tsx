@@ -106,8 +106,9 @@ function resolveChip(im: Imovel): ChipStatus {
 }
 
 /** Card de um imóvel — usado no carrossel horizontal "Meus Terrenos". */
-function TerrenoCard({ im, width }: { im: Imovel; width: number }) {
+function TerrenoCard({ im, width, onPress }: { im: Imovel; width: number; onPress: () => void }) {
   return (
+    <TouchableOpacity activeOpacity={0.9} onPress={onPress} accessibilityRole="button" accessibilityLabel={`Ver detalhes de ${im.imovel.nome}`}>
     <Card style={[s.terrenoCard, { width }]}>
       <View style={s.satWrap}>
         <TerrenoHero points={im.geometry.points} />
@@ -146,6 +147,7 @@ function TerrenoCard({ im, width }: { im: Imovel; width: number }) {
         </View>
       </View>
     </Card>
+    </TouchableOpacity>
   );
 }
 
@@ -246,13 +248,23 @@ export function HomeScreen() {
             </View>
 
             {imoveis.length === 1 ? (
-              <TerrenoCard im={imoveis[0]!} width={CARD_W} />
+              <TerrenoCard
+                im={imoveis[0]!}
+                width={CARD_W}
+                onPress={() => navigate({ name: 'imovel-detalhe', imovelId: imoveis[0]!.id })}
+              />
             ) : (
               <>
                 <FlatList
                   data={imoveis}
                   keyExtractor={(im) => im.id}
-                  renderItem={({ item }) => <TerrenoCard im={item} width={CARD_W} />}
+                  renderItem={({ item }) => (
+                    <TerrenoCard
+                      im={item}
+                      width={CARD_W}
+                      onPress={() => navigate({ name: 'imovel-detalhe', imovelId: item.id })}
+                    />
+                  )}
                   horizontal
                   showsHorizontalScrollIndicator={false}
                   snapToInterval={CARD_W + GAP}
@@ -278,7 +290,9 @@ export function HomeScreen() {
               icon="locate-outline"
               label="Iniciar Nova Medição"
               primary
-              onPress={() => navigate({ name: 'cadastro' })}
+              onPress={() =>
+                navigate(imoveis.length > 1 ? { name: 'selecionar-imovel' } : { name: 'cadastro' })
+              }
             />
             <ActionBtn
               icon="document-text-outline"
