@@ -22,6 +22,7 @@ import { Screen } from '../app/Screen';
 import { useNav } from '../app/navigation';
 import { areaHectares, perimeterM, simplifyRDP, type LngLat } from '../lib/geo';
 import { getImovel, updateImovel } from '../lib/store';
+import { croquiSnapshotRegion } from '../lib/export';
 import { DEMO_ROUTES } from '../sim/routes';
 import { useSimulatedWalk } from '../sim/useSimulatedWalk';
 import { usePerimeterTracker } from '../hooks/usePerimeterTracker';
@@ -288,8 +289,30 @@ export function DemarcacaoScreen({ imovelId }: { imovelId: string }) {
   const doSave = useCallback(async () => {
     setSaving(true);
     try {
+      // Print do mapa real (Apple Maps) na MESMA região do croqui — vira o fundo
+      // do laudo, pra ser a mesma imagem que o produtor mediu. O polígono é
+      // redesenhado por cima no PDF (alinhado ao satBbox).
+      let croquiSnapshot: string | undefined;
+      try {
+        const region = croquiSnapshotRegion(activePoints);
+        if (mapRef.current && region) {
+          const b64 = await mapRef.current.takeSnapshot({
+            width: 840,
+            height: 560,
+            region,
+            format: 'jpg',
+            quality: 0.85,
+            result: 'base64',
+          });
+          if (b64) croquiSnapshot = `data:image/jpeg;base64,${b64}`;
+        }
+      } catch {
+        /* snapshot falhou — o PDF cai no satélite Esri */
+      }
+
       const updated = await updateImovel(imovelId, {
         geometry: { points: activePoints, area_ha: area, perimetro_m: perimeter },
+        ...(croquiSnapshot ? { croquiSnapshot } : {}),
       });
       if (updated) {
         const alt = analisarAlteracaoImovel(updated, DEMO_CAMADAS, 'offline-demo');

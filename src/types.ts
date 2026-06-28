@@ -134,6 +134,12 @@ export interface Imovel {
   imovel: ImovelDados;
   geometry: ImovelGeometry;
   /**
+   * Print do mapa real do app (Apple Maps) com o polígono, capturado ao finalizar
+   * a demarcação. Data URI base64 (jpeg). Usado como croqui no PDF/laudo para o
+   * fundo ser a MESMA imagem que o produtor mediu. Ausente → cai no satélite Esri.
+   */
+  croquiSnapshot?: string;
+  /**
    * Snapshot da geometria imediatamente anterior à última re-demarcação.
    * Preenchido automaticamente pelo store.updateImovel ao detectar mudança de geometry.
    * Usado pelo motor de delta (lib/delta.ts) para comparar perímetros.
