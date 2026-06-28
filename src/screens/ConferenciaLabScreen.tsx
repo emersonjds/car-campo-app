@@ -25,6 +25,7 @@ import {
   View,
 } from 'react-native';
 import MapView, { Marker, Polygon, Polyline } from 'react-native-maps';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Screen } from '../app/Screen';
 import { useNav } from '../app/navigation';
@@ -52,7 +53,9 @@ import type { Severidade } from '../lib/overlay';
 // ---------- constantes ----------
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
-const MAP_HEIGHT = Math.max(220, Math.floor(SCREEN_HEIGHT * 0.34));
+// Mapa imersivo (igual à tela do produtor): domina a 1ª dobra — só mapa + legenda;
+// o resto (topologia, avisos, decisão) aparece ao rolar.
+const MAP_HEIGHT = Math.max(280, Math.floor(SCREEN_HEIGHT * 0.46));
 
 const ROTA_FAZENDEIRO = 'sorriso-fazendeiro';
 const ROTA_ANALISTA = 'sorriso-soja';
@@ -97,8 +100,9 @@ type Aceite = ValidacaoStatus | null;
 
 // ---------- tela ----------
 
-export function ConferenciaLabScreen({ imovelId }: { imovelId?: string }) {
+export function ConferenciaLabScreen({ imovelId, car }: { imovelId?: string; car?: string }) {
   const { switchTab, goBack } = useNav();
+  const insets = useSafeAreaInsets();
   const simFaz = useSimulatedWalk(); // avatar do fazendeiro (Medição Produtor)
   const simAna = useSimulatedWalk(); // avatar do analista (Medição Analista)
   const mapRef = useRef<MapView>(null);
@@ -258,12 +262,20 @@ export function ConferenciaLabScreen({ imovelId }: { imovelId?: string }) {
     ]);
   };
 
+  const statusTexto =
+    status === 'idle'
+      ? null
+      : status === 'done' && relatorio
+        ? `Concluído — Δ ${relatorio.delta_ha >= 0 ? '+' : ''}${relatorio.delta_ha.toFixed(1)} ha (${relatorio.delta_pct >= 0 ? '+' : ''}${relatorio.delta_pct.toFixed(0)}%)`
+        : `Simulando · ${SIM_SPEED}x · ${Math.round(Math.min(simFaz.progress, simAna.progress) * 100)}%`;
+
   return (
-    <Screen
-      title="Conferência de campo"
-      subtitle={imovelNome ? `Medindo: ${imovelNome}` : 'Analista mede por cima do declarado'}
-    >
-      <MapView ref={mapRef} style={{ height: MAP_HEIGHT }} initialRegion={REGION} mapType="satellite" showsCompass>
+    // Sem title/subtitle → só a app-bar fina, igual à tela de medição do produtor.
+    <Screen>
+      {/* Mapa imersivo num container próprio (igual ao produtor): o mapa preenche
+          o container e fica livre para arrastar; os overlays ficam nos cantos. */}
+      <View style={s.mapWrap}>
+      <MapView ref={mapRef} style={StyleSheet.absoluteFill} initialRegion={REGION} mapType="satellite" showsCompass>
 
         {/* (1) Dados Governo — contorno vermelho, sem preenchimento */}
         {CAMADA_POLYS.map((c, i) =>
@@ -346,40 +358,27 @@ export function ConferenciaLabScreen({ imovelId }: { imovelId?: string }) {
 
       </MapView>
 
-      {status !== 'idle' && (
-        <View style={s.pill}>
-          <Text style={s.pillText}>
-            {status === 'done' && relatorio
-              ? `Concluído — Δ ${relatorio.delta_ha >= 0 ? '+' : ''}${relatorio.delta_ha.toFixed(1)} ha (${relatorio.delta_pct >= 0 ? '+' : ''}${relatorio.delta_pct.toFixed(0)}%)`
-              : `Simulando Produtor × Analista · ${SIM_SPEED}x · ${Math.round(Math.min(simFaz.progress, simAna.progress) * 100)}%`}
-          </Text>
-        </View>
-      )}
+      {/* Contexto sobre o mapa (canto sup. esq.) — substitui o pageHead.
+          O status da simulação entra como 3ª linha (sem pill separada que travava o pan). */}
+      <View style={s.mapTitle} pointerEvents="none">
+        <Text style={s.mapTitleH} numberOfLines={1}>Conferência de campo</Text>
+        <Text style={s.mapTitleSub} numberOfLines={1}>
+          {imovelNome ? `Medindo: ${imovelNome}` : car ? `CAR ${car}` : 'Analista mede por cima do declarado'}
+        </Text>
+        {statusTexto && <Text style={s.mapStatus} numberOfLines={1}>{statusTexto}</Text>}
+      </View>
+
+      {/* Legenda compacta no canto inf. esq. — só as cores dos desenhos */}
+      <View style={s.legendOverlay} pointerEvents="none">
+        <LegendLine cor={colors.critico} label="Dados governo" outlined />
+        <LegendLine cor={colors.tertiary} label="Medição produtor" />
+        <LegendLine cor={colors.primary} label="Medição analista" />
+        {relatorio && <LegendLine cor={colors.acrescido} label="Acrescido (+)" />}
+        {relatorio && <LegendLine cor={colors.suprimido} label="Suprimido (−)" />}
+      </View>
+      </View>
 
       <ScrollView style={s.panel} contentContainerStyle={s.panelContent} showsVerticalScrollIndicator={false}>
-
-        {/* Legenda — chip e polígono usam exatamente a mesma cor */}
-        <View style={s.legend}>
-          <Text style={s.legendGroup}>DADOS GOVERNO</Text>
-          <View style={s.chipRow}>
-            {/* outlined=true → sem preenchimento, só borda vermelha */}
-            <LegendChip cor={colors.critico} label="Dados Governo" outlined />
-          </View>
-          <Text style={s.legendGroup}>PERÍMETROS</Text>
-          <View style={s.chipRow}>
-            <LegendChip cor={colors.tertiary} label="Medição Produtor" solid />
-            <LegendChip cor={colors.primary}   label="Medição Analista" solid />
-          </View>
-          {relatorio && (
-            <>
-              <Text style={s.legendGroup}>DIFERENÇA</Text>
-              <View style={s.chipRow}>
-                <LegendChip cor={colors.acrescido} label="Acrescido (+)" solid />
-                <LegendChip cor={colors.suprimido} label="Suprimido (−)" solid />
-              </View>
-            </>
-          )}
-        </View>
 
         {status === 'idle' ? (
           <Text style={s.hint}>
@@ -467,7 +466,7 @@ export function ConferenciaLabScreen({ imovelId }: { imovelId?: string }) {
       </ScrollView>
 
       {/* Rodapé: Limpar (compacto) · ação principal (flex) */}
-      <View style={s.footer}>
+      <View style={[s.footer, { paddingBottom: insets.bottom + 16 }]}>
         <View style={s.footerLimpar}>
           <SecondaryButton label="Limpar" onPress={limpar} disabled={status === 'idle'} />
         </View>
@@ -537,29 +536,15 @@ export function ConferenciaLabScreen({ imovelId }: { imovelId?: string }) {
 // ---------- sub-componentes ----------
 
 /**
- * Chip da legenda.
- * - outlined: borda colorida, sem preenchimento (Dados Governo)
- * - solid:    borda + fundo com 13% opacidade (Medição Produtor / Analista / Diferença)
- * - padrão:   borda + fundo com 12% opacidade
+ * Linha da legenda compacta sobre o mapa.
+ * - outlined: só o anel colorido (Dados Governo, sem preenchimento no mapa).
+ * - padrão:   ponto preenchido (perímetros / diferença).
  */
-function LegendChip({
-  cor,
-  label,
-  dashed,
-  solid,
-  outlined,
-}: {
-  cor: string;
-  label: string;
-  dashed?: boolean;
-  solid?: boolean;
-  outlined?: boolean;
-}) {
-  const bg = outlined ? 'transparent' : solid ? `${cor}22` : `${cor}1f`;
+function LegendLine({ cor, label, outlined }: { cor: string; label: string; outlined?: boolean }) {
   return (
-    <View style={[s.chip, { borderColor: cor, backgroundColor: bg }, dashed && s.chipDashed]}>
-      <View style={[s.chipDot, { backgroundColor: outlined ? 'transparent' : cor, borderColor: cor }]} />
-      <Text style={s.chipText}>{label}</Text>
+    <View style={s.legendLine}>
+      <View style={[s.legendDot, { borderColor: cor, backgroundColor: outlined ? 'transparent' : cor }]} />
+      <Text style={s.legendText}>{label}</Text>
     </View>
   );
 }
@@ -608,34 +593,48 @@ const s = StyleSheet.create({
   panel: { flex: 1, backgroundColor: colors.branco },
   panelContent: { padding: 14, paddingBottom: 28 },
 
-  pill: {
-    position: 'absolute',
-    top: MAP_HEIGHT - 34,
-    left: 10,
-    right: 10,
-    backgroundColor: 'rgba(255,255,255,0.92)',
-    borderRadius: 20,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-  },
-  pillText: { fontSize: 12, fontFamily: fonts.bold, color: colors.inkText, textAlign: 'center' },
+  // Mapa imersivo num container próprio — o mapa preenche e fica livre para arrastar.
+  mapWrap: { height: MAP_HEIGHT },
 
-  // Legenda
-  legend: { marginBottom: 10 },
-  legendGroup: {
-    fontSize: 9,
-    fontFamily: fonts.extraBold,
-    color: colors.mutedText,
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-    marginTop: 6,
-    marginBottom: 4,
+  // Título sobre o mapa (substitui o pageHead) — canto superior esquerdo, livre do compass
+  mapTitle: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    right: 62,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 4,
   },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 5 },
-  chip: { flexDirection: 'row', alignItems: 'center', gap: 5, height: 24, paddingHorizontal: 7, borderRadius: 4, borderWidth: 1 },
-  chipDashed: { borderStyle: 'dashed' },
-  chipDot: { width: 9, height: 9, borderRadius: 5, borderWidth: 1 },
-  chipText: { fontSize: 10, fontFamily: fonts.bold, color: colors.inkText },
+  mapTitleH: { fontSize: 15, fontFamily: fonts.extraBold, color: colors.inkText },
+  mapTitleSub: { fontSize: 11, fontFamily: fonts.regular, color: colors.mutedText, marginTop: 1 },
+  mapStatus: { fontSize: 11, fontFamily: fonts.bold, color: colors.primary, marginTop: 3 },
+
+  // Legenda compacta no canto inferior esquerdo do mapa
+  legendOverlay: {
+    position: 'absolute',
+    bottom: 10,
+    left: 10,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    gap: 5,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 3,
+  },
+  legendLine: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  legendDot: { width: 11, height: 11, borderRadius: 6, borderWidth: 2 },
+  legendText: { fontSize: 11, fontFamily: fonts.bold, color: colors.inkText },
 
   hint: { fontSize: 14, fontFamily: fonts.regular, color: colors.mutedText, lineHeight: 20, marginTop: 4 },
 
@@ -703,24 +702,24 @@ const s = StyleSheet.create({
   avatar: { width: 28, height: 28, borderRadius: 14, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
   avatarLabel: { fontSize: 12, fontFamily: fonts.extraBold },
 
-  // Rodapé
+  // Rodapé — padronizado com a tela do produtor (cantos arredondados, sombra ascendente,
+  // padding inferior pelo safe-area). paddingBottom vem do inset (aplicado inline).
   footer: {
     flexDirection: 'row',
     alignItems: 'stretch',
-    gap: 10,
-    paddingHorizontal: 14,
-    paddingTop: 12,
-    paddingBottom: 34,
-    backgroundColor: colors.branco,
-    borderTopWidth: 1,
-    borderTopColor: colors.line,
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    backgroundColor: colors.neutral,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
     shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
+    shadowOpacity: 0.10,
+    shadowRadius: 12,
     shadowOffset: { width: 0, height: -3 },
-    elevation: 12,
+    elevation: 8,
   },
-  footerLimpar: { width: 104 },
+  footerLimpar: { width: 112 },
   footerMain: { flex: 1, justifyContent: 'center' },
 
   // Modal de confirmação da decisão
