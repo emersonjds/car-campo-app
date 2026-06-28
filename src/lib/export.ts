@@ -106,111 +106,98 @@ function croquiTransform(points: LngLat[]) {
 }
 
 /**
- * Baixa um recorte de imagem de satélite (Esri World Imagery) para o bbox e
- * devolve como data URI base64 — assim o PDF fica autossuficiente (vê offline
- * depois de gerado). Requer rede no momento da geração; em falha devolve null
- * e o croqui cai no fundo esquemático.
+ * URL do recorte de satélite (Esri World Imagery) para o bbox do croqui.
+ * Igual ao card da web: a imagem é carregada como <img> ao renderizar o HTML —
+ * o expo-print rasteriza no PDF (precisa de rede no momento da geração). Sem
+ * dependência de FileSystem/base64, que estava falhando no device.
  * ponytail: tile público da Esri sem chave; se precisar de SLA, trocar por provedor próprio.
  */
-async function fetchSatelliteDataUri(
-  bbox: { minLon: number; minLat: number; maxLon: number; maxLat: number },
-): Promise<string | null> {
-  try {
-    const dir = FileSystem.cacheDirectory ?? FileSystem.documentDirectory;
-    if (!dir) return null;
-    const b = `${bbox.minLon},${bbox.minLat},${bbox.maxLon},${bbox.maxLat}`;
-    const url =
-      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export' +
-      `?bbox=${b}&bboxSR=4326&imageSR=4326&size=${CROQUI_W * 3},${CROQUI_H * 3}` +
-      '&format=jpg&f=image';
-    const tmp = `${dir}sat_${Date.now()}.jpg`;
-    const { uri, status } = await FileSystem.downloadAsync(url, tmp);
-    if (status !== 200) return null;
-    const b64 = await FileSystem.readAsStringAsync(uri, { encoding: 'base64' });
-    await FileSystem.deleteAsync(uri, { idempotent: true });
-    return b64 ? `data:image/jpeg;base64,${b64}` : null;
-  } catch {
-    return null; // offline / falha → croqui esquemático
-  }
-}
-
-/** Busca o satélite do card a partir dos pontos; null se < 3 pontos ou falha. */
-async function croquiSatDataUri(points: LngLat[]): Promise<string | null> {
+function croquiSatUrl(points: LngLat[]): string | null {
   if (points.length < 3) return null;
-  return fetchSatelliteDataUri(croquiTransform(points).satBbox);
+  const b = croquiTransform(points).satBbox;
+  return (
+    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export' +
+    `?bbox=${b.minLon},${b.minLat},${b.maxLon},${b.maxLat}` +
+    `&bboxSR=4326&imageSR=4326&size=${CROQUI_W * 2},${CROQUI_H * 2}&format=jpg&f=image`
+  );
 }
 
 /**
- * Gera o croqui SVG do polígono com vértices numerados. Se `satDataUri` for
- * passado, usa imagem de satélite de fundo (alinhada ao polígono); senão, fundo
- * esquemático offline.
+ * Croqui do perímetro. Com `satUrl`, monta um bloco HTML com a imagem de
+ * satélite (Esri) de fundo (<img>) e o polígono em SVG por cima — igual ao card
+ * da web. Sem `satUrl`, cai num croqui esquemático SVG (offline).
  */
-function buildSVGCroqui(points: LngLat[], satDataUri?: string | null): string {
+function buildSVGCroqui(points: LngLat[], satUrl?: string | null): string {
   if (points.length < 3) return '';
 
   const W = CROQUI_W;
   const H = CROQUI_H;
   const { toX, toY } = croquiTransform(points);
-  const onSat = !!satDataUri;
+  const onSat = !!satUrl;
 
   const polygonPts = points
     .map((p) => `${toX(p.longitude).toFixed(1)},${toY(p.latitude).toFixed(1)}`)
     .join(' ');
 
+  const dot = onSat
+    ? { fill: '#16321f', stroke: '#7CFFB0', text: '#d6ffe5' }
+    : { fill: '#1b6b3a', stroke: '#ffffff', text: '#1d2b22' };
   const dotLabels = points
     .map((p, i) => {
       const x = toX(p.longitude).toFixed(1);
       const y = toY(p.latitude);
       return (
-        `<circle cx="${x}" cy="${y.toFixed(1)}" r="5.5" fill="#16321f" stroke="#7CFFB0" stroke-width="1.5"/>` +
+        `<circle cx="${x}" cy="${y.toFixed(1)}" r="5.5" fill="${dot.fill}" stroke="${dot.stroke}" stroke-width="1.5"/>` +
         `<text x="${x}" y="${(y + 3).toFixed(1)}" text-anchor="middle" ` +
-        `font-size="8.5" font-family="Arial,sans-serif" font-weight="bold" fill="#d6ffe5">${i + 1}</text>`
+        `font-size="8.5" font-family="Arial,sans-serif" font-weight="bold" fill="${dot.text}">${i + 1}</text>`
       );
     })
     .join('');
 
-  const bg = onSat
-    ? `<image href="${satDataUri}" xlink:href="${satDataUri}" x="0" y="0" ` +
-      `width="${W}" height="${H}" preserveAspectRatio="none" ` +
-      `clip-path="url(#croquiClip)" filter="url(#croquiSat)"/>` +
-      `<rect width="${W}" height="${H}" rx="8" fill="none" stroke="rgba(0,0,0,0.18)"/>`
-    : `<rect width="${W}" height="${H}" rx="8" fill="#eef7f0"/>`;
+  const polyFill = onSat ? 'rgba(34,197,94,0.18)' : 'rgba(27,107,58,0.15)';
+  const polyStroke = onSat ? '#7CFFB0' : '#1b6b3a';
 
-  const poly = onSat
-    ? `<polygon points="${polygonPts}" fill="rgba(34,197,94,0.18)" stroke="#7CFFB0" stroke-width="2.5" stroke-linejoin="round"/>`
-    : `<polygon points="${polygonPts}" fill="rgba(27,107,58,0.15)" stroke="#1b6b3a" stroke-width="2" stroke-linejoin="round"/>`;
+  // Sem satélite (offline): SVG esquemático em fundo claro.
+  if (!onSat) {
+    return (
+      `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" ` +
+      `style="display:block;margin:0 auto;">` +
+      `<rect width="${W}" height="${H}" rx="8" fill="#eef7f0"/>` +
+      `<polygon points="${polygonPts}" fill="${polyFill}" stroke="${polyStroke}" stroke-width="2" stroke-linejoin="round"/>` +
+      dotLabels +
+      `</svg>`
+    );
+  }
+
+  // Com satélite: <div> com <img> de fundo + SVG do polígono por cima (igual à web).
+  const overlay =
+    `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" ` +
+    `style="position:absolute;inset:0;width:100%;height:100%;" preserveAspectRatio="none">` +
+    `<polygon points="${polygonPts}" fill="${polyFill}" stroke="${polyStroke}" stroke-width="2.5" stroke-linejoin="round"/>` +
+    dotLabels +
+    `</svg>`;
 
   return (
-    `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" ` +
-    `xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" ` +
-    `style="display:block;margin:0 auto;">` +
-    `<defs>` +
-    `<clipPath id="croquiClip"><rect width="${W}" height="${H}" rx="8"/></clipPath>` +
-    // Realça o verde da lavoura: satura, dá leve contraste e puxa o canal verde.
-    `<filter id="croquiSat" x="0" y="0" width="100%" height="100%">` +
-    `<feColorMatrix type="saturate" values="1.35"/>` +
-    `<feComponentTransfer>` +
-    `<feFuncR type="linear" slope="1.06" intercept="-0.02"/>` +
-    `<feFuncG type="linear" slope="1.12" intercept="0"/>` +
-    `<feFuncB type="linear" slope="1.0" intercept="-0.02"/>` +
-    `</feComponentTransfer></filter>` +
-    `</defs>` +
-    bg +
-    poly +
-    dotLabels +
-    `</svg>`
+    `<div style="position:relative;width:${W}px;height:${H}px;margin:0 auto;` +
+    `border-radius:8px;overflow:hidden;background:#2f3b24;">` +
+    `<img src="${satUrl}" alt="" ` +
+    `style="position:absolute;inset:0;width:100%;height:100%;object-fit:fill;` +
+    `filter:saturate(1.3) contrast(1.05) brightness(1.02);"/>` +
+    overlay +
+    `<div style="position:absolute;inset:0;box-shadow:inset 0 0 0 1px rgba(0,0,0,0.2);"></div>` +
+    `</div>`
   );
 }
 
 /** HTML do relatório completo para printToFileAsync. Layout A4, offline-safe. */
-function buildHTML(imovel: Imovel, maskPii: boolean, satDataUri?: string | null): string {
+function buildHTML(imovel: Imovel, maskPii: boolean, satUrl?: string | null): string {
   const { imovel: dados, produtor, geometry, status, createdAt } = imovel;
   const points = geometry.points;
   const area = areaHectares(points).toFixed(4);
   const perim = Number(perimeterM(points).toFixed(0)).toLocaleString('pt-BR');
   const cpfDisplay = maskPii ? maskCpfCnpj(produtor.cpfCnpj) : produtor.cpfCnpj;
-  const svgCroqui = buildSVGCroqui(points, satDataUri);
-  const croquiTitulo = satDataUri ? 'imagem de satélite' : 'esquemático';
+  const svgCroqui = buildSVGCroqui(points, satUrl);
+  const croquiTitulo = satUrl ? 'imagem de satélite' : 'esquemático';
 
   const vertexRows = points
     .map(
@@ -451,31 +438,19 @@ export async function exportGeoJSONFile(imovel: Imovel): Promise<void> {
 /**
  * Abre o PDF preliminar no visualizador nativo (expo-print) para o produtor
  * VER como ficou o documento no próprio celular — com opção de salvar/imprimir.
- * Tenta usar imagem de satélite no croqui (com rede); cai no esquemático offline.
+ * Usa imagem de satélite de fundo no croqui (carrega ao gerar; precisa de rede).
  */
 export async function previewPDF(imovel: Imovel): Promise<void> {
-  const sat = await croquiSatDataUri(imovel.geometry.points);
-  const html = buildHTML(imovel, /* maskPii */ true, sat);
+  const html = buildHTML(imovel, /* maskPii */ true, croquiSatUrl(imovel.geometry.points));
   await Print.printAsync({ html });
 }
 
 /**
  * HTML do documento preliminar (CPF mascarado — LGPD) para exibir num WebView
- * dentro do app — pré-visualização offline, sem salvar nem imprimir.
- * Mantém o croqui esquemático (sync, sem rede); o satélite entra no PDF gerado.
+ * dentro do app. Usa satélite de fundo no croqui (carrega ao renderizar, com rede).
  */
 export function documentoHTML(imovel: Imovel): string {
-  return buildHTML(imovel, /* maskPii */ true);
-}
-
-/**
- * Versão async do preview: tenta embutir a imagem de satélite no croqui (precisa
- * de rede). Use no WebView mostrando primeiro `documentoHTML` (esquemático,
- * instantâneo) e trocando por esta quando resolver — com fallback offline.
- */
-export async function documentoHTMLComSatelite(imovel: Imovel): Promise<string> {
-  const sat = await croquiSatDataUri(imovel.geometry.points);
-  return buildHTML(imovel, /* maskPii */ true, sat);
+  return buildHTML(imovel, /* maskPii */ true, croquiSatUrl(imovel.geometry.points));
 }
 
 /**
@@ -484,8 +459,7 @@ export async function documentoHTMLComSatelite(imovel: Imovel): Promise<string> 
  * Usa imagem de satélite no croqui quando há rede; cai no esquemático offline.
  */
 export async function exportPDF(imovel: Imovel): Promise<void> {
-  const sat = await croquiSatDataUri(imovel.geometry.points);
-  const html = buildHTML(imovel, /* maskPii */ true, sat);
+  const html = buildHTML(imovel, /* maskPii */ true, croquiSatUrl(imovel.geometry.points));
 
   // Dimensões A4 em pontos (72 ppi): 595 × 842
   const { uri } = await Print.printToFileAsync({ html, width: 595, height: 842 });
@@ -521,9 +495,8 @@ export interface LinkMedicao {
  * Requer conexão; lança erro descritivo se a API não responder.
  */
 export async function uploadPDFLink(imovel: Imovel): Promise<LinkMedicao> {
-  const sat = await croquiSatDataUri(imovel.geometry.points);
   const { uri } = await Print.printToFileAsync({
-    html: buildHTML(imovel, /* maskPii */ true, sat),
+    html: buildHTML(imovel, /* maskPii */ true, croquiSatUrl(imovel.geometry.points)),
     width: 595,
     height: 842,
   });

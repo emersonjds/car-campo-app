@@ -1,10 +1,9 @@
 // Pré-visualização do documento preliminar dentro do app (WebView, offline).
 // Renderiza o mesmo HTML do PDF — sem salvar, sem imprimir, sem rede.
-import { useEffect, useState } from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
-import { documentoHTML, documentoHTMLComSatelite } from '../lib/export';
+import { documentoHTML } from '../lib/export';
 import { colors } from '../theme/colors';
 import type { Imovel } from '../types';
 
@@ -17,20 +16,6 @@ export function DocumentoPreviewModal({
   visible: boolean;
   onClose: () => void;
 }) {
-  // Esquemático na hora (offline); troca pelo croqui com satélite quando carregar.
-  const [html, setHtml] = useState('');
-  useEffect(() => {
-    if (!visible || !imovel) return;
-    let alive = true;
-    setHtml(documentoHTML(imovel));
-    documentoHTMLComSatelite(imovel).then((h) => {
-      if (alive) setHtml(h);
-    });
-    return () => {
-      alive = false;
-    };
-  }, [visible, imovel]);
-
   return (
     <Modal
       visible={visible}
@@ -50,10 +35,10 @@ export function DocumentoPreviewModal({
             <Ionicons name="close" size={26} color={colors.inkText} />
           </TouchableOpacity>
         </View>
-        {visible && imovel && html ? (
+        {visible && imovel ? (
           <WebView
             originWhitelist={['*']}
-            source={{ html }}
+            source={{ html: documentoHTML(imovel) }}
             style={s.web}
             showsVerticalScrollIndicator
           />
