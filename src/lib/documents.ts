@@ -66,6 +66,7 @@ export async function pickFromLibrary(tipo: DocumentoTipo): Promise<Documento | 
   return {
     id: genId(),
     tipo,
+    origem: 'manual',
     uri,
     nome: nomeOriginal,
     mime: asset.mimeType ?? 'image/jpeg',
@@ -124,6 +125,7 @@ export async function takePhoto(
   return {
     id: genId(),
     tipo,
+    origem: 'manual',
     uri,
     nome: nomeOriginal,
     mime: asset.mimeType ?? 'image/jpeg',
@@ -152,6 +154,7 @@ export async function pickDocument(tipo: DocumentoTipo): Promise<Documento | nul
   return {
     id: genId(),
     tipo,
+    origem: 'manual',
     uri,
     nome: asset.name,
     mime: asset.mimeType ?? 'application/octet-stream',
@@ -164,6 +167,7 @@ export async function pickDocument(tipo: DocumentoTipo): Promise<Documento | nul
  * Nunca lança — falhas são silenciosas para não travar o fluxo de remoção da lista.
  */
 export async function deleteDocumentFile(doc: Documento): Promise<void> {
+  if (!doc.uri) return; // docs govbr não têm arquivo local
   try {
     const info = await getInfoAsync(doc.uri);
     if (info.exists) {

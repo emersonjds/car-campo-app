@@ -22,14 +22,20 @@ export type DocumentoTipo =
 export interface Documento {
   id: string;
   tipo: DocumentoTipo;
-  /** URI do arquivo no sandbox do app (file://...) */
-  uri: string;
+  /** URI do arquivo no sandbox (file://...). Ausente em docs sincronizados (metadados gov.br). */
+  uri?: string;
   nome: string;
   /** mime/type quando conhecido (image/jpeg, application/pdf, ...) */
   mime?: string;
   /** geotag opcional — fotos da divisa carregam onde foram tiradas */
   lat?: number;
   lng?: number;
+  /** Procedência do documento. Default 'manual' (anexado pelo produtor). */
+  origem?: 'govbr' | 'manual';
+  /** Órgão emissor — preenchido para origem 'govbr' (ex.: "SICAR / Meu Imóvel Rural"). */
+  orgao?: string;
+  /** Data de emissão (epoch ms) — preenchido para origem 'govbr'. */
+  emitidoEm?: number;
   createdAt: number;
 }
 
@@ -137,6 +143,8 @@ export interface Imovel {
    */
   deltaRelatorio?: DeltaRelatorio;
   documentos: Documento[];
+  /** Epoch ms da última sincronização de documentos com o gov.br (mock). */
+  documentosSincronizadosEm?: number;
   status: ImovelStatus;
   /** Análise do analista de campo (opcional — só preenchida no fluxo do analista). */
   validacao?: Validacao;
