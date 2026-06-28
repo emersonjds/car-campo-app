@@ -122,7 +122,7 @@ function buildSVGCroqui(points: LngLat[]): string {
 
 /** HTML do relatório completo para printToFileAsync. Layout A4, offline-safe. */
 function buildHTML(imovel: Imovel, maskPii: boolean): string {
-  const { imovel: dados, produtor, geometry, documentos, status, createdAt } = imovel;
+  const { imovel: dados, produtor, geometry, status, createdAt } = imovel;
   const points = geometry.points;
   const area = areaHectares(points).toFixed(4);
   const perim = Number(perimeterM(points).toFixed(0)).toLocaleString('pt-BR');
@@ -140,15 +140,6 @@ function buildHTML(imovel: Imovel, maskPii: boolean): string {
         </tr>`,
     )
     .join('');
-
-  const docRows = documentos.length
-    ? documentos
-        .map(
-          (d) =>
-            `<tr><td>${escHtml(d.nome)}</td><td>${escHtml(d.tipo)}</td></tr>`,
-        )
-        .join('')
-    : '<tr><td colspan="2" style="color:#5d6b62;font-style:italic">Nenhum documento anexado.</td></tr>';
 
   const statusLabel = status === 'enviado' ? 'Enviado' : 'Rascunho';
   const statusColor = status === 'enviado' ? '#1b6b3a' : '#8a5a13';
@@ -282,16 +273,6 @@ ${
   </tbody>
 </table>
 
-<h2>Documentos anexados (${documentos.length})</h2>
-<table>
-  <thead>
-    <tr><th>Nome</th><th>Tipo</th></tr>
-  </thead>
-  <tbody>
-    ${docRows}
-  </tbody>
-</table>
-
 <footer>
   Gerado em ${formatDateBR(Date.now())} pelo app <strong>CAR Campo</strong>
   (haCARthon &middot; Desafio 2 &middot; Solução 4).<br>
@@ -385,8 +366,18 @@ export async function exportGeoJSONFile(imovel: Imovel): Promise<void> {
 }
 
 /**
- * Gera um relatório PDF com croqui SVG do polígono, tabela de vértices e
- * lista de documentos via expo-print (printToFileAsync), depois compartilha.
+ * Abre o PDF preliminar no visualizador nativo (expo-print) para o produtor
+ * VER como ficou o documento no próprio celular — com opção de salvar/imprimir.
+ * Funciona 100% offline.
+ */
+export async function previewPDF(imovel: Imovel): Promise<void> {
+  const html = buildHTML(imovel, /* maskPii */ true);
+  await Print.printAsync({ html });
+}
+
+/**
+ * Gera o relatório PDF (croqui SVG, medidas e vértices) via expo-print e abre o
+ * share sheet nativo para baixar (salvar nos Arquivos) ou enviar (WhatsApp, e-mail…).
  * Funciona 100% offline — sem assets remotos, sem mapa raster.
  */
 export async function exportPDF(imovel: Imovel): Promise<void> {
