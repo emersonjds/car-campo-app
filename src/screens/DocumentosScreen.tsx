@@ -19,6 +19,7 @@ import { Button, EmptyState } from '../ui';
 import { colors } from '../theme/colors';
 import type { Documento, DocumentoTipo, Imovel } from '../types';
 import { sincronizarDocumentos, avaliarRegularidade, CATALOGO_DIGITAL } from '../lib/docHub';
+import { abrirDocumentoDigital } from '../lib/docPdf';
 
 function calcRegion(points: Array<{ latitude: number; longitude: number }>) {
   if (points.length < 3) return null;
@@ -282,15 +283,15 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
     ]);
   }
 
-  function abrirDocumento(doc: Documento) {
-    if (doc.origem === 'govbr' || !doc.uri) {
-      Alert.alert(
-        CATALOGO_DIGITAL[doc.tipo].label,
-        'Documento sincronizado do gov.br. Visualização completa disponível na versão integrada (demo).',
-      );
-      return;
+  async function abrirDocumento(doc: Documento) {
+    try {
+      setBusy(true);
+      await abrirDocumentoDigital(doc, imovel!);
+    } catch {
+      Alert.alert('Não foi possível abrir', 'Tente novamente em instantes.');
+    } finally {
+      setBusy(false);
     }
-    // ponytail: sem file-viewer; abrir quando expo-file-viewer disponível
   }
 
   if (loading) {
