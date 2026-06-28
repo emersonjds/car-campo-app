@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../auth/AuthContext';
@@ -25,9 +25,7 @@ export function LoginScreen() {
     <SafeAreaView style={s.safe}>
       <View style={s.root}>
         <View style={s.header}>
-          <View style={s.logoMark}>
-            <Ionicons name="leaf" size={38} color={colors.branco} />
-          </View>
+          <Image source={require('../../assets/brand-mark.png')} style={s.logoMark} resizeMode="contain" />
           <Text style={s.appName}>CAR CAMPO</Text>
           <Text style={s.welcome}>Bem-vindo ao CAR Campo</Text>
           <Text style={s.tagline}>Sua terra, sua gestão, em um só lugar.</Text>
@@ -73,12 +71,8 @@ const s = StyleSheet.create({
 
   header: { alignItems: 'center', paddingTop: 16 },
   logoMark: {
-    width: 76,
-    height: 76,
-    borderRadius: 22,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 88,
+    height: 88,
     marginBottom: 18,
     shadowColor: '#000',
     shadowOpacity: 0.18,

@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useState } from 'react';
-import { StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
@@ -38,9 +38,7 @@ export function Screen({
                 <Ionicons name="chevron-back" size={24} color={colors.primary} />
               </TouchableOpacity>
             )}
-            <View style={s.logoMark}>
-              <Ionicons name="leaf" size={15} color={colors.branco} />
-            </View>
+            <Image source={require('../../assets/brand-mark.png')} style={s.logoMark} resizeMode="contain" />
             <Text style={s.brandName}>CAR Campo</Text>
           </View>
           <View style={s.appBarRight}>
@@ -91,12 +89,8 @@ const s = StyleSheet.create({
   brand: { flexDirection: 'row', alignItems: 'center', gap: 9 },
   backBtn: { marginRight: 2, marginLeft: -4 },
   logoMark: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 38,
+    height: 38,
   },
   brandName: { fontFamily: fonts.extraBold, fontSize: 17, color: colors.primary },
   appBarRight: { flexDirection: 'row', alignItems: 'center', gap: 16 },
