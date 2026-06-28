@@ -10,7 +10,7 @@ import { submitPerimeter } from '../lib/api';
 import { analisarSobreposicoes } from '../lib/overlay';
 import { analisarAlteracaoImovel, decisaoSugerida } from '../lib/alteracao';
 import { DEMO_CAMADAS } from '../lib/refLayers.demo';
-import { exportGeoJSONFile, exportPDF, shareText } from '../lib/export';
+import { exportPDF } from '../lib/export';
 import {
   Badge,
   Card,
@@ -43,7 +43,7 @@ function maskCpfCnpj(value: string): string {
 }
 
 // Qual botão de ação está carregando agora
-type ActiveAction = 'geojson' | 'pdf' | 'share' | 'submit' | 'visita' | null;
+type ActiveAction = 'pdf' | 'submit' | 'visita' | null;
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
@@ -98,19 +98,9 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
     [activeAction],
   );
 
-  const handleExportGeoJSON = useCallback(() => {
-    if (!imovel) return;
-    withAction('geojson', () => exportGeoJSONFile(imovel));
-  }, [imovel, withAction]);
-
   const handleExportPDF = useCallback(() => {
     if (!imovel) return;
     withAction('pdf', () => exportPDF(imovel));
-  }, [imovel, withAction]);
-
-  const handleShare = useCallback(() => {
-    if (!imovel) return;
-    withAction('share', () => shareText(imovel));
   }, [imovel, withAction]);
 
   const handleSubmit = useCallback(() => {
@@ -208,7 +198,7 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
 
   if (loadingImovel) {
     return (
-      <Screen title="Revisão" subtitle="Confira, exporte e envie">
+      <Screen title="Revisão" subtitle="Documento preliminar de metragem">
         <WizardSteps active={3} />
         <View style={s.center}>
           <Text style={s.loadingText}>Carregando dados do imóvel…</Text>
@@ -219,7 +209,7 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
 
   if (!imovel) {
     return (
-      <Screen title="Revisão" subtitle="Confira, exporte e envie">
+      <Screen title="Revisão" subtitle="Documento preliminar de metragem">
         <WizardSteps active={3} />
         <View style={s.center}>
           <Text style={s.errorTitle}>Imóvel não encontrado.</Text>
@@ -238,7 +228,7 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
 
   if (points.length < 3) {
     return (
-      <Screen title="Revisão" subtitle="Confira, exporte e envie">
+      <Screen title="Revisão" subtitle="Documento preliminar de metragem">
         <WizardSteps active={3} />
         <View style={s.center}>
           <Text style={s.errorTitle}>Demarcação incompleta.</Text>
@@ -265,9 +255,19 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
   const canSubmit = validation.ok && !isBusy;
 
   return (
-    <Screen title="Revisão" subtitle="Confira, exporte e envie">
+    <Screen title="Revisão" subtitle="Documento preliminar de metragem">
       <WizardSteps active={3} />
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+
+        <View style={s.avisoBanner}>
+          <Text style={s.avisoBannerTitle}>Medição preliminar — não oficial</Text>
+          <Text style={s.avisoBannerText}>
+            Esta metragem foi feita pelo celular e gera um documento preliminar que dá
+            segurança e adianta o seu processo. Ela não substitui a medição oficial, que
+            deve ser feita por um técnico habilitado (engenheiro/analista ambiental) em
+            visita ao imóvel.
+          </Text>
+        </View>
 
         <Card style={s.card}>
           <SectionTitle>Dados do Imóvel</SectionTitle>
@@ -336,25 +336,15 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
         ) : null}
 
         <Card style={s.card}>
-          <SectionTitle>Exportar / Compartilhar</SectionTitle>
+          <SectionTitle>Documento preliminar</SectionTitle>
+          <Text style={s.docPrelimText}>
+            Gere o PDF com o croqui e as medidas para guardar e apresentar na visita do
+            técnico. É um documento de referência, não a medição oficial.
+          </Text>
           <View style={s.btnRow}>
-            <SecondaryButton
-              label={activeAction === 'geojson' ? 'Exportando…' : 'Exportar GeoJSON'}
-              onPress={handleExportGeoJSON}
-              disabled={isBusy}
-            />
-          </View>
-          <View style={s.btnRow}>
-            <SecondaryButton
-              label={activeAction === 'pdf' ? 'Gerando PDF…' : 'Gerar PDF / Croqui'}
+            <PrimaryButton
+              label={activeAction === 'pdf' ? 'Gerando PDF…' : 'Gerar Documento Final (PDF)'}
               onPress={handleExportPDF}
-              disabled={isBusy}
-            />
-          </View>
-          <View style={s.btnRow}>
-            <SecondaryButton
-              label={activeAction === 'share' ? 'Compartilhando…' : 'Compartilhar'}
-              onPress={handleShare}
               disabled={isBusy}
             />
           </View>
@@ -389,7 +379,8 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
                 </Text>
               )}
               <Text style={s.analiseNota}>
-                Baseado em camada de demonstração (offline). O laudo completo usa dados oficiais.
+                Verificação preliminar com camada de demonstração (offline). O laudo oficial é
+                confirmado pelo técnico na visita ao imóvel.
               </Text>
               <View style={[s.btnRow, { marginTop: 10 }]}>
                 <SecondaryButton
@@ -451,13 +442,19 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
                 </Text>
               </View>
             ) : (
-              <View style={[s.btnRow, { marginTop: 12 }]}>
-                <PrimaryButton
-                  label={activeAction === 'visita' ? 'Solicitando…' : 'Solicitar visita do técnico'}
-                  onPress={handleSolicitarVisita}
-                  disabled={isBusy}
-                />
-              </View>
+              <>
+                <Text style={s.analiseNota}>
+                  A medição oficial é feita por um técnico em campo. Solicite a visita para
+                  oficializar e regularizar o imóvel.
+                </Text>
+                <View style={[s.btnRow, { marginTop: 12 }]}>
+                  <PrimaryButton
+                    label={activeAction === 'visita' ? 'Solicitando…' : 'Solicitar visita do técnico'}
+                    onPress={handleSolicitarVisita}
+                    disabled={isBusy}
+                  />
+                </View>
+              </>
             )}
           </Card>
         )}
@@ -495,6 +492,32 @@ const s = StyleSheet.create({
   },
   card: {
     marginBottom: 12,
+  },
+
+  avisoBanner: {
+    backgroundColor: '#fdf4e3',
+    borderLeftWidth: 4,
+    borderLeftColor: colors.aviso,
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 12,
+  },
+  avisoBannerTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: colors.aviso,
+  },
+  avisoBannerText: {
+    fontSize: 12,
+    color: colors.ink,
+    marginTop: 4,
+    lineHeight: 17,
+  },
+  docPrelimText: {
+    fontSize: 13,
+    color: colors.muted,
+    lineHeight: 18,
+    marginTop: 2,
   },
 
   center: {
