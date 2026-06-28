@@ -1,14 +1,21 @@
-// Modelos de domínio do CAR Campo. Contrato compartilhado por todos os módulos.
 import type { LngLat } from './lib/geo';
 import type { DeltaRelatorio } from './lib/delta';
 
 export type Perfil = 'produtor' | 'analista';
 
+// Tipos de documento do imóvel rural. Vários já existem em formato DIGITAL e
+// podem ser baixados pelo próprio produtor (gov.br, INCRA, SICAR, MDA…). A
+// "origem" de cada um (onde obter o PDF) fica em TIPOS_META (DocumentosScreen).
 export type DocumentoTipo =
-  | 'matricula'
-  | 'ccir'
+  | 'matricula' // matrícula/escritura — Cartório de Registro de Imóveis (matrícula eletrônica)
+  | 'ccir' // Certificado de Cadastro de Imóvel Rural — INCRA
+  | 'car' // Recibo do CAR — SICAR / Meu Imóvel Rural
+  | 'car-extrato' // Extrato/Demonstrativo do CAR — SICAR / Meu Imóvel Rural
+  | 'sigef' // Certidão de georreferenciamento (demarcação) — SIGEF/INCRA
+  | 'caf' // Cadastro Nacional da Agricultura Familiar (substitui a DAP) — MDA
+  | 'itr' // ITR / CIB-CAFIR — Receita Federal
+  | 'licenca' // Licença ambiental (LP/LI/LO) ou outorga de água — órgão estadual
   | 'rg'
-  | 'car'
   | 'foto-divisa'
   | 'outro';
 

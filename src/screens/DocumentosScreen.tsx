@@ -1,6 +1,3 @@
-// Tela de Detalhe do Documento CAR — redesenho S1.
-// Mostra header CAR, métricas, abas, mapa SIRGAS 2000, checklist de conformidade
-// e preserva a gestão de anexos (câmera / galeria / arquivo).
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -22,10 +19,6 @@ import { exportPDF, shareText } from '../lib/export';
 import { Button, Card, EmptyState, StatusChip } from '../ui';
 import { colors } from '../theme/colors';
 import type { Documento, DocumentoTipo, Imovel } from '../types';
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 type Tab = 'dados' | 'dominio' | 'uso';
 type ChecklistStatus = 'ok' | 'aviso' | 'pendente';
@@ -101,10 +94,6 @@ function ehImagem(doc: Documento): boolean {
   if (doc.mime) return doc.mime.startsWith('image/');
   return /\.(jpg|jpeg|png|gif|webp|heic|bmp)$/i.test(doc.nome);
 }
-
-// ---------------------------------------------------------------------------
-// Sub-componentes locais
-// ---------------------------------------------------------------------------
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
@@ -238,41 +227,80 @@ function TabUso() {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Metadados de tipo de documento (preservados do original)
-// ---------------------------------------------------------------------------
-
 type TipoMeta = {
   label: string;
   descricao: string;
   icone: string;
   acoes: ('camera' | 'galeria' | 'arquivo')[];
   geotag?: boolean;
+  /** Onde o produtor baixa este documento em formato DIGITAL (PDF). */
+  origem?: string;
 };
 
+// Vários documentos do imóvel rural já existem em formato digital e o próprio
+// produtor pode baixá-los (gov.br/Meu Imóvel Rural, INCRA, SIGEF, MDA, Receita).
+// `origem` mostra onde obter o PDF — é só importar pelo seletor de arquivos.
 const TIPOS_META: Record<DocumentoTipo, TipoMeta> = {
-  matricula: {
-    label: 'Matrícula',
-    descricao: 'Escritura ou matrícula do imóvel',
-    icone: '📄',
-    acoes: ['camera', 'galeria', 'arquivo'],
+  car: {
+    label: 'Recibo do CAR',
+    descricao: 'Recibo de inscrição no Cadastro Ambiental Rural (PDF)',
+    icone: '📋',
+    acoes: ['arquivo', 'galeria', 'camera'],
+    origem: 'gov.br › Meu Imóvel Rural (SICAR)',
+  },
+  'car-extrato': {
+    label: 'Extrato do CAR',
+    descricao: 'Demonstrativo da situação do imóvel no CAR (PDF)',
+    icone: '🌿',
+    acoes: ['arquivo', 'galeria'],
+    origem: 'gov.br › Meu Imóvel Rural (SICAR)',
   },
   ccir: {
     label: 'CCIR',
-    descricao: 'Certidão de Cadastro do Imóvel Rural',
+    descricao: 'Certificado de Cadastro de Imóvel Rural (PDF)',
+    icone: '🧾',
+    acoes: ['arquivo', 'galeria', 'camera'],
+    origem: 'gov.br › Emitir CCIR (INCRA)',
+  },
+  sigef: {
+    label: 'Georreferenciamento',
+    descricao: 'Certidão de demarcação georreferenciada (planta e memorial)',
+    icone: '📐',
+    acoes: ['arquivo', 'galeria'],
+    origem: 'sigef.incra.gov.br',
+  },
+  matricula: {
+    label: 'Matrícula',
+    descricao: 'Matrícula ou escritura do imóvel',
     icone: '📄',
-    acoes: ['camera', 'galeria', 'arquivo'],
+    acoes: ['arquivo', 'galeria', 'camera'],
+    origem: 'Cartório de Registro de Imóveis (matrícula eletrônica)',
+  },
+  caf: {
+    label: 'CAF',
+    descricao: 'Cadastro da Agricultura Familiar — substitui a DAP (Pronaf)',
+    icone: '👩‍🌾',
+    acoes: ['arquivo', 'galeria'],
+    origem: 'caf.mda.gov.br',
+  },
+  itr: {
+    label: 'ITR / CAFIR',
+    descricao: 'Comprovante do Imposto Territorial Rural / cadastro CAFIR',
+    icone: '🧮',
+    acoes: ['arquivo', 'galeria'],
+    origem: 'gov.br › Receita Federal',
+  },
+  licenca: {
+    label: 'Licença ambiental',
+    descricao: 'Licença (LP/LI/LO) ou outorga de uso de água',
+    icone: '✅',
+    acoes: ['arquivo', 'galeria', 'camera'],
+    origem: 'Órgão ambiental estadual (SEMA / IAT / INEA…)',
   },
   rg: {
     label: 'RG / CPF',
     descricao: 'Documento de identidade do produtor',
     icone: '🪪',
-    acoes: ['camera', 'galeria', 'arquivo'],
-  },
-  car: {
-    label: 'Recibo CAR',
-    descricao: 'Comprovante de cadastro anterior',
-    icone: '📋',
     acoes: ['camera', 'galeria', 'arquivo'],
   },
   'foto-divisa': {
@@ -290,7 +318,19 @@ const TIPOS_META: Record<DocumentoTipo, TipoMeta> = {
   },
 };
 
-const ORDEM_TIPOS: DocumentoTipo[] = ['matricula', 'ccir', 'rg', 'car', 'foto-divisa', 'outro'];
+const ORDEM_TIPOS: DocumentoTipo[] = [
+  'car',
+  'car-extrato',
+  'ccir',
+  'sigef',
+  'matricula',
+  'caf',
+  'itr',
+  'licenca',
+  'rg',
+  'foto-divisa',
+  'outro',
+];
 
 function BotaoTipo({
   meta,
@@ -315,6 +355,11 @@ function BotaoTipo({
       <Text style={s.tipoBtnDesc} numberOfLines={2}>
         {meta.descricao}
       </Text>
+      {meta.origem ? (
+        <Text style={s.tipoBtnOrigem} numberOfLines={2}>
+          📲 Baixe digital: {meta.origem}
+        </Text>
+      ) : null}
     </TouchableOpacity>
   );
 }
@@ -377,10 +422,6 @@ function ItemDocumento({
     </View>
   );
 }
-
-// ---------------------------------------------------------------------------
-// Tela principal
-// ---------------------------------------------------------------------------
 
 export function DocumentosScreen({ imovelId }: { imovelId: string }) {
   const { navigate, goBack } = useNav();
@@ -471,7 +512,10 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
     if (meta.acoes.includes('arquivo')) {
       botoes.push({ text: 'Escolher arquivo (PDF)', onPress: () => comArquivo(tipo) });
     }
-    Alert.alert(meta.label, meta.descricao, [
+    const msg = meta.origem
+      ? `${meta.descricao}\n\n📲 Você pode baixar este documento em PDF: ${meta.origem}. Depois é só importar pelo arquivo.`
+      : meta.descricao;
+    Alert.alert(meta.label, msg, [
       ...botoes.map((b) => ({ text: b.text, onPress: b.onPress })),
       { text: 'Cancelar', style: 'cancel' as const },
     ]);
@@ -500,10 +544,6 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
       setSharingText(false);
     }
   }
-
-  // ---------------------------------------------------------------------------
-  // Render
-  // ---------------------------------------------------------------------------
 
   if (loading) {
     return (
@@ -543,7 +583,6 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
         contentContainerStyle={s.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Breadcrumb + título + chip */}
         <Text style={s.breadcrumb}>Documentos › CAR</Text>
         <View style={s.titleRow}>
           <Text style={s.titleCar} numberOfLines={2}>
@@ -553,7 +592,6 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
         </View>
         <Text style={s.protoco}>{protoco}</Text>
 
-        {/* Botões de ação */}
         <View style={s.actionRow}>
           <Button
             label="Compartilhar"
@@ -572,7 +610,6 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
           />
         </View>
 
-        {/* VISUALIZAÇÃO */}
         <Card style={s.secaoCard}>
           <Text style={s.secaoLabel}>VISUALIZAÇÃO</Text>
           {firstImageDoc ? (
@@ -599,7 +636,6 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
           </Text>
         </Card>
 
-        {/* HISTÓRICO DE VERSÕES */}
         <Card style={s.secaoCard}>
           <Text style={s.secaoLabel}>HISTÓRICO DE VERSÕES</Text>
           {imovel.updatedAt !== imovel.createdAt && (
@@ -620,7 +656,6 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
           </View>
         </Card>
 
-        {/* Métricas */}
         <View style={s.metricsRow}>
           <MetricCard label="Área Total" value={areaStr} />
           <View style={s.metricSpacer} />
@@ -638,7 +673,6 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
           valueColor={colors.tertiary}
         />
 
-        {/* Abas */}
         <View style={s.tabBar}>
           {tabs.map(({ key, label }) => (
             <TouchableOpacity
@@ -659,7 +693,6 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
           {activeTab === 'uso' && <TabUso />}
         </Card>
 
-        {/* Checklist de conformidade */}
         <Card style={s.secaoCard}>
           <Text style={s.secaoLabel}>CHECKLIST DE CONFORMIDADE</Text>
           {checklist.map((item, i) => (
@@ -667,7 +700,6 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
           ))}
         </Card>
 
-        {/* Gerenciar documentos */}
         <Text style={s.secaoTitulo}>Adicionar documentos</Text>
         <Text style={s.secaoHint}>
           Toque em um tipo para adicionar. Todos os campos são opcionais.
@@ -709,7 +741,6 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
         )}
       </ScrollView>
 
-      {/* Rodapé */}
       <View style={s.rodape}>
         <Button label="Voltar" variant="secondary" onPress={goBack} />
         <View style={s.actionSpacer} />
@@ -723,16 +754,11 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Estilos
-// ---------------------------------------------------------------------------
-
 const s = StyleSheet.create({
   centralize: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   scroll: { flex: 1 },
   scrollContent: { padding: 16, paddingBottom: 8 },
 
-  // Header CAR
   breadcrumb: { fontSize: 12, color: colors.mutedText, marginBottom: 6 },
   titleRow: {
     flexDirection: 'row',
@@ -750,11 +776,9 @@ const s = StyleSheet.create({
   },
   protoco: { fontSize: 12, color: colors.mutedText, marginBottom: 14 },
 
-  // Ações
   actionRow: { flexDirection: 'row', marginBottom: 16 },
   actionSpacer: { width: 10 },
 
-  // Seção genérica
   secaoCard: { marginBottom: 12 },
   secaoLabel: {
     fontSize: 11,
@@ -773,7 +797,6 @@ const s = StyleSheet.create({
   },
   secaoHint: { fontSize: 13, color: colors.mutedText, marginBottom: 12, lineHeight: 18 },
 
-  // Visualização
   preview: { width: '100%', height: 180, borderRadius: 10, backgroundColor: colors.verdeBg },
   previewPlaceholder: {
     height: 140,
@@ -786,13 +809,11 @@ const s = StyleSheet.create({
   previewPlaceholderText: { fontSize: 13, color: colors.mutedText, textAlign: 'center' },
   previewMeta: { fontSize: 11, color: colors.mutedText, marginTop: 8, textAlign: 'center' },
 
-  // Histórico
   historicoItem: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
   historicoDot: { width: 10, height: 10, borderRadius: 5 },
   historicoLbl: { fontSize: 14, fontWeight: '700', color: colors.inkText },
   historicoData: { fontSize: 12, color: colors.mutedText, marginTop: 1 },
 
-  // Métricas
   metricsRow: { flexDirection: 'row', marginBottom: 10 },
   metricSpacer: { width: 10 },
   metricCard: {
@@ -812,7 +833,6 @@ const s = StyleSheet.create({
   metricValue: { fontSize: 26, fontWeight: '800', color: colors.inkText },
   metricSub: { fontSize: 11, color: colors.mutedText, marginTop: 2 },
 
-  // Tabs
   tabBar: {
     flexDirection: 'row',
     marginTop: 14,
@@ -832,12 +852,10 @@ const s = StyleSheet.create({
   tabContent: { gap: 12 },
   tabEmpty: { fontSize: 13, color: colors.mutedText, fontStyle: 'italic', textAlign: 'center', paddingVertical: 12 },
 
-  // Aba Dados — InfoRow
   infoRow: { gap: 2 },
   infoLabel: { fontSize: 11, fontWeight: '700', color: colors.mutedText, textTransform: 'uppercase', letterSpacing: 0.5 },
   infoValue: { fontSize: 15, fontWeight: '600', color: colors.inkText },
 
-  // Mapa (dentro de TabDados)
   mapLabel: {
     fontSize: 11,
     fontWeight: '700',
@@ -849,17 +867,14 @@ const s = StyleSheet.create({
   },
   map: { height: 180, borderRadius: 12, overflow: 'hidden' },
 
-  // Aba Domínio
   domDocRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   domDocLabel: { flex: 1, fontSize: 13, color: colors.inkText },
 
-  // Checklist
   checkRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 12 },
   checkBody: { flex: 1 },
   checkLabel: { fontSize: 14, fontWeight: '700', color: colors.inkText },
   checkDetail: { fontSize: 12, color: colors.mutedText, marginTop: 1 },
 
-  // Grid de tipos de documento
   gridTipos: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   tipoBtn: {
     width: '47%',
@@ -875,12 +890,11 @@ const s = StyleSheet.create({
   tipoBtnIcone: { fontSize: 22, marginBottom: 4 },
   tipoBtnLabel: { fontSize: 13, fontWeight: '800', color: colors.inkText, marginBottom: 2 },
   tipoBtnDesc: { fontSize: 11, color: colors.mutedText, lineHeight: 15 },
+  tipoBtnOrigem: { fontSize: 10, color: colors.primary, lineHeight: 14, marginTop: 5, fontWeight: '700' },
 
-  // Busy
   busyRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12 },
   busyTexto: { fontSize: 13, color: colors.mutedText },
 
-  // Lista de documentos
   listaDoc: { gap: 10 },
   itemDoc: {
     flexDirection: 'row',
@@ -900,7 +914,6 @@ const s = StyleSheet.create({
   itemTipo: { fontSize: 11, color: colors.mutedText },
   itemGeo: { fontSize: 11, color: colors.verdeClaro },
 
-  // Botão remover
   btnRemover: {
     width: 36,
     height: 36,
@@ -911,7 +924,6 @@ const s = StyleSheet.create({
   },
   btnRemoverTexto: { fontSize: 14, color: colors.critico, fontWeight: '800' },
 
-  // Rodapé
   rodape: {
     flexDirection: 'row',
     paddingHorizontal: 16,
