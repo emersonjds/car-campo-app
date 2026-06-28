@@ -8,7 +8,7 @@ import { getImovel, updateImovel } from '../lib/store';
 import { areaHectares, perimeterM, validatePerimeter } from '../lib/geo';
 import { submitPerimeter } from '../lib/api';
 import { analisarSobreposicoes } from '../lib/overlay';
-import { analisarAlteracaoImovel, decisaoSugerida } from '../lib/alteracao';
+import { analisarAlteracaoImovel } from '../lib/alteracao';
 import { DEMO_CAMADAS } from '../lib/refLayers.demo';
 import { exportPDF } from '../lib/export';
 import {
@@ -378,10 +378,7 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
                   ✓ Nenhuma sobreposição detectada (dados de demonstração).
                 </Text>
               )}
-              <Text style={s.analiseNota}>
-                Verificação preliminar com camada de demonstração (offline). O laudo oficial é
-                confirmado pelo técnico na visita ao imóvel.
-              </Text>
+              <Text style={s.analiseNota}>Prévia offline — confirmada pelo técnico na visita.</Text>
               <View style={[s.btnRow, { marginTop: 10 }]}>
                 <SecondaryButton
                   label="Ver análise ambiental completa"
@@ -402,35 +399,16 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
                 {alteracaoResumo.baseline === 'demo' ? ' (baseline de demonstração)' : ''}.
               </Text>
             ) : (
-              <>
-                <View style={s.statsRow}>
-                  <StatBox label="Antes (ha)" value={alteracaoResumo.relatorio.areaAnterior_ha.toFixed(2)} />
-                  <View style={s.statGap} />
-                  <StatBox label="Agora (ha)" value={alteracaoResumo.relatorio.areaNova_ha.toFixed(2)} />
-                  <View style={s.statGap} />
-                  <StatBox
-                    label="Diferença"
-                    value={`${alteracaoResumo.relatorio.delta_ha >= 0 ? '+' : ''}${alteracaoResumo.relatorio.delta_ha.toFixed(2)}`}
-                  />
-                </View>
-                {(() => {
-                  const dec = decisaoSugerida(alteracaoResumo.relatorio.severidade);
-                  const tone =
-                    dec.tone === 'alerta' ? colors.alerta : dec.tone === 'aviso' ? colors.aviso : colors.verde;
-                  return (
-                    <View style={[s.cmpBanner, { borderColor: tone }]}>
-                      <Text style={[s.cmpBannerTitle, { color: tone }]}>{dec.titulo}</Text>
-                      <Text style={s.cmpBannerText}>{alteracaoResumo.relatorio.recomendacao}</Text>
-                    </View>
-                  );
-                })()}
-                <Text style={s.analiseNota}>
-                  {alteracaoResumo.baseline === 'demo'
-                    ? 'Comparado a um baseline de demonstração (sem registro anterior real). '
-                    : ''}
-                  Acréscimo não prova compra; valide com dados oficiais quando houver rede.
-                </Text>
-              </>
+              <View style={s.statsRow}>
+                <StatBox label="Antes (ha)" value={alteracaoResumo.relatorio.areaAnterior_ha.toFixed(2)} />
+                <View style={s.statGap} />
+                <StatBox label="Agora (ha)" value={alteracaoResumo.relatorio.areaNova_ha.toFixed(2)} />
+                <View style={s.statGap} />
+                <StatBox
+                  label="Diferença"
+                  value={`${alteracaoResumo.relatorio.delta_ha >= 0 ? '+' : ''}${alteracaoResumo.relatorio.delta_ha.toFixed(2)}`}
+                />
+              </View>
             )}
 
             {imovel.solicitacaoVisita ? (
@@ -685,14 +663,6 @@ const s = StyleSheet.create({
     fontWeight: '700',
     lineHeight: 18,
   },
-  cmpBanner: {
-    borderWidth: 1,
-    borderRadius: 10,
-    padding: 10,
-    marginTop: 10,
-  },
-  cmpBannerTitle: { fontSize: 13, fontWeight: '800' },
-  cmpBannerText: { fontSize: 12, color: colors.ink, marginTop: 4, lineHeight: 17 },
   visitaFeita: { backgroundColor: '#e2f3e8', borderRadius: 10, padding: 10, marginTop: 12 },
   visitaFeitaText: { fontSize: 13, color: colors.verde, fontWeight: '700', lineHeight: 18 },
 });
