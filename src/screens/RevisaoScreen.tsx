@@ -1,6 +1,6 @@
 // Offline-first: nunca bloqueia o produtor por falta de rede.
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Linking, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Screen } from '../app/Screen';
 import { WizardSteps } from '../app/WizardSteps';
 import { useNav } from '../app/navigation';
@@ -11,6 +11,7 @@ import { DEMO_CAMADAS } from '../lib/refLayers.demo';
 import { exportPDF, uploadPDFLink } from '../lib/export';
 import { solicitarVisitaTecnico } from '../lib/visita';
 import { DocumentoPreviewModal } from '../ui/DocumentoPreviewModal';
+import { mostrarLinkMedicao } from '../ui/linkMedicaoAlert';
 import {
   Badge,
   Card,
@@ -112,16 +113,7 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
   const handleGerarLink = useCallback(() => {
     if (!imovel) return;
     withAction('pdf-link', async () => {
-      const url = await uploadPDFLink(imovel);
-      Alert.alert(
-        'Link gerado',
-        url,
-        [
-          { text: 'Abrir', onPress: () => Linking.openURL(url) },
-          { text: 'Compartilhar', onPress: () => Share.share({ message: url }) },
-          { text: 'Fechar', style: 'cancel' },
-        ],
-      );
+      mostrarLinkMedicao(await uploadPDFLink(imovel));
     });
   }, [imovel, withAction]);
 

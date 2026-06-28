@@ -2,9 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Linking,
   ScrollView,
-  Share,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -17,6 +15,7 @@ import { useNav } from '../app/navigation';
 import { getImovel } from '../lib/store';
 import { exportPDF, exportGeoJSONFile, uploadPDFLink } from '../lib/export';
 import { DocumentoPreviewModal } from '../ui/DocumentoPreviewModal';
+import { mostrarLinkMedicao } from '../ui/linkMedicaoAlert';
 import { Button, EmptyState } from '../ui';
 import { colors } from '../theme/colors';
 import type { Imovel } from '../types';
@@ -200,16 +199,7 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
     if (!imovel || gerando) return;
     setGerando('pdf-link');
     try {
-      const url = await uploadPDFLink(imovel);
-      Alert.alert(
-        'Link gerado',
-        url,
-        [
-          { text: 'Abrir', onPress: () => Linking.openURL(url) },
-          { text: 'Compartilhar', onPress: () => Share.share({ message: url }) },
-          { text: 'Fechar', style: 'cancel' },
-        ],
-      );
+      mostrarLinkMedicao(await uploadPDFLink(imovel));
     } catch (err: unknown) {
       Alert.alert('Ops', err instanceof Error ? err.message : 'Não foi possível gerar o link.');
     } finally {
