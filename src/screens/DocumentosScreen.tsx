@@ -20,7 +20,8 @@ import { Button, EmptyState } from '../ui';
 import { colors } from '../theme/colors';
 import type { Imovel } from '../types';
 import { solicitacaoMetragem } from '../lib/docHub';
-import { CHECKLIST_CAR_OFICIAL, type PassoCAR } from '../lib/checklistCAR';
+import { CHECKLIST_CAR_OFICIAL, type PassoCAR, type StatusPasso } from '../lib/checklistCAR';
+import { solicitarVisitaTecnico } from '../lib/visita';
 
 // chave da exportação em andamento
 type Gerando = 'pdf-view' | 'pdf-share' | 'geojson' | 'pdf-link' | null;
@@ -90,9 +91,24 @@ function GeradoCard({
   );
 }
 
+// Tag visual por status do passo.
+const TAG: Record<StatusPasso, { texto: string; ok: boolean; cor: string }> = {
+  'feito-app': { texto: 'Adiantado pela sua medição', ok: true, cor: colors.primary },
+  'voce-ja-tem': { texto: 'Você já tem', ok: true, cor: colors.primary },
+  'a-fazer': { texto: 'A fazer', ok: false, cor: colors.mutedText },
+  'em-analise': { texto: 'Em análise', ok: false, cor: colors.aviso },
+};
+
 // Passo da checklist de emissão oficial do CAR. Toque abre "como obter" + órgão.
-function PassoRow({ passo }: { passo: PassoCAR }) {
-  const feito = passo.jaCobertoPeloApp;
+function PassoRow({
+  passo,
+  onSolicitarTecnico,
+}: {
+  passo: PassoCAR;
+  onSolicitarTecnico?: () => void;
+}) {
+  const tag = TAG[passo.status];
+  const feito = tag.ok;
   return (
     <TouchableOpacity
       style={s.passoRow}
@@ -119,7 +135,19 @@ function PassoRow({ passo }: { passo: PassoCAR }) {
           {!passo.obrigatorio ? <Text style={s.passoOpcional}>  · opcional</Text> : null}
         </Text>
         <Text style={s.passoOrgao}>{passo.orgao}</Text>
-        {feito ? <Text style={s.passoOk}>Adiantado pela sua medição</Text> : null}
+        <View style={[s.passoTag, { backgroundColor: `${tag.cor}1f` }]}>
+          <Text style={[s.passoTagTxt, { color: tag.cor }]}>{tag.texto}</Text>
+        </View>
+        {passo.solicitarTecnico && onSolicitarTecnico ? (
+          <TouchableOpacity
+            onPress={onSolicitarTecnico}
+            style={s.btnTecnico}
+            accessibilityRole="button"
+            accessibilityLabel="Solicitar técnico"
+          >
+            <Text style={s.btnTecnicoTxt}>Solicitar técnico</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
       <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
     </TouchableOpacity>
@@ -332,7 +360,33 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
         </Text>
         <View style={s.listaPasso}>
           {CHECKLIST_CAR_OFICIAL.map((passo) => (
-            <PassoRow key={passo.id} passo={passo} />
+            <PassoRow
+              key={passo.id}
+              passo={passo}
+              onSolicitarTecnico={
+                passo.solicitarTecnico && temMedicao
+                  ? () =>
+                      Alert.alert(
+                        'Solicitar técnico',
+                        'Pedir a visita de um técnico para a medição oficial?',
+                        [
+                          {
+                            text: 'Solicitar',
+                            onPress: async () => {
+                              await solicitarVisitaTecnico(
+                                imovel,
+                                'medicao',
+                                'Solicitação de técnico para medição oficial (checklist CAR).',
+                              );
+                              Alert.alert('Pronto', 'Sua solicitação foi registrada.');
+                            },
+                          },
+                          { text: 'Cancelar', style: 'cancel' },
+                        ],
+                      )
+                  : undefined
+              }
+            />
           ))}
         </View>
       </ScrollView>
@@ -425,7 +479,24 @@ const s = StyleSheet.create({
   passoLabel: { fontSize: 14, fontWeight: '700', color: colors.inkText },
   passoOpcional: { fontSize: 12, fontWeight: '600', color: colors.mutedText },
   passoOrgao: { fontSize: 12, color: colors.mutedText, marginTop: 2 },
-  passoOk: { fontSize: 11, fontWeight: '700', color: colors.primary, marginTop: 2 },
+  passoTag: {
+    alignSelf: 'flex-start',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginTop: 4,
+  },
+  passoTagTxt: { fontSize: 11, fontWeight: '700' },
+  btnTecnico: {
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginTop: 6,
+  },
+  btnTecnicoTxt: { fontSize: 12, fontWeight: '600', color: colors.primary },
 
   itemDoc: {
     flexDirection: 'row',
