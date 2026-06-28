@@ -36,6 +36,8 @@ export interface Documento {
   orgao?: string;
   /** Data de emissão (epoch ms) — preenchido para origem 'govbr'. */
   emitidoEm?: number;
+  /** Data de vencimento (epoch ms) — quando aplicável (CCIR, CAF, ITR, licença). */
+  venceEm?: number;
   createdAt: number;
 }
 

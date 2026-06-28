@@ -6,6 +6,28 @@
 // `sincronizarDocumentos`. Hoje é mock determinístico, offline-first.
 import type { Documento, DocumentoTipo, Imovel } from '../types';
 
+// ---------------------------------------------------------------------------
+// Modelo de status dos documentos
+// ---------------------------------------------------------------------------
+
+export type DocStatus = 'em-dia' | 'vencendo' | 'vencido' | 'pendente' | 'ausente';
+
+export interface ItemDocumento {
+  tipo: DocumentoTipo;
+  label: string;
+  orgao: string;
+  status: DocStatus;
+  doc?: Documento;
+  venceEm?: number;
+  detalhe: string;
+}
+
+export interface SolicitacaoMetragem {
+  delta_ha: number;
+  afeta: DocumentoTipo[];
+  mensagem: string;
+}
+
 export type NivelRegularidade = 'regular' | 'pendente' | 'critico';
 
 export interface DocMeta {
@@ -50,6 +72,17 @@ const DISCLAIMER =
   'imóvel. Não constitui oferta de crédito nem diagnóstico jurídico. A concessão ' +
   'depende de análise da instituição financeira e da documentação completa.';
 
+// ponytail: helper local para fim do exercício fiscal do ano do timestamp fornecido
+function fimExercicio(ts: number): number {
+  return new Date(new Date(ts).getFullYear(), 11, 31, 23, 59, 59, 999).getTime();
+}
+
+// Formata epoch ms como "MM/AAAA" (usado nas mensagens de detalhe)
+function fmtMesAno(ts: number): string {
+  const d = new Date(ts);
+  return `${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+}
+
 /** Documentos digitais que "existem" no gov.br para este imóvel (mock determinístico). */
 export function documentosDisponiveis(imovel: Imovel): Documento[] {
   const tipos: DocumentoTipo[] = [];
@@ -59,8 +92,21 @@ export function documentosDisponiveis(imovel: Imovel): Documento[] {
   if (imovel.geometry.points.length >= 3) tipos.push('sigef'); // foi georreferenciado
   // caf/itr/licenca não são retornados por padrão → viram pendência.
 
+  // Datas derivadas de imovel.createdAt para resultado determinístico por imóvel.
+  // CCIR e ITR: vence no fim do exercício em que o imóvel foi cadastrado.
+  // CAF: validade de 3 anos a partir do cadastro (CAF 3.0 — MDA, 2025).
+  const venceEmCCIR = fimExercicio(imovel.createdAt);
+  const venceEmCAF  = imovel.createdAt + 3 * 365.25 * 24 * 60 * 60 * 1000;
+  const venceEmITR  = venceEmCCIR;
+
   return tipos.map((tipo) => {
     const meta = CATALOGO_DIGITAL[tipo];
+    const venceEm: number | undefined =
+      tipo === 'ccir' ? venceEmCCIR :
+      tipo === 'caf'  ? venceEmCAF  :
+      tipo === 'itr'  ? venceEmITR  :
+      undefined; // car, car-extrato, sigef, matricula: permanentes
+
     return {
       id: `govbr_${tipo}`, // id estável → re-sync não duplica
       tipo,
@@ -69,6 +115,7 @@ export function documentosDisponiveis(imovel: Imovel): Documento[] {
       nome: meta.label,
       mime: 'application/pdf',
       emitidoEm: imovel.createdAt,
+      venceEm,
       createdAt: imovel.createdAt,
     } as Documento;
   });
@@ -88,6 +135,153 @@ export async function sincronizarDocumentos(imovel: Imovel): Promise<Documento[]
   } catch {
     return imovel.documentos;
   }
+}
+
+// ---------------------------------------------------------------------------
+// Status por documento
+// ---------------------------------------------------------------------------
+
+const SESSENTA_DIAS = 60 * 24 * 60 * 60 * 1000;
+
+/** Calcula o DocStatus de um tipo de documento para o imóvel dado. Função pura. */
+export function statusDocumento(
+  tipo: DocumentoTipo,
+  imovel: Imovel,
+  doc: Documento | undefined,
+  hoje: number,
+): DocStatus {
+  const hasDelta = !!(imovel.alertaDivergencia || imovel.deltaRelatorio);
+
+  switch (tipo) {
+    case 'car':
+      if (!imovel.imovel.carNumero || !doc) return 'ausente';
+      if (
+        imovel.alertaDivergencia?.severidade === 'critico' ||
+        imovel.validacao?.status === 'reprovado'
+      ) return 'pendente';
+      return 'em-dia';
+
+    case 'car-extrato':
+      if (!doc) return 'ausente';
+      if (hasDelta) return 'vencido';
+      return 'em-dia';
+
+    case 'sigef':
+      if (!doc) return 'ausente';
+      if (hasDelta) return 'vencido';
+      return 'em-dia';
+
+    case 'matricula':
+      if (!doc) return 'ausente';
+      return 'em-dia';
+
+    case 'ccir':
+    case 'caf':
+    case 'itr':
+    case 'licenca': {
+      if (!doc) return 'ausente';
+      const ve = doc.venceEm;
+      if (!ve) return 'em-dia';
+      if (ve < hoje) return 'vencido';
+      if (ve < hoje + SESSENTA_DIAS) return 'vencendo';
+      return 'em-dia';
+    }
+
+    default:
+      return doc ? 'em-dia' : 'ausente';
+  }
+}
+
+function gerarDetalhe(
+  tipo: DocumentoTipo,
+  status: DocStatus,
+  doc: Documento | undefined,
+): string {
+  const ve = doc?.venceEm;
+
+  if (status === 'ausente') {
+    switch (tipo) {
+      case 'caf':     return 'Cadastre em caf.mda.gov.br';
+      case 'itr':     return 'Entregue a DITR no e-CAC (Receita Federal)';
+      case 'licenca': return 'Consulte o órgão ambiental estadual';
+      default:        return 'Baixe no Meu Imóvel Rural (gov.br)';
+    }
+  }
+
+  if (status === 'pendente') {
+    return tipo === 'car' ? 'Em análise no SICAR' : 'Pendente de regularização';
+  }
+
+  if (status === 'vencido') {
+    if (tipo === 'sigef' || tipo === 'car-extrato') return 'Refaça — nova metragem detectada';
+    if (ve) return `Vencido em ${fmtMesAno(ve)} — renove`;
+    return 'Vencido — renove o documento';
+  }
+
+  if (status === 'vencendo' && ve) return `Vence em ${fmtMesAno(ve)}`;
+
+  // em-dia
+  if (ve) return `Válido até ${fmtMesAno(ve)}`;
+  return 'Documento em dia';
+}
+
+// Prioridade de exibição: o que precisa de ação aparece primeiro.
+const PRIORIDADE_STATUS: Record<DocStatus, number> = {
+  ausente: 0, vencido: 1, pendente: 2, vencendo: 3, 'em-dia': 4,
+};
+
+/**
+ * Lista todos os documentos digitais aplicáveis ao imóvel, cada um com seu
+ * status calculado. Inclui itens ausentes (ainda não anexados). Ordenados:
+ * ausentes/vencidos/pendentes primeiro, em-dia por último.
+ */
+export function listarDocumentosPropriedade(imovel: Imovel, hoje: number): ItemDocumento[] {
+  const tipos: DocumentoTipo[] = [];
+  if (imovel.imovel.carNumero) tipos.push('car', 'car-extrato');
+  tipos.push('ccir');
+  if (imovel.imovel.matricula) tipos.push('matricula');
+  if (imovel.geometry.points.length >= 3) tipos.push('sigef');
+  tipos.push('caf', 'itr', 'licenca');
+
+  const docPorTipo = new Map<DocumentoTipo, Documento>(
+    imovel.documentos.map((d) => [d.tipo, d]),
+  );
+
+  const itens: ItemDocumento[] = tipos.map((tipo) => {
+    const meta = CATALOGO_DIGITAL[tipo];
+    const doc = docPorTipo.get(tipo);
+    const status = statusDocumento(tipo, imovel, doc, hoje);
+    return {
+      tipo,
+      label: meta.label,
+      orgao: meta.orgao,
+      status,
+      doc,
+      venceEm: doc?.venceEm,
+      detalhe: gerarDetalhe(tipo, status, doc),
+    };
+  });
+
+  return itens.sort((a, b) => PRIORIDADE_STATUS[a.status] - PRIORIDADE_STATUS[b.status]);
+}
+
+/**
+ * Retorna aviso de nova metragem quando há re-demarcação pendente (alertaDivergencia
+ * ou deltaRelatorio). Null quando o imóvel está estável.
+ */
+export function solicitacaoMetragem(imovel: Imovel): SolicitacaoMetragem | null {
+  if (!imovel.alertaDivergencia && !imovel.deltaRelatorio) return null;
+  const delta_ha = Math.abs(
+    imovel.alertaDivergencia?.delta_ha ??
+    imovel.deltaRelatorio?.acrescido_ha ??
+    0,
+  );
+  const deltaStr = delta_ha > 0 ? `+${delta_ha.toFixed(1)} ha` : 'divergência de área';
+  return {
+    delta_ha,
+    afeta: ['sigef', 'car-extrato'],
+    mensagem: `Nova metragem de ${deltaStr} detectada. Refaça o Georreferenciamento e o Extrato do CAR para regularizar.`,
+  };
 }
 
 /** Avalia regularidade: documentos obrigatórios faltando + hectares em risco. */
