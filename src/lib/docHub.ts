@@ -121,7 +121,9 @@ export function avaliarRegularidade(imovel: Imovel): RegularidadeImovel {
   const titulo =
     nivel === 'regular' ? 'Imóvel regular' : nivel === 'critico' ? 'Regularização crítica' : 'Regularização pendente';
   const mensagem = podeImpactarCredito
-    ? `${partes.join(' e ')} podem impedir o acesso a crédito rural (Pronaf/Pronampe) e financiamento bancário.`
+    ? partes.length > 0
+      ? `${partes.join(' e ')} podem impedir o acesso a crédito rural (Pronaf/Pronampe) e financiamento bancário.`
+      : 'Situação cadastral reprovada. Regularize o imóvel para acesso a crédito rural e financiamento.'
     : 'Documentação e geometria em dia — apto a pleitear crédito rural.';
 
   return { nivel, haEmRisco, docsObrigatoriosFaltando, podeImpactarCredito, titulo, mensagem, disclaimer: DISCLAIMER };

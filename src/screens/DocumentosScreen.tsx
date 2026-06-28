@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -20,7 +20,6 @@ import { Button, Card, EmptyState, StatusChip } from '../ui';
 import { colors } from '../theme/colors';
 import type { Documento, DocumentoTipo, Imovel } from '../types';
 import { sincronizarDocumentos, avaliarRegularidade, CATALOGO_DIGITAL } from '../lib/docHub';
-import type { RegularidadeImovel } from '../lib/docHub';
 
 type Tab = 'dados' | 'dominio' | 'uso';
 type ChecklistStatus = 'ok' | 'aviso' | 'pendente';
@@ -381,9 +380,12 @@ function ItemDocumento({
   const geotagged = doc.tipo === 'foto-divisa' && doc.lat != null && doc.lng != null;
 
   function confirmarRemocao() {
+    const msg = doc.origem === 'govbr'
+      ? `Deseja remover "${doc.nome}" da lista? Ele pode ser restaurado em "Sincronizar com gov.br".`
+      : `Deseja remover "${doc.nome}"? Esta ação não pode ser desfeita.`;
     Alert.alert(
       'Remover documento',
-      `Deseja remover "${doc.nome}"? Esta ação não pode ser desfeita.`,
+      msg,
       [
         { text: 'Cancelar', style: 'cancel' },
         { text: 'Remover', style: 'destructive', onPress: () => onRemover(doc) },
@@ -446,6 +448,8 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
   const [sharingText, setSharingText] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>('dados');
   const [sincronizando, setSincronizando] = useState(false);
+  const montado = useRef(true);
+  useEffect(() => { montado.current = true; return () => { montado.current = false; }; }, []);
 
   const sincronizar = useCallback(async (im: Imovel) => {
     setSincronizando(true);
@@ -455,12 +459,12 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
         documentos: docs,
         documentosSincronizadosEm: Date.now(),
       });
-      if (atualizado) {
+      if (atualizado && montado.current) {
         setImovel(atualizado);
         setDocumentos(atualizado.documentos);
       }
     } finally {
-      setSincronizando(false);
+      if (montado.current) setSincronizando(false);
     }
   }, []);
 
@@ -608,7 +612,7 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
 
   const { status: chipStatus, label: chipLabel } = chipProps(imovel);
   const checklist = buildChecklist(imovel);
-  const reg: RegularidadeImovel = avaliarRegularidade(imovel);
+  const reg = useMemo(() => avaliarRegularidade(imovel), [imovel]);
   const firstImageDoc = documentos.find((d) => !!d.uri && ehImagem(d));
   const areaStr = `${imovel.geometry.area_ha.toFixed(2)} ha`;
   const protoco = imovel.imovel.matricula
@@ -658,7 +662,7 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
           <Text style={s.secaoLabel}>VISUALIZAÇÃO</Text>
           {firstImageDoc ? (
             <Image
-              source={{ uri: firstImageDoc.uri }}
+              source={{ uri: firstImageDoc.uri! }}
               style={s.preview}
               resizeMode="contain"
               accessibilityLabel="Pré-visualização do documento"

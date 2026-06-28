@@ -56,4 +56,13 @@ const rRisco = avaliarRegularidade(imovelBase({ alertaDivergencia: { detectadoEm
 assert.strictEqual(rRisco.haEmRisco, 7.1);
 assert.strictEqual(rRisco.nivel, 'critico');
 
+// 5) critico com todos os docs presentes (reprovado sem alertaDivergencia) → mensagem sem sujeito vazio
+const comDocsReprovado = imovelBase({
+  documentos: OBRIGATORIOS_CREDITO.map((t, i) => ({ id: `d${i}`, tipo: t, origem: 'govbr', orgao: 'x', nome: t, createdAt: 0 })),
+  validacao: { status: 'reprovado', updatedAt: 0 },
+});
+const rReprovado = avaliarRegularidade(comDocsReprovado);
+assert.strictEqual(rReprovado.nivel, 'critico');
+assert.ok(rReprovado.mensagem.length > 0 && !rReprovado.mensagem.startsWith(' '), 'mensagem não pode começar vazia');
+
 console.log('docHub.test: OK');
