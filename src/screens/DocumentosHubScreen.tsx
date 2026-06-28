@@ -5,17 +5,16 @@ import { useNav } from '../app/navigation';
 import { Card, EmptyState, StatusChip } from '../ui';
 import { colors } from '../theme/colors';
 import { listImoveis } from '../lib/store';
+import { avaliarRegularidade } from '../lib/docHub';
 import type { Imovel } from '../types';
 
 // ponytail: chip status derivado inline — evita import de tipo não exportado
 type ChipStatus = 'regularizado' | 'critico' | 'aviso' | 'info';
 
-function cardChip(im: Imovel): { status: ChipStatus; label: string } {
-  const v = im.validacao?.status;
-  if (v === 'aprovado') return { status: 'regularizado', label: 'Validado' };
-  if (v === 'reprovado') return { status: 'critico', label: 'Reprovado' };
-  if (im.status === 'enviado') return { status: 'info', label: 'Enviado' };
-  return { status: 'aviso', label: 'Rascunho' };
+function cardChip(nivel: 'regular' | 'pendente' | 'critico'): { status: ChipStatus; label: string } {
+  if (nivel === 'critico') return { status: 'critico', label: 'Crítico' };
+  if (nivel === 'pendente') return { status: 'aviso', label: 'Pendência' };
+  return { status: 'regularizado', label: 'Regular' };
 }
 
 export function DocumentosHubScreen() {
@@ -43,7 +42,8 @@ export function DocumentosHubScreen() {
           />
         }
         renderItem={({ item }) => {
-          const chip = cardChip(item);
+          const reg = avaliarRegularidade(item);
+          const chip = cardChip(reg.nivel);
           const area =
             item.geometry.points.length >= 3
               ? `${item.geometry.area_ha.toFixed(2)} ha`
@@ -78,7 +78,11 @@ export function DocumentosHubScreen() {
                       {docCount} doc{docCount !== 1 ? 's' : ''}
                     </Text>
                   </View>
-                  {area ? <Text style={s.area}>{area}</Text> : null}
+                  {reg.haEmRisco > 0 ? (
+                    <Text style={s.risco}>{reg.haEmRisco.toFixed(1)} ha em risco</Text>
+                  ) : area ? (
+                    <Text style={s.area}>{area}</Text>
+                  ) : null}
                 </View>
               </Card>
             </TouchableOpacity>
@@ -123,4 +127,5 @@ const s = StyleSheet.create({
   },
   docsCount: { fontSize: 12, fontWeight: '700', color: colors.primary },
   area: { fontSize: 13, fontWeight: '700', color: colors.mutedText },
+  risco: { fontSize: 13, fontWeight: '800', color: '#D33' },
 });
