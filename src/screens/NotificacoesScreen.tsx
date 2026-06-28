@@ -145,7 +145,11 @@ export function NotificacoesScreen() {
   };
 
   return (
-    <Screen title="Notificações" subtitle="Gerencie seus alertas e atualizações de campo">
+    <Screen
+      title="Notificações"
+      subtitle="Gerencie seus alertas e atualizações de campo"
+      right={<View />} // já estamos nas notificações: sem sino auto-referente
+    >
       <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
         <TouchableOpacity style={s.marcarTodas} onPress={marcarTodas} activeOpacity={0.7}>
           <Ionicons name="checkmark-done" size={16} color={colors.primary} />
