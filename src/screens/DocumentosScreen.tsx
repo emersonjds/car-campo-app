@@ -19,6 +19,8 @@ import { exportPDF, shareText } from '../lib/export';
 import { Button, Card, EmptyState, StatusChip } from '../ui';
 import { colors } from '../theme/colors';
 import type { Documento, DocumentoTipo, Imovel } from '../types';
+import { sincronizarDocumentos, avaliarRegularidade, CATALOGO_DIGITAL } from '../lib/docHub';
+import type { RegularidadeImovel } from '../lib/docHub';
 
 type Tab = 'dados' | 'dominio' | 'uso';
 type ChecklistStatus = 'ok' | 'aviso' | 'pendente';
@@ -367,11 +369,14 @@ function BotaoTipo({
 function ItemDocumento({
   doc,
   onRemover,
+  onPress,
 }: {
   doc: Documento;
   onRemover: (doc: Documento) => void;
+  onPress: (doc: Documento) => void;
 }) {
-  const imagem = ehImagem(doc);
+  // ponytail: guard uri — docs govbr não têm arquivo local
+  const imagem = !!doc.uri && ehImagem(doc);
   const meta = TIPOS_META[doc.tipo];
   const geotagged = doc.tipo === 'foto-divisa' && doc.lat != null && doc.lng != null;
 
@@ -387,29 +392,37 @@ function ItemDocumento({
   }
 
   return (
-    <View
-      style={s.itemDoc}
-      accessibilityLabel={`Documento: ${doc.nome}, tipo ${meta?.label ?? doc.tipo}`}
-    >
-      {imagem ? (
-        <Image
-          source={{ uri: doc.uri }}
-          style={s.thumb}
-          resizeMode="cover"
-          accessibilityLabel=""
-        />
-      ) : (
-        <View style={[s.thumb, s.thumbPdf]}>
-          <Text style={s.thumbPdfIcone}>📄</Text>
+    <View style={s.itemDoc}>
+      <TouchableOpacity
+        style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 }}
+        onPress={() => onPress(doc)}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel={`Abrir ${doc.nome}, tipo ${meta?.label ?? doc.tipo}`}
+      >
+        {imagem ? (
+          <Image
+            source={{ uri: doc.uri! }}
+            style={s.thumb}
+            resizeMode="cover"
+            accessibilityLabel=""
+          />
+        ) : (
+          <View style={[s.thumb, s.thumbPdf]}>
+            <Text style={s.thumbPdfIcone}>📄</Text>
+          </View>
+        )}
+        <View style={s.itemInfo}>
+          <Text style={s.itemNome} numberOfLines={1}>
+            {doc.nome}
+          </Text>
+          <Text style={s.itemTipo}>{meta?.label ?? doc.tipo}</Text>
+          {geotagged ? <Text style={s.itemGeo}>georreferenciada</Text> : null}
+          {doc.origem === 'govbr' ? (
+            <Text style={s.docOrigem}>🔗 gov.br · {doc.orgao}</Text>
+          ) : null}
         </View>
-      )}
-      <View style={s.itemInfo}>
-        <Text style={s.itemNome} numberOfLines={1}>
-          {doc.nome}
-        </Text>
-        <Text style={s.itemTipo}>{meta?.label ?? doc.tipo}</Text>
-        {geotagged ? <Text style={s.itemGeo}>georreferenciada</Text> : null}
-      </View>
+      </TouchableOpacity>
       <TouchableOpacity
         style={s.btnRemover}
         onPress={confirmarRemocao}
@@ -432,6 +445,24 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
   const [sharingPdf, setSharingPdf] = useState(false);
   const [sharingText, setSharingText] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>('dados');
+  const [sincronizando, setSincronizando] = useState(false);
+
+  const sincronizar = useCallback(async (im: Imovel) => {
+    setSincronizando(true);
+    try {
+      const docs = await sincronizarDocumentos(im);
+      const atualizado = await updateImovel(im.id, {
+        documentos: docs,
+        documentosSincronizadosEm: Date.now(),
+      });
+      if (atualizado) {
+        setImovel(atualizado);
+        setDocumentos(atualizado.documentos);
+      }
+    } finally {
+      setSincronizando(false);
+    }
+  }, []);
 
   useEffect(() => {
     let ativo = true;
@@ -440,13 +471,14 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
       if (im) {
         setImovel(im);
         setDocumentos(im.documentos);
+        if (!im.documentosSincronizadosEm) sincronizar(im);
       }
       setLoading(false);
     });
     return () => {
       ativo = false;
     };
-  }, [imovelId]);
+  }, [imovelId, sincronizar]);
 
   async function salvarLista(nova: Documento[]): Promise<void> {
     setDocumentos(nova);
@@ -545,6 +577,17 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
     }
   }
 
+  function abrirDocumento(doc: Documento) {
+    if (doc.origem === 'govbr' || !doc.uri) {
+      Alert.alert(
+        doc.nome,
+        'Documento sincronizado do gov.br. Visualização completa disponível na versão integrada (demo).',
+      );
+      return;
+    }
+    // ponytail: sem file-viewer; abrir quando expo-file-viewer disponível
+  }
+
   if (loading) {
     return (
       <Screen title="Documentos" showBack>
@@ -565,7 +608,8 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
 
   const { status: chipStatus, label: chipLabel } = chipProps(imovel);
   const checklist = buildChecklist(imovel);
-  const firstImageDoc = documentos.find(ehImagem);
+  const reg: RegularidadeImovel = avaliarRegularidade(imovel);
+  const firstImageDoc = documentos.find((d) => !!d.uri && ehImagem(d));
   const areaStr = `${imovel.geometry.area_ha.toFixed(2)} ha`;
   const protoco = imovel.imovel.matricula
     ? `Matrícula: ${imovel.imovel.matricula}`
@@ -700,6 +744,38 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
           ))}
         </Card>
 
+        {sincronizando ? (
+          <View style={s.busyRow}>
+            <ActivityIndicator color={colors.primary} size="small" />
+            <Text style={s.busyTexto}>Buscando seus documentos no gov.br…</Text>
+          </View>
+        ) : null}
+
+        {reg.podeImpactarCredito ? (
+          <View style={[s.regBanner, reg.nivel === 'critico' ? s.regCritico : s.regPendente]}>
+            <Text style={s.regTitulo}>{reg.titulo}</Text>
+            <Text style={s.regMsg}>{reg.mensagem}</Text>
+            {reg.docsObrigatoriosFaltando.length > 0 ? (
+              <Text style={s.regFalta}>
+                Falta: {reg.docsObrigatoriosFaltando.map((t) => CATALOGO_DIGITAL[t].label).join(', ')}
+              </Text>
+            ) : null}
+            <Text style={s.regDisclaimer}>{reg.disclaimer}</Text>
+          </View>
+        ) : null}
+
+        <TouchableOpacity
+          onPress={() => sincronizar(imovel)}
+          disabled={sincronizando}
+          style={s.syncBtn}
+          accessibilityRole="button"
+          accessibilityLabel="Sincronizar documentos com o gov.br"
+        >
+          <Text style={s.syncBtnTxt}>
+            {sincronizando ? 'Sincronizando…' : '🔄 Sincronizar com gov.br'}
+          </Text>
+        </TouchableOpacity>
+
         <Text style={s.secaoTitulo}>Adicionar documentos</Text>
         <Text style={s.secaoHint}>
           Toque em um tipo para adicionar. Todos os campos são opcionais.
@@ -735,7 +811,7 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
         ) : (
           <View style={s.listaDoc}>
             {documentos.map((doc) => (
-              <ItemDocumento key={doc.id} doc={doc} onRemover={removerDoc} />
+              <ItemDocumento key={doc.id} doc={doc} onRemover={removerDoc} onPress={abrirDocumento} />
             ))}
           </View>
         )}
@@ -923,6 +999,18 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   btnRemoverTexto: { fontSize: 14, color: colors.critico, fontWeight: '800' },
+
+  regBanner: { borderRadius: 12, borderWidth: 1, padding: 12, marginBottom: 12, gap: 4 },
+  // ponytail: colors.alerta é vermelho (≡ critico); aviso é âmbar — correto para pendente
+  regPendente: { backgroundColor: '#FFF7E6', borderColor: colors.aviso },
+  regCritico: { backgroundColor: '#FDECEC', borderColor: colors.critico },
+  regTitulo: { fontSize: 14, fontWeight: '800', color: colors.inkText },
+  regMsg: { fontSize: 13, color: colors.inkText },
+  regFalta: { fontSize: 12, fontWeight: '700', color: colors.mutedText },
+  regDisclaimer: { fontSize: 10, color: colors.mutedText, marginTop: 2 },
+  syncBtn: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, backgroundColor: colors.verdeBg, alignSelf: 'flex-start', marginBottom: 10 },
+  syncBtnTxt: { fontSize: 13, fontWeight: '700', color: colors.primary },
+  docOrigem: { fontSize: 11, fontWeight: '700', color: colors.primary, marginTop: 2 },
 
   rodape: {
     flexDirection: 'row',
