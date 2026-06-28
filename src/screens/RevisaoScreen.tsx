@@ -4,12 +4,12 @@ import { Alert, Linking, ScrollView, Share, StyleSheet, Text, View } from 'react
 import { Screen } from '../app/Screen';
 import { WizardSteps } from '../app/WizardSteps';
 import { useNav } from '../app/navigation';
-import { getImovel, updateImovel } from '../lib/store';
+import { getImovel } from '../lib/store';
 import { areaHectares, perimeterM, validatePerimeter } from '../lib/geo';
-import { submitPerimeter } from '../lib/api';
 import { analisarAlteracaoImovel } from '../lib/alteracao';
 import { DEMO_CAMADAS } from '../lib/refLayers.demo';
 import { exportPDF, previewPDF, uploadPDFLink } from '../lib/export';
+import { solicitarVisitaTecnico } from '../lib/visita';
 import {
   Badge,
   Card,
@@ -19,7 +19,7 @@ import {
   StatBox,
 } from '../ui';
 import { colors } from '../theme/colors';
-import type { Imovel, MotivoVisita, SolicitacaoVisita } from '../types';
+import type { Imovel, MotivoVisita } from '../types';
 
 /**
  * Mascara CPF/CNPJ para exibição na tela (LGPD — dado sensível).
@@ -135,30 +135,12 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
     const r = alteracaoResumo?.relatorio;
     const pedir = (motivo: MotivoVisita, detalhe: string) =>
       withAction('visita', async () => {
-        const { imovel: dados, produtor, geometry } = imovel;
-        const sol: SolicitacaoVisita = { solicitadaEm: Date.now(), motivo, detalhe };
-        // A solicitação JÁ registra e envia o imóvel para a fila do analista.
-        const updated = await updateImovel(imovel.id, {
-          solicitacaoVisita: sol,
-          status: 'enviado',
-        });
+        const updated = await solicitarVisitaTecnico(imovel, motivo, detalhe);
         if (updated) setImovel(updated);
-
-        // Melhor-esforço: publica o perímetro preliminar na CAR Geo API
-        // (offline-resiliente — nunca bloqueia o produtor por falta de rede).
-        const properties: Record<string, unknown> = {
-          nome: dados.nome,
-          municipio: dados.municipio,
-          uf: dados.uf,
-          produtor_nome: produtor.nome,
-          ...(dados.matricula ? { matricula: dados.matricula } : {}),
-          ...(dados.modulosFiscais != null ? { modulos_fiscais: dados.modulosFiscais } : {}),
-        };
-        await submitPerimeter(geometry.points, properties).catch(() => {});
 
         Alert.alert(
           'Visita solicitada',
-          'Seu imóvel entrou na fila de visitas do analista com a medição preliminar. ' +
+          'Solicitação de visita enviada com a medição preliminar. ' +
             'Você poderá discutir os números com o técnico na visita de campo.',
           [{ text: 'Ok', onPress: () => switchTab({ name: 'home' }) }],
         );
@@ -356,9 +338,8 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
             {imovel.solicitacaoVisita ? (
               <View style={s.visitaFeita}>
                 <Text style={s.visitaFeitaText}>
-                  ✓ Conferência solicitada (
-                  {imovel.solicitacaoVisita.motivo === 'medicao' ? 'nova medição' : 'documentação'}) — na fila
-                  do analista.
+                  ✓ Solicitação enviada (
+                  {imovel.solicitacaoVisita.motivo === 'medicao' ? 'nova medição' : 'documentação'}).
                 </Text>
               </View>
             ) : (
@@ -382,6 +363,9 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
 
         <View style={s.submitSection}>
           <View style={s.btnRow}>
+            <PrimaryButton label="Concluir" onPress={() => switchTab({ name: 'home' })} disabled={isBusy} />
+          </View>
+          <View style={[s.btnRow, { marginTop: 8 }]}>
             <SecondaryButton label="Voltar" onPress={goBack} disabled={isBusy} />
           </View>
         </View>

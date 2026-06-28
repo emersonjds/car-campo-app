@@ -21,15 +21,8 @@ const TABS_PRODUTOR: Tab[] = [
   { route: { name: 'perfil' },         name: 'perfil',         icon: 'person-outline',        iconActive: 'person',        label: 'Perfil' },
 ];
 
-const TABS_ANALISTA: Tab[] = [
-  { route: { name: 'painel' },         name: 'painel',         icon: 'stats-chart-outline',   iconActive: 'stats-chart',   label: 'Painel' },
-  { route: { name: 'medicoes' },       name: 'medicoes',       icon: 'reader-outline',        iconActive: 'reader',        label: 'Medições' },
-  { route: { name: 'documentos-hub' }, name: 'documentos-hub', icon: 'document-text-outline', iconActive: 'document-text', label: 'Documentos' },
-  { route: { name: 'perfil' },         name: 'perfil',         icon: 'person-outline',        iconActive: 'person',        label: 'Perfil' },
-];
-
-export function tabsForPerfil(perfil: Perfil | null): Tab[] {
-  return perfil === 'analista' ? TABS_ANALISTA : TABS_PRODUTOR;
+export function tabsForPerfil(_perfil: Perfil | null): Tab[] {
+  return TABS_PRODUTOR;
 }
 
 export function TabBar() {

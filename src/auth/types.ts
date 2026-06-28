@@ -1,10 +1,10 @@
 import type { Perfil } from '../types';
 
-export type AuthMethod = 'govbr' | 'matricula';
+export type AuthMethod = 'govbr';
 export type Selo = 'bronze' | 'prata' | 'ouro';
 
 export interface Sessao {
-  perfil: Perfil;       // derivado do método: govbr→produtor, matricula→analista
+  perfil: Perfil;
   method: AuthMethod;
   nome: string;
   cpf?: string;         // produtor (PII — mascarar na UI, nunca logar)

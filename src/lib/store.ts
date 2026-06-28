@@ -144,7 +144,7 @@ export async function deleteImovel(id: string): Promise<void> {
 
 export async function getPerfil(): Promise<Perfil | null> {
   const raw = await AsyncStorage.getItem(PERFIL_KEY);
-  return raw === 'produtor' || raw === 'analista' ? raw : null;
+  return raw === 'produtor' ? raw : null;
 }
 
 export async function setPerfil(perfil: Perfil): Promise<void> {

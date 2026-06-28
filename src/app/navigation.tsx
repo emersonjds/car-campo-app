@@ -3,15 +3,13 @@ import type { Perfil } from '../types';
 import { useAuth } from '../auth/AuthContext';
 
 export type Route =
-  | { name: 'dashboard' }       // produtor: aba 1 → HomeScreen
-  | { name: 'medicoes' }        // ambos: aba 2 → MedicoesScreen / ValidacaoScreen
-  | { name: 'documentos-hub' }  // ambos: aba 3 → DocumentosHubScreen
-  | { name: 'perfil' }          // ambos: aba 4 → ConfigScreen
-  // ── Abas legadas (mantidas para backward-compat de navegações internas) ───
+  | { name: 'dashboard' }       // aba 1 → HomeScreen
+  | { name: 'medicoes' }        // aba 2 → MedicoesScreen
+  | { name: 'documentos-hub' }  // aba 3 → DocumentosHubScreen
+  | { name: 'perfil' }          // aba 4 → ConfigScreen
+  // ── Rotas legadas (backward-compat de navegações internas) ───
   | { name: 'home' }
-  | { name: 'validacao' }
   | { name: 'visitas' }
-  | { name: 'painel' }
   | { name: 'notificacoes' }
   | { name: 'config' }
   | { name: 'imovel-detalhe'; imovelId: string }
@@ -22,7 +20,6 @@ export type Route =
   | { name: 'revisao'; imovelId: string }
   | { name: 'analise-ambiental'; imovelId: string }
   | { name: 'alteracao-detalhe'; imovelId: string }
-  | { name: 'conferencia-lab'; imovelId?: string; car?: string }
   | { name: 'agendar-visita'; imovelId: string };
 
 export type RouteName = Route['name'];
@@ -30,8 +27,7 @@ export type RouteName = Route['name'];
 /** Rotas que são "abas" de topo (mostram a barra inferior, sem botão voltar). */
 export const TAB_ROOTS: RouteName[] = [
   'dashboard', 'medicoes', 'documentos-hub', 'perfil',
-  // legadas (mantidas para navegações internas como PainelScreen → visitas)
-  'home', 'validacao', 'visitas', 'painel', 'config',
+  'home', 'visitas', 'config',
 ];
 
 export function isTabRoot(name: RouteName): boolean {
@@ -59,13 +55,12 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const perfil = sessao?.perfil ?? null;
   const ready = !loading;
 
-  // A cada novo login (token muda), volta para a aba inicial do perfil — o produtor
-  // cai em "Imóveis"; o analista cai direto na "Triagem" (sem aba Imóveis).
+  // A cada novo login (token muda), volta para a aba inicial.
   const prevToken = useRef<string | null>(null);
   useEffect(() => {
     const token = sessao?.token ?? null;
     if (token && token !== prevToken.current) {
-      setStack([{ name: sessao?.perfil === 'analista' ? 'painel' : 'dashboard' }]);
+      setStack([{ name: 'dashboard' }]);
     }
     prevToken.current = token;
   }, [sessao]);

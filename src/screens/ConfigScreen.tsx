@@ -31,7 +31,7 @@ export function ConfigScreen() {
       <ScrollView contentContainerStyle={s.content}>
         <Card>
           <SectionTitle>Identidade</SectionTitle>
-          {sessao?.perfil === 'produtor' ? (
+          {sessao ? (
             <View style={s.identity}>
               <Text style={s.nome}>{sessao.nome}</Text>
               {sessao.cpf ? (
@@ -43,16 +43,6 @@ export function ConfigScreen() {
                     gov.br {sessao.selo}
                   </Badge>
                 </View>
-              ) : null}
-            </View>
-          ) : sessao?.perfil === 'analista' ? (
-            <View style={s.identity}>
-              <Text style={s.nome}>{sessao.nome}</Text>
-              {sessao.matricula ? (
-                <Text style={s.detalhe}>Matrícula: {sessao.matricula}</Text>
-              ) : null}
-              {sessao.orgao ? (
-                <Text style={s.detalhe}>Órgão: {sessao.orgao}</Text>
               ) : null}
             </View>
           ) : null}

@@ -80,7 +80,7 @@ export function AgendarVisitaScreen({ imovelId }: { imovelId: string }) {
           periodo: periodoDeSlot(slotSel),
           horario: slotSel,
           observacao: obs.trim() || undefined,
-          analista: 'Analista',
+          analista: 'Técnico responsável',
         },
       });
       goBack();
@@ -131,7 +131,7 @@ export function AgendarVisitaScreen({ imovelId }: { imovelId: string }) {
           <Text style={s.bannerLabel}>AÇÃO NECESSÁRIA</Text>
           <Text style={s.bannerTitulo}>Agendar Visita Técnica</Text>
           <Text style={s.bannerSub}>
-            Selecione uma data e horário para a avaliação presencial do analista na gleba identificada com divergência.
+            Selecione uma data e horário para a avaliação presencial na propriedade identificada com divergência.
           </Text>
         </View>
 
@@ -149,7 +149,7 @@ export function AgendarVisitaScreen({ imovelId }: { imovelId: string }) {
             style={s.textarea}
             multiline
             numberOfLines={4}
-            placeholder="Descreva os detalhes da divergência encontrada para orientar o analista durante a visita técnica..."
+            placeholder="Descreva os detalhes da divergência encontrada para orientar o técnico durante a visita..."
             placeholderTextColor={colors.muted}
             value={obs}
             onChangeText={setObs}

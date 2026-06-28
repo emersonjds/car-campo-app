@@ -13,12 +13,9 @@ import { DemarcacaoScreen } from '../screens/DemarcacaoScreen';
 import { DocumentosScreen } from '../screens/DocumentosScreen';
 import { RevisaoScreen } from '../screens/RevisaoScreen';
 import { AnaliseAmbientalScreen } from '../screens/AnaliseAmbientalScreen';
-import { ValidacaoScreen } from '../screens/ValidacaoScreen';
 import { VisitasScreen } from '../screens/VisitasScreen';
 import { AlteracaoDetalheScreen } from '../screens/AlteracaoDetalheScreen';
-import { ConferenciaLabScreen } from '../screens/ConferenciaLabScreen';
 import { AgendarVisitaScreen } from '../screens/AgendarVisitaScreen';
-import { PainelScreen } from '../screens/PainelScreen';
 import { NotificacoesScreen } from '../screens/NotificacoesScreen';
 import { ConfigScreen } from '../screens/ConfigScreen';
 
@@ -42,20 +39,15 @@ export function Router() {
     case 'dashboard':
       return <HomeScreen />;
     case 'medicoes':
-      // ponytail: mesma rota, tela diferente por perfil — evita rota duplicada.
-      return sessao.perfil === 'analista' ? <ValidacaoScreen /> : <MedicoesScreen />;
+      return <MedicoesScreen />;
     case 'documentos-hub':
       return <DocumentosHubScreen />;
     case 'perfil':
       return <ConfigScreen />;
     case 'home':
       return <HomeScreen />;
-    case 'validacao':
-      return <ValidacaoScreen />;
     case 'visitas':
       return <VisitasScreen />;
-    case 'painel':
-      return <PainelScreen />;
     case 'notificacoes':
       return <NotificacoesScreen />;
     case 'config':
@@ -76,8 +68,6 @@ export function Router() {
       return <AnaliseAmbientalScreen imovelId={route.imovelId} />;
     case 'alteracao-detalhe':
       return <AlteracaoDetalheScreen imovelId={route.imovelId} />;
-    case 'conferencia-lab':
-      return <ConferenciaLabScreen imovelId={route.imovelId} car={route.car} />;
     case 'agendar-visita':
       return <AgendarVisitaScreen imovelId={route.imovelId} />;
     default:

@@ -422,7 +422,8 @@ export async function uploadPDFLink(imovel: Imovel): Promise<string> {
   if (!res.ok) {
     throw new Error('Não foi possível gerar o link agora. Tente novamente com internet.');
   }
-  return (await res.json()).url as string;
+  const { url } = (await res.json()) as { url: string };
+  return `${url}/ver`;
 }
 
 /**

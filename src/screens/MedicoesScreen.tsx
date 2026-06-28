@@ -1,4 +1,3 @@
-// Analista cai em ValidacaoScreen pela mesma rota 'medicoes' (ver Router.tsx).
 import { useCallback, useEffect, useState } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Screen } from '../app/Screen';

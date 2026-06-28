@@ -99,7 +99,7 @@ export function VisitasScreen() {
         {fila.length === 0 ? (
           <EmptyState
             title="Sem visitas pendentes"
-            hint="As medições enviadas pelos produtores que exigem conferência em campo aparecem aqui, já priorizadas por gravidade."
+            hint="As medições que exigem conferência em campo aparecem aqui, já priorizadas por gravidade."
           />
         ) : (
           fila.map(({ imovel, painel }) => (
@@ -109,7 +109,7 @@ export function VisitasScreen() {
               painel={painel}
               onAgendar={() => agendar(imovel)}
               onWhatsApp={() => contatarWhatsApp({ imovel, painel })}
-              onConferir={() => navigate({ name: 'conferencia-lab', imovelId: imovel.id })}
+              onConferir={() => navigate({ name: 'demarcacao', imovelId: imovel.id })}
             />
           ))
         )}

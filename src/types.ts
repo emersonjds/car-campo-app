@@ -1,7 +1,7 @@
 import type { LngLat } from './lib/geo';
 import type { DeltaRelatorio } from './lib/delta';
 
-export type Perfil = 'produtor' | 'analista';
+export type Perfil = 'produtor';
 
 // Tipos de documento do imóvel rural. Vários já existem em formato DIGITAL e
 // podem ser baixados pelo próprio produtor (gov.br, INCRA, SICAR, MDA…). A
