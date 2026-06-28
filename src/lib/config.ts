@@ -7,8 +7,10 @@ const fromExtra = (Constants.expoConfig?.extra as Record<string, string> | undef
 export const API_BASE_URL =
   process.env.EXPO_PUBLIC_API_BASE_URL ?? fromExtra ?? 'http://localhost:3000';
 
-// LGPD: dado de localização é sensível; fora de dev/localhost exigimos HTTPS.
-if (__DEV__ && API_BASE_URL.startsWith('http:') && !API_BASE_URL.includes('localhost')) {
+// LGPD: dado de localização é sensível; fora de dev exigimos HTTPS.
+// localhost e IPs de rede local (LAN) são teste em device — não disparam o aviso.
+const isLocalHost = /localhost|127\.0\.0\.1|192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\./.test(API_BASE_URL);
+if (__DEV__ && API_BASE_URL.startsWith('http:') && !isLocalHost) {
   console.warn('[CAR Campo] API_BASE_URL usa HTTP fora de localhost — risco LGPD. Use HTTPS em produção.');
 }
 
