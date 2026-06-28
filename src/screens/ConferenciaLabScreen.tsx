@@ -29,7 +29,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Screen } from '../app/Screen';
 import { useNav } from '../app/navigation';
-import { CalendarModal, type Periodo } from '../ui/CalendarModal';
 import { type LngLat } from '../lib/geo';
 import { analisarSobreposicoes, type AnaliseAmbiental } from '../lib/overlay';
 import { DEMO_CAMADAS, DEMO_PERIMETRO_ANTERIOR } from '../lib/refLayers.demo';
@@ -44,7 +43,7 @@ import { useSimulatedWalk, type SimStatus } from '../sim/useSimulatedWalk';
 import { useAlteracaoDelta } from '../hooks/useAlteracaoDelta';
 import { getImovel, updateImovel } from '../lib/store';
 import { pickDocument, takePhoto } from '../lib/documents';
-import { PrimaryButton, SecondaryButton } from '../ui';
+import { Button } from '../ui';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/typography';
 import type { Documento, ValidacaoStatus } from '../types';
@@ -136,8 +135,6 @@ export function ConferenciaLabScreen({ imovelId, car }: { imovelId?: string; car
   // Decisão em confirmação no modal (reprovado/aprovado) ou null.
   const [confirmando, setConfirmando] = useState<ValidacaoStatus | null>(null);
   const [nota, setNota] = useState('');
-  // Calendário de agendamento aberto?
-  const [agendando, setAgendando] = useState(false);
 
   useEffect(() => {
     if (!imovelId) return;
@@ -195,7 +192,6 @@ export function ConferenciaLabScreen({ imovelId, car }: { imovelId?: string; car
     setDocs([]);
     setConfirmando(null);
     setNota('');
-    setAgendando(false);
   };
 
   const acaoPrincipal =
@@ -209,16 +205,12 @@ export function ConferenciaLabScreen({ imovelId, car }: { imovelId?: string; car
 
   // ---------- ações do analista ----------
   const abrirDecisao = (st: ValidacaoStatus) => {
-    if (st === 'pendente') {
-      setAgendando(true);
-    } else {
-      setNota('');
-      setConfirmando(st);
-    }
+    setNota('');
+    setConfirmando(st);
   };
 
-  const voltarParaHome = (tab: 'validacao' | 'visitas') => {
-    if (imovelId) switchTab({ name: tab });
+  const voltarParaHome = () => {
+    if (imovelId) switchTab({ name: 'validacao' });
     else goBack();
   };
 
@@ -232,19 +224,7 @@ export function ConferenciaLabScreen({ imovelId, car }: { imovelId?: string; car
         validacao: { status: st, nota: nota.trim() || undefined, analista: 'Analista', updatedAt: Date.now() },
       });
     }
-    voltarParaHome('validacao');
-  };
-
-  const confirmarAgendamento = async (ts: number, periodo: Periodo) => {
-    setAgendando(false);
-    setAceite('pendente');
-    if (imovelId) {
-      await updateImovel(imovelId, {
-        visitaAgendada: { agendadaEm: Date.now(), dataVisita: ts, periodo, analista: 'Analista' },
-        validacao: { status: 'pendente', analista: 'Analista', updatedAt: Date.now() },
-      });
-    }
-    voltarParaHome('visitas');
+    voltarParaHome();
   };
 
   const encaminhar = () => {
@@ -474,11 +454,11 @@ export function ConferenciaLabScreen({ imovelId, car }: { imovelId?: string; car
               )}
             </View>
 
-            {/* Decisão do analista */}
+            {/* Decisão do analista — já está em campo remedindo, então só recusa/aceita
+                (agendar visita é ação remota do painel, não faz sentido aqui). */}
             <Text style={s.sectionLabel}>DECISÃO DO ANALISTA</Text>
             <View style={s.decisaoRow}>
               <DecisaoChip label="Recusar medição" tone="alerta" ativo={aceite === 'reprovado'} onPress={() => abrirDecisao('reprovado')} />
-              <DecisaoChip label="Agendar visita"  tone="aviso"  ativo={aceite === 'pendente'}  onPress={() => abrirDecisao('pendente')} />
               <DecisaoChip label="Aceitar medição" tone="ok"     ativo={aceite === 'aprovado'}  onPress={() => abrirDecisao('aprovado')} />
             </View>
 
@@ -507,14 +487,11 @@ export function ConferenciaLabScreen({ imovelId, car }: { imovelId?: string; car
         )}
       </ScrollView>
 
-      {/* Rodapé: Limpar (compacto) · ação principal (flex) */}
+      {/* Rodapé: Limpar (compacto) · ação principal (flex) — botões irmãos com a
+          mesma base (mesma altura, sem wrappers assimétricos). */}
       <View style={[s.footer, { paddingBottom: insets.bottom + 16 }]}>
-        <View style={s.footerLimpar}>
-          <SecondaryButton label="Limpar" onPress={limpar} disabled={status === 'idle'} />
-        </View>
-        <View style={s.footerMain}>
-          <PrimaryButton label={acaoPrincipal.label} onPress={acaoPrincipal.onPress} />
-        </View>
+        <Button label="Limpar" variant="secondary" onPress={limpar} disabled={status === 'idle'} style={s.btnLimpar} />
+        <Button label={acaoPrincipal.label} variant="primary" onPress={acaoPrincipal.onPress} />
       </View>
 
       {/* Modal de confirmação: recusar / aceitar medição */}
@@ -561,16 +538,6 @@ export function ConferenciaLabScreen({ imovelId, car }: { imovelId?: string; car
           </Pressable>
         </Pressable>
       </Modal>
-
-      {/* Calendário de agendamento de visita */}
-      <CalendarModal
-        visible={agendando}
-        title="Agendar visita de campo"
-        subtitle={imovelNome ?? undefined}
-        confirmLabel="Confirmar visita"
-        onConfirm={confirmarAgendamento}
-        onClose={() => setAgendando(false)}
-      />
     </Screen>
   );
 }
@@ -779,8 +746,8 @@ const s = StyleSheet.create({
     shadowOffset: { width: 0, height: -3 },
     elevation: 8,
   },
-  footerLimpar: { width: 112 },
-  footerMain: { flex: 1, justifyContent: 'center' },
+  // Limpar tem largura fixa (override do flex:1 da base); a ação principal mantém flex:1.
+  btnLimpar: { flex: 0, width: 112 },
 
   // Modal de confirmação da decisão
   mBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
