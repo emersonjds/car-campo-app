@@ -20,8 +20,7 @@ import { Button, EmptyState } from '../ui';
 import { colors } from '../theme/colors';
 import type { Imovel } from '../types';
 import { solicitacaoMetragem } from '../lib/docHub';
-import { CHECKLIST_CAR_OFICIAL, type PassoCAR, type StatusPasso } from '../lib/checklistCAR';
-import { solicitarVisitaTecnico } from '../lib/visita';
+import type { PassoCAR, StatusPasso } from '../lib/checklistCAR';
 
 // chave da exportação em andamento
 type Gerando = 'pdf-view' | 'pdf-share' | 'geojson' | 'pdf-link' | null;
@@ -100,7 +99,7 @@ const TAG: Record<StatusPasso, { texto: string; ok: boolean; cor: string }> = {
 };
 
 // Passo da checklist de emissão oficial do CAR. Toque abre "como obter" + órgão.
-function PassoRow({
+export function PassoRow({
   passo,
   onSolicitarTecnico,
 }: {
@@ -346,44 +345,6 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
             hint="Caminhe a divisa na etapa de demarcação. Depois você gera aqui o PDF de medição e o GeoJSON do perímetro."
           />
         )}
-
-        {/* 5. Checklist: próximos passos para a emissão oficial do CAR */}
-        <Text style={s.secaoTitulo}>Para a emissão oficial do CAR</Text>
-        <Text style={s.secaoSub}>
-          O que ainda falta para registrar oficialmente. Toque em cada item para ver onde
-          obter.
-        </Text>
-        <View style={s.listaPasso}>
-          {CHECKLIST_CAR_OFICIAL.map((passo) => (
-            <PassoRow
-              key={passo.id}
-              passo={passo}
-              onSolicitarTecnico={
-                passo.solicitarTecnico && temMedicao
-                  ? () =>
-                      Alert.alert(
-                        'Solicitar técnico',
-                        'Pedir a visita de um técnico para a medição oficial?',
-                        [
-                          {
-                            text: 'Solicitar',
-                            onPress: async () => {
-                              await solicitarVisitaTecnico(
-                                imovel,
-                                'medicao',
-                                'Solicitação de técnico para medição oficial (checklist CAR).',
-                              );
-                              Alert.alert('Pronto', 'Sua solicitação foi registrada.');
-                            },
-                          },
-                          { text: 'Cancelar', style: 'cancel' },
-                        ],
-                      )
-                  : undefined
-              }
-            />
-          ))}
-        </View>
       </ScrollView>
 
       {/* 5. Rodapé fixo */}
