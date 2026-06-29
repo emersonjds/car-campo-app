@@ -12,7 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import MapView, { Polygon } from 'react-native-maps';
 import { Screen } from '../app/Screen';
 import { useNav } from '../app/navigation';
-import { getImovel } from '../lib/store';
+import { getImovel, registrarMedicao } from '../lib/store';
 import { exportPDF, exportGeoJSONFile, uploadPDFLink } from '../lib/export';
 import { DocumentoPreviewModal } from '../ui/DocumentoPreviewModal';
 import { mostrarLinkMedicao } from '../ui/linkMedicaoAlert';
@@ -199,7 +199,10 @@ export function DocumentosScreen({ imovelId }: { imovelId: string }) {
     if (!imovel || gerando) return;
     setGerando('pdf-link');
     try {
-      mostrarLinkMedicao(await uploadPDFLink(imovel));
+      const link = await uploadPDFLink(imovel);
+      const atualizado = await registrarMedicao(imovel.id, link.codigo, link.viewUrl);
+      if (atualizado) setImovel(atualizado);
+      mostrarLinkMedicao(link);
     } catch (err: unknown) {
       Alert.alert('Ops', err instanceof Error ? err.message : 'Não foi possível gerar o link.');
     } finally {

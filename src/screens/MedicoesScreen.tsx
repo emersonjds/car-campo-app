@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Screen } from '../app/Screen';
 import { useNav } from '../app/navigation';
 import { EmptyState, FAB } from '../ui';
@@ -44,6 +44,7 @@ export function MedicoesScreen() {
 
 function ImovelCard({ item, onPress }: { item: Imovel; onPress: () => void }) {
   const temPerimetro = item.geometry.points.length >= 3;
+  const ultima = item.medicoes?.[item.medicoes.length - 1];
   return (
     <TouchableOpacity style={s.card} activeOpacity={0.85} onPress={onPress}>
       <View style={s.cardHead}>
@@ -61,6 +62,21 @@ function ImovelCard({ item, onPress }: { item: Imovel; onPress: () => void }) {
         <Text style={s.meta}>{item.geometry.area_ha.toFixed(2)} ha</Text>
         <Text style={s.meta}>{item.geometry.points.length} vértices</Text>
       </View>
+      {ultima && (
+        <TouchableOpacity
+          style={s.codeRow}
+          activeOpacity={0.7}
+          onPress={() => Linking.openURL(ultima.viewUrl)}
+          accessibilityRole="button"
+          accessibilityLabel={`Abrir medição ${ultima.codigo} no portal web`}
+        >
+          <View style={s.codeText}>
+            <Text style={s.codeLabel}>Código da medição</Text>
+            <Text style={s.codeValue}>{ultima.codigo}</Text>
+          </View>
+          <Text style={s.codeLink}>Ver na web →</Text>
+        </TouchableOpacity>
+      )}
     </TouchableOpacity>
   );
 }
@@ -89,4 +105,17 @@ const s = StyleSheet.create({
   cardSub: { fontSize: 13, color: colors.muted, marginTop: 4 },
   metaRow: { flexDirection: 'row', gap: 14, marginTop: 10 },
   meta: { fontSize: 12, fontWeight: '700', color: colors.verde },
+  codeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: colors.line,
+  },
+  codeText: { gap: 2 },
+  codeLabel: { fontSize: 11, color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.5 },
+  codeValue: { fontSize: 16, fontWeight: '800', color: colors.ink, letterSpacing: 1 },
+  codeLink: { fontSize: 13, fontWeight: '700', color: colors.verde },
 });

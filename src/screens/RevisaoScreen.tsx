@@ -4,7 +4,7 @@ import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Screen } from '../app/Screen';
 import { WizardSteps } from '../app/WizardSteps';
 import { useNav } from '../app/navigation';
-import { getImovel } from '../lib/store';
+import { getImovel, registrarMedicao } from '../lib/store';
 import { areaHectares, perimeterM, validatePerimeter } from '../lib/geo';
 import { analisarAlteracaoImovel } from '../lib/alteracao';
 import { DEMO_CAMADAS } from '../lib/refLayers.demo';
@@ -113,7 +113,10 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
   const handleGerarLink = useCallback(() => {
     if (!imovel) return;
     withAction('pdf-link', async () => {
-      mostrarLinkMedicao(await uploadPDFLink(imovel));
+      const link = await uploadPDFLink(imovel);
+      const atualizado = await registrarMedicao(imovel.id, link.codigo, link.viewUrl);
+      if (atualizado) setImovel(atualizado);
+      mostrarLinkMedicao(link);
     });
   }, [imovel, withAction]);
 
