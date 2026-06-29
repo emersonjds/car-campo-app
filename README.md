@@ -21,18 +21,6 @@ O produtor anda a divisa, o app captura os vértices por GPS, calcula **área e 
 
 </div>
 
----
-
-## 📸 Telas
-
-| Produtor — Dashboard | Produtor — Medição no mapa | Produtor — Confrontação ambiental |
-|:---:|:---:|:---:|
-| <img src="design/produtor/01-dashboard.png" width="240" /> | <img src="design/produtor/02-medicao-mapa.png" width="240" /> | <img src="design/produtor/03-analise-confrontacao.png" width="240" /> |
-| **Documento CAR** | **Analista — Painel** | **Analista — Agendar visita** |
-| <img src="design/shared/01-documento-car.png" width="240" /> | <img src="design/analista/01-painel.png" width="240" /> | <img src="design/analista/02-agendar-visita.png" width="240" /> |
-
----
-
 ## ✨ O que ele faz
 
 - 🚶 **Demarcação caminhando** — captura um vértice a cada 5 m, descarta fixes imprecisos (>20 m), simplifica o ruído com Ramer–Douglas–Peucker.
