@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { FlatList, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Screen } from '../app/Screen';
 import { useNav } from '../app/navigation';
-import { EmptyState, FAB } from '../ui';
+import { EmptyState } from '../ui';
 import { colors } from '../theme/colors';
 import { listImoveis } from '../lib/store';
 import type { Imovel } from '../types';
@@ -37,7 +37,6 @@ export function MedicoesScreen() {
         }
         renderItem={({ item }) => <ImovelCard item={item} onPress={() => abrirImovel(item)} />}
       />
-      <FAB onPress={() => navigate({ name: 'cadastro' })} />
     </Screen>
   );
 }

@@ -185,20 +185,6 @@ export function CircleAction({
   );
 }
 
-export function FAB({
-  onPress,
-  icon = 'add',
-}: {
-  onPress: () => void;
-  icon?: keyof typeof Ionicons.glyphMap;
-}) {
-  return (
-    <TouchableOpacity style={ui.fab} onPress={onPress} activeOpacity={0.85}>
-      <Ionicons name={icon} size={28} color={colors.branco} />
-    </TouchableOpacity>
-  );
-}
-
 // ─── Componentes legados (mantidos sem alteração de assinatura) ───────────────
 
 export function SectionTitle({ children }: { children: ReactNode }) {
@@ -301,7 +287,6 @@ export const ui = StyleSheet.create({
   metricSublabel: { fontSize: 11, color: colors.mutedText, marginTop: 2 },
 
   circle: { alignItems: 'center', justifyContent: 'center' },
-  fab:    { position: 'absolute', bottom: 24, right: 24, width: 60, height: 60, borderRadius: 30, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', elevation: 6, shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.2, shadowRadius: 6 },
 
   sectionTitle: { fontSize: 17, fontWeight: '800', color: colors.ink, marginBottom: 10 },
   label:        { fontSize: 13, fontWeight: '700', color: colors.muted, marginBottom: 6 },
