@@ -1,144 +1,174 @@
-# CAR Campo — desenho georreferenciado pelo celular
+<div align="center">
 
-[![Expo SDK 56](https://img.shields.io/badge/Expo_SDK-56-000020)](https://docs.expo.dev/versions/v56.0.0/)
-[![React 19.2](https://img.shields.io/badge/React-19.2-61DAFB)](https://react.dev/)
-[![React Native 0.85](https://img.shields.io/badge/React_Native-0.85-20232A)](https://reactnative.dev/)
-[![TypeScript 6.0](https://img.shields.io/badge/TypeScript-6.0-3178C6)](https://www.typescriptlang.org/)
-[![Testes: Vitest](https://img.shields.io/badge/Testes-Vitest-6E9F18)](https://vitest.dev/)
-[![Cobertura 100%](https://img.shields.io/badge/Cobertura-100%25-brightgreen)](#testes)
-[![Licença UNLICENSED](https://img.shields.io/badge/Licen%C3%A7a-UNLICENSED-lightgrey)](#licença)
+<img src="assets/brand-mark.png" alt="CAR Campo" width="96" />
 
-App mobile que permite ao **produtor rural desenhar o perímetro do imóvel caminhando com o celular** (GPS): captura os vértices ao longo da divisa, calcula **área e perímetro geodésicos**, **valida a sobreposição com camadas ambientais oficiais** (Terra Indígena, Unidade de Conservação, embargo IBAMA, desmatamento, queimada, APP), estima a **aptidão a crédito rural** e exporta/envia o resultado como **GeoJSON** para a CAR Geo API. Tudo **offline-first**: capturar, calcular e armazenar funcionam sem rede; a sincronização acontece quando há conexão.
+# CAR Campo
 
-> haCARthon · **Desafio 2 · Solução 4** — "App de desenho georreferenciado pelo celular".
+### Desenhe o perímetro do seu imóvel rural **caminhando com o celular** 🚶📍
+
+O produtor anda a divisa, o app captura os vértices por GPS, calcula **área e perímetro geodésicos**, cruza com **camadas ambientais oficiais** (Terra Indígena, UC, embargo IBAMA, desmatamento, queimada, APP), estima a **aptidão a crédito rural** e exporta tudo como **GeoJSON** para a CAR Geo API. **100% offline-first.**
+
+[![Expo SDK 56](https://img.shields.io/badge/Expo_SDK-56-000020?logo=expo&logoColor=white)](https://docs.expo.dev/versions/v56.0.0/)
+[![React Native 0.85](https://img.shields.io/badge/React_Native-0.85-20232A?logo=react&logoColor=61DAFB)](https://reactnative.dev/)
+[![React 19](https://img.shields.io/badge/React-19.2-61DAFB?logo=react&logoColor=white)](https://react.dev/)
+[![TypeScript 6](https://img.shields.io/badge/TypeScript-6.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Turf.js](https://img.shields.io/badge/Geo-Turf.js-2C8C3C?logo=turbo&logoColor=white)](https://turfjs.org/)
+[![Offline-first](https://img.shields.io/badge/Offline-first-2D5A27)](#-como-funciona-a-demarcação)
+[![Licença](https://img.shields.io/badge/Licença-UNLICENSED-lightgrey)](#-licença)
+
+> 🌱 **haCARthon · Desafio 2 · Solução 4** — "App de desenho georreferenciado pelo celular".
 > Par natural: a `car-geo-api` (Solução 7) é o backend que recebe/serve as geometrias.
+
+</div>
 
 ---
 
-## Como rodar
+## 📸 Telas
 
-### Pré-requisitos
+| Produtor — Dashboard | Produtor — Medição no mapa | Produtor — Confrontação ambiental |
+|:---:|:---:|:---:|
+| <img src="design/produtor/01-dashboard.png" width="240" /> | <img src="design/produtor/02-medicao-mapa.png" width="240" /> | <img src="design/produtor/03-analise-confrontacao.png" width="240" /> |
+| **Documento CAR** | **Analista — Painel** | **Analista — Agendar visita** |
+| <img src="design/shared/01-documento-car.png" width="240" /> | <img src="design/analista/01-painel.png" width="240" /> | <img src="design/analista/02-agendar-visita.png" width="240" /> |
 
-- **bun** (gerenciador recomendado) ou yarn.
-- **Development build** do Expo: mapa, GPS, câmera e file picker **não rodam 100% no Expo Go** — use `expo run:ios`/`expo run:android` ou um dev client.
-- Stack: **Expo SDK 56 · React 19 · React Native 0.85 · TypeScript**.
+---
 
-### Instalação e execução
+## ✨ O que ele faz
+
+- 🚶 **Demarcação caminhando** — captura um vértice a cada 5 m, descarta fixes imprecisos (>20 m), simplifica o ruído com Ramer–Douglas–Peucker.
+- 📐 **Área e perímetro geodésicos** — nunca em graus: shoelace esférico (raio WGS84) + Haversine, resultado em hectares e metros.
+- 🛰️ **Sobreposição ambiental** — cruza o perímetro com WFS oficiais (FUNAI, ICMBio, IBAMA, INPE) e classifica severidade crítico/alerta/info.
+- 💳 **Aptidão a crédito** — deriva score 0–100 e linhas Pronaf/Pronampe a partir da análise (informativo, não é oferta).
+- 📤 **Exporta GeoJSON / PDF** — geometria RFC 7946 pronta para a CAR Geo API; croqui em PDF para levar à visita técnica.
+- 📡 **Offline-first** — capturar, calcular e armazenar funcionam sem rede; sincroniza quando há conexão.
+- 🎮 **Modo "Simular caminhada"** — avatar 🚶 percorre rotas de MT marcando vértices, sem GPS real — ideal para demo.
+
+---
+
+## 🚀 Rodar localmente
+
+> ⚠️ Este app usa **mapa, GPS, câmera e secure store** — recursos nativos que **não rodam 100% no Expo Go**. É preciso um **development build** (`expo run:ios` / `expo run:android`).
+
+### 1. O que instalar
+
+| Ferramenta | Para quê | Como |
+|---|---|---|
+| **Node.js 20 LTS+** | runtime do Metro/Expo | [nodejs.org](https://nodejs.org) ou `nvm install --lts` |
+| **bun** | gerenciador de pacotes (recomendado) | `curl -fsSL https://bun.sh/install \| bash` — ou use `yarn`/`npm` |
+| **Watchman** *(macOS)* | file watching estável | `brew install watchman` |
+| **Xcode 16+** *(iOS, só macOS)* | simulador + build iOS | App Store → depois `xcode-select --install` e abrir o Xcode 1x p/ aceitar a licença |
+| **CocoaPods** *(iOS)* | dependências nativas iOS | `brew install cocoapods` |
+| **Android Studio + JDK 17** *(Android)* | SDK, emulador e build | [developer.android.com/studio](https://developer.android.com/studio) → instalar um AVD |
+
+### 2. Instalar e rodar
 
 ```bash
-bun install
+bun install            # ou: yarn install / npm install
 
-bun start        # Metro / Expo dev server
-bun ios          # simulador iOS  (precisa de dev build)
-bun android      # emulador Android (precisa de dev build)
+bun ios                # build + simulador iOS   (precisa de dev build)
+bun android            # build + emulador Android (precisa de dev build)
+bun start              # Metro / Expo dev server (após o 1º dev build)
 ```
 
 Sem gerenciador local: `npx expo run:ios` / `npx expo run:android`.
 
-Para simular GPS no emulador: Android (Extended Controls → Location → rota) / iOS (Features → Location).
-Ou, sem nenhum GPS real, use o modo **"Simular caminhada"** dentro do app: um avatar 🚶 percorre rotas pré-definidas de MT (`src/sim/routes.ts`) marcando vértices automaticamente — ideal para demo e treino offline.
+### 3. Ver o GPS funcionando
 
-### Testes
+- **Sem GPS real:** use o modo **"Simular caminhada"** dentro do app — percorre rotas pré-definidas de MT (`src/sim/routes.ts`) e marca vértices automaticamente.
+- **GPS simulado no emulador:** Android → *Extended Controls → Location → Routes*; iOS → *Features → Location*.
 
-Testes unitários com **Vitest** (cobertura medida em **100%**):
+### 4. Configuração (opcional)
+
+A URL da CAR Geo API vem de `app.json > extra.apiBaseUrl` ou da env `EXPO_PUBLIC_API_BASE_URL` (default `http://localhost:3000`). Fora de `localhost`, HTTP dispara aviso de LGPD — use HTTPS.
 
 ```bash
-bun run test       # vitest run
-bun run coverage   # vitest run --coverage  (@vitest/coverage-v8)
+EXPO_PUBLIC_API_BASE_URL=https://sua-car-geo-api bun start
 ```
 
 ---
 
-## APIs e camadas integradas — e por quê
+## 🧱 Stack
 
-A análise de sobreposição busca cada camada via **WFS oficial** dentro do bounding box do imóvel (com ~1 km de buffer), com timeout curto (6 s) e **fallback individual por tipo** para fixtures de demo offline (`src/lib/refLayers.demo.ts`). Se **qualquer** WFS falhar, o resultado é marcado como `offline-demo` — nunca reporta `online` parcial, para não esconder uma camada crítica ausente (falso negativo regulatório). Endpoints reais conforme `src/lib/refLayers.ts`:
+**Expo SDK 56 · React 19 · React Native 0.85 · TypeScript 6** — roteamento baseado em estado (sem react-navigation), gateado por sessão.
+
+| Domínio | Bibliotecas |
+|---|---|
+| GPS / localização | `expo-location` |
+| Mapa + polígono | `react-native-maps` |
+| Geometria | `@turf/*` (area, intersect, difference, union, buffer, boolean-intersects) |
+| Persistência offline | `@react-native-async-storage/async-storage` |
+| Sessão sensível (LGPD) | `expo-secure-store` |
+| Documentos / foto | `expo-image-picker`, `expo-document-picker`, `expo-file-system` |
+| Exportação | `expo-print` (PDF), `expo-sharing` |
+| Animação | `react-native-reanimated` (avatar de simulação) |
+
+---
+
+## 🛰️ APIs e camadas integradas — e por quê
+
+A análise de sobreposição busca cada camada via **WFS oficial** dentro do bounding box do imóvel (com ~1 km de buffer), timeout curto (6 s) e **fallback individual por tipo** para fixtures de demo offline (`src/lib/refLayers.demo.ts`). Se **qualquer** WFS falhar, o resultado é marcado como `offline-demo` — nunca reporta `online` parcial, para não esconder uma camada crítica ausente (falso negativo regulatório). Endpoints reais em `src/lib/refLayers.ts`:
 
 | Camada | Fonte (WFS / endpoint) | O que detecta | Por que importa |
 |---|---|---|---|
-| **Terra Indígena** | FUNAI — `geoserver.funai.gov.br/geoserver/wfs` · `funai:ti_sirgas` | Limites homologados/declarados de TIs | Sobreposição é impedimento legal ao registro no CAR e bloqueio definitivo de crédito (CF art. 231) |
-| **Unidade de Conservação** | ICMBio / INDE — `geoservicos.inde.gov.br/geoserver/ICMBio/ows` · `ICMBio:BCIM_Unidade_Conservacao_A_2021` | UCs federais | Em UC de Proteção Integral a atividade agropecuária é vedada (Lei 9.985/2000); risco legal e de crédito |
-| **Embargo IBAMA** | IBAMA SISCOM — `siscom.ibama.gov.br/geoserver/wfs` · `publica:vw_brasil_adm_embargo_a` | Áreas com embargo ambiental ativo | Imóvel embargado não obtém crédito rural nem licenciamento (MCR Seção 2) |
-| **Desmatamento (PRODES)** | INPE TerraBrasilis — `terrabrasilis.dpi.inpe.br/geoserver/ows` · `prodes-amazon-nb:yearly_deforestation_biome` | Desmatamento anual consolidado (Amazônia) | Passivo florestal não regularizado pode suspender o crédito (Lei 12.651/2012, PRA) |
-| **Área queimada** | INPE Programa Queimadas — `terrabrasilis.dpi.inpe.br/geoserver/ows` · `queimadas:aq1km_mensal` (AQ1km) | Cicatriz de fogo mensal (1 km) | Fogo extenso indica risco de dano à vegetação/Reserva Legal e pode inviabilizar o crédito |
-| **APP / hidrografia** | sem WFS nacional consolidado → servida via fixture demo | Faixa de Área de Preservação Permanente de curso d'água/nascente | Pode haver obrigação de recomposição (Código Florestal, art. 61-A) |
-| **CAR vizinho** | sem WFS nacional consolidado → servida via fixture demo | Sobreposição de divisa com imóvel CAR adjacente | Indica possível conflito de limites (acionar INCRA) |
-
-> O DETER (alertas INPE em tempo real) é citado na documentação como evolução possível; a camada de desmatamento atualmente integrada é o **PRODES anual**.
+| **Terra Indígena** | FUNAI — `geoserver.funai.gov.br/geoserver/wfs` · `funai:ti_sirgas` | Limites homologados/declarados de TIs | Sobreposição é impedimento legal ao registro no CAR e bloqueio de crédito (CF art. 231) |
+| **Unidade de Conservação** | ICMBio / INDE — `geoservicos.inde.gov.br/geoserver/ICMBio/ows` · `ICMBio:BCIM_Unidade_Conservacao_A_2021` | UCs federais | Em UC de Proteção Integral a agropecuária é vedada (Lei 9.985/2000) |
+| **Embargo IBAMA** | IBAMA SISCOM — `siscom.ibama.gov.br/geoserver/wfs` · `publica:vw_brasil_adm_embargo_a` | Embargo ambiental ativo | Imóvel embargado não obtém crédito rural nem licenciamento (MCR Seção 2) |
+| **Desmatamento (PRODES)** | INPE TerraBrasilis — `terrabrasilis.dpi.inpe.br/geoserver/ows` · `prodes-amazon-nb:yearly_deforestation_biome` | Desmatamento anual consolidado (Amazônia) | Passivo florestal não regularizado pode suspender crédito (Lei 12.651/2012, PRA) |
+| **Área queimada** | INPE Queimadas — `terrabrasilis.dpi.inpe.br/geoserver/ows` · `queimadas:aq1km_mensal` | Cicatriz de fogo mensal (1 km) | Fogo extenso indica risco à Reserva Legal e pode inviabilizar crédito |
+| **APP / hidrografia** | sem WFS nacional → fixture demo | Faixa de APP de curso d'água/nascente | Pode haver obrigação de recomposição (Código Florestal, art. 61-A) |
+| **CAR vizinho** | sem WFS nacional → fixture demo | Sobreposição de divisa com CAR adjacente | Indica possível conflito de limites (acionar INCRA) |
 
 Todos os WFS são consultados com `srsName=CRS:84` (lon/lat WGS84 explícito, evitando a inversão de eixo do WFS 1.1.0). SIRGAS 2000 (EPSG:4674) e WGS84 são coincidentes a nível sub-métrico.
 
-**Envio do GeoJSON — CAR Geo API** (`src/lib/api.ts`, `src/lib/config.ts`): o perímetro validado é serializado como `Feature`/`Polygon` (RFC 7946) e enviado via `POST {API_BASE_URL}/collections/imovel/items` (`application/geo+json`). A API atual da Solução 7 é somente-leitura (OGC API Features), então `404/405` são tratados com graça — o GeoJSON é sempre gerado localmente, pronto para envio quando o endpoint de escrita existir. A URL vem de `app.json > extra.apiBaseUrl` ou `EXPO_PUBLIC_API_BASE_URL` (default `http://localhost:3000`); fora de localhost, HTTP dispara aviso de LGPD (use HTTPS).
+**Envio do GeoJSON — CAR Geo API** (`src/lib/api.ts`, `src/lib/config.ts`): o perímetro validado é serializado como `Feature`/`Polygon` (RFC 7946) e enviado via `POST {API_BASE_URL}/collections/imovel/items` (`application/geo+json`). A API atual da Solução 7 é somente-leitura (OGC API Features), então `404/405` são tratados com graça — o GeoJSON é sempre gerado localmente, pronto para envio quando o endpoint de escrita existir.
 
 ---
 
-## Como funciona a demarcação
+## 📐 Como funciona a demarcação
 
 1. **Caminhar a divisa** — o produtor percorre o perímetro com o celular.
-2. **Captura GPS** (`src/hooks/usePerimeterTracker.ts`) — registra um novo vértice a cada `MIN_VERTEX_DISTANCE_M` (5 m); descarta fixes imprecisos (`accuracy` acima de `MAX_ACCEPTABLE_ACCURACY_M` = 20 m); remove a subscription no cleanup (bateria) e trata permissão negada.
-3. **Simplificação RDP** (`simplifyRDP`, Ramer–Douglas–Peucker, tolerância padrão 3 m) — reduz ruído de GPS preservando primeiro e último ponto.
+2. **Captura GPS** (`src/hooks/usePerimeterTracker.ts`) — novo vértice a cada `MIN_VERTEX_DISTANCE_M` (5 m); descarta fixes com `accuracy` acima de `MAX_ACCEPTABLE_ACCURACY_M` (20 m); remove a subscription no cleanup (bateria) e trata permissão negada.
+3. **Simplificação RDP** (`simplifyRDP`, Ramer–Douglas–Peucker, tolerância 3 m) — reduz ruído preservando primeiro e último ponto.
 4. **Polígono** — os vértices fecham o anel automaticamente (`toGeoJSONFeature`).
-5. **Área e perímetro geodésicos** (`src/lib/geo.ts`) — área via fórmula esférica (shoelace geodésico, raio WGS84) e perímetro via Haversine, **nunca em graus**. Resultado em hectares e metros.
-6. **Validação topológica** (`validatePerimeter`) — bloqueia o envio em: menos de 3 vértices, anel que se auto-intersecta (`selfIntersects`, teste de orientação por pares de segmentos) ou área ~0. Emite avisos não-bloqueantes para área/perímetro suspeitos e pontos com GPS impreciso.
+5. **Área e perímetro geodésicos** (`src/lib/geo.ts`) — shoelace geodésico (raio WGS84) + Haversine, **nunca em graus**.
+6. **Validação topológica** (`validatePerimeter`) — bloqueia o envio com menos de 3 vértices, anel auto-intersectante (`selfIntersects`) ou área ~0; emite avisos não-bloqueantes para casos suspeitos.
 
 ---
 
-## Como funciona a sobreposição
+## 🔎 Como funciona a sobreposição
 
-O motor (`src/lib/overlay.ts`) cruza o anel do imóvel com cada camada usando **Turf**: `booleanIntersects` (teste rápido de bbox) → `intersect` (polígono de interseção, preservando buracos/holes de zonas de exclusão) → `@turf/area` (área geodésica em m²). Para cada sobreposição calcula **hectares + percentual** do imóvel e atribui **severidade**, com mensagem em pt-br para o produtor.
+O motor (`src/lib/overlay.ts`) cruza o anel com cada camada via **Turf**: `booleanIntersects` (bbox) → `intersect` (polígono de interseção, preservando holes) → `@turf/area` (m² geodésico). Para cada sobreposição calcula **hectares + percentual** e atribui **severidade** com mensagem em pt-br.
 
 | Camada | Severidade base | Escalonamento dinâmico |
 |---|---|---|
-| Terra Indígena | **crítico** ⛔ | — |
-| Unidade de Conservação | **crítico** ⛔ | — |
-| Embargo IBAMA | **crítico** ⛔ | — |
-| Desmatamento (PRODES) | **alerta** ⚠ | → crítico se sobrepõe **> 20%** do imóvel |
-| Área queimada (AQ1km) | **alerta** ⚠ | → crítico se sobrepõe **> 20%** do imóvel |
+| Terra Indígena · UC · Embargo IBAMA | **crítico** ⛔ | — |
+| Desmatamento (PRODES) | **alerta** ⚠ | → crítico se sobrepõe **> 20%** |
+| Área queimada (AQ1km) | **alerta** ⚠ | → crítico se sobrepõe **> 20%** |
 | APP / hidrografia | **info** ℹ | — |
-| CAR vizinho | **info** ℹ | → alerta se sobrepõe **> 50%** do imóvel |
+| CAR vizinho | **info** ℹ | → alerta se sobrepõe **> 50%** |
 
-A análise é `ok` quando **não** há nenhuma sobreposição crítica; as sobreposições são ordenadas crítico → alerta → info. Geometria de camada malformada é ignorada sem quebrar a UI.
+A análise é `ok` quando **não** há sobreposição crítica. A partir dela, `src/lib/credito.ts` deriva a **aptidão a crédito** (score 0–100; sobreposição crítica zera elegibilidade e limita o score a 30). **É informativo** — não constitui oferta de crédito nem diagnóstico jurídico.
 
-**Exemplo numérico** (fixtures de demo sobre a rota `SORRISO_SOJA`, MT — todos os dados são fictícios):
+### O que **não** dá para afirmar
 
-```
-Imóvel: ~50 ha
-  ⛔ TI Xavante Sorriso ......... ~15–20% → crítico  (impedimento ao CAR)
-  ⛔ Embargo IBAMA AI 1234567 ... ~10%    → crítico  (bloqueia crédito)
-  ⚠ Desmatamento PRODES 2023 ... ~12%    → alerta   (regularizar via PRA)
-  ⚠ Queimada AQ1km set/2023 .... ~5–15%  → alerta   (averiguar origem do fogo)
-  ℹ APP Riacho (faixa 30 m) ..... ~5%     → info     (verificar recomposição)
-  → análise: NÃO ok (há sobreposição crítica)
-```
-
-A partir da análise, `src/lib/credito.ts` deriva a **aptidão a crédito** (score 0–100, bloqueios e linhas Pronaf / Pronampe Rural / Custeio / Investimento). Sobreposição crítica zera a elegibilidade e limita o score a 30. **É informativo** — não constitui oferta de crédito nem diagnóstico jurídico.
-
----
-
-## O que isso destrava — e o que não dá para afirmar
-
-**Destrava** (resumo de [`docs/sobreposicao-validacao-car.md`](docs/sobreposicao-validacao-car.md)): um imóvel com **CAR ativo e sem embargo IBAMA** remove um obstáculo crítico ao **crédito rural** (Pronaf para agricultura familiar; Pronampe para micro/pequenas empresas rurais), além de viabilizar regularização ambiental (PRA/Termo de Compromisso) e gerar laudo/croqui que aceleram a triagem do analista.
-
-**Não dá para afirmar:**
 - **Titularidade da terra** — só INCRA/Justiça/Cartório determinam o dono; o app não substitui matrícula.
 - **Legalidade definitiva de desmatamento** — sobreposição com PRODES aponta o fato, mas área consolidada (anterior a 22/07/2008) ou supressão autorizada podem ser legais; quem decide é IBAMA/Justiça.
-- **Precisão sub-métrica** — GPS de celular tem ±5–10 m; *slivers* menores que ~10–20 m² podem ser ruído, não sobreposição real.
+- **Precisão sub-métrica** — GPS de celular tem ±5–10 m; *slivers* menores que ~10–20 m² podem ser ruído.
 
-Detalhamento completo (camadas, limites, roadmap, glossário): [`docs/sobreposicao-validacao-car.md`](docs/sobreposicao-validacao-car.md) · versão PDF em [`docs/sobreposicao-validacao-car.pdf`](docs/sobreposicao-validacao-car.pdf).
+Detalhamento completo: [`docs/sobreposicao-validacao-car.md`](docs/sobreposicao-validacao-car.md).
 
 ---
 
-## Estrutura de pastas
-
-App multi-tela offline-first, roteamento baseado em estado (sem react-navigation), gateado por sessão.
+## 🗂️ Estrutura de pastas
 
 ```
 App.tsx                      AuthProvider + NavigationProvider + AppShell
 src/app/                     navigation, Router (gateia por login), AppShell, TabBar
-src/auth/                    AuthContext + AuthProvider (mock; OIDC+PKCE depois) + secureSession (expo-secure-store, LGPD)
+src/auth/                    AuthContext + AuthProvider (mock; OIDC+PKCE depois) + secureSession (LGPD)
 src/screens/                 Login, Home, Cadastro, Demarcacao, Documentos, Revisao,
                              Validacao + Painel (analista), Config (perfil)
 src/lib/
-  geo.ts                     área/perímetro geodésicos, GeoJSON (RFC 7946), validação topológica, RDP
+  geo.ts                     área/perímetro geodésicos, GeoJSON (RFC 7946), validação, RDP
   overlay.ts                 motor de sobreposição (Turf): interseção, severidade, mensagens
   refLayers.ts               fontes WFS oficiais + fetch por bbox + fallback offline
   refLayers.demo.ts          fixtures de demo (camadas fictícias sobre rotas de MT)
@@ -148,13 +178,13 @@ src/lib/
   documents.ts / export.ts   anexos/geotag · exportação GeoJSON/PDF/compartilhar
 src/hooks/usePerimeterTracker.ts   captura GPS real (vértices, descarte, cleanup)
 src/sim/                     rotas de demo (routes.ts) + useSimulatedWalk (avatar 🚶)
-src/ui/  src/theme/  src/types.ts   componentes compartilhados, paleta, modelos de domínio
+src/ui/  src/theme/  src/types.ts   componentes, paleta, modelos de domínio
 ```
 
-Contexto técnico completo para agentes: [`CLAUDE.md`](CLAUDE.md).
+Contexto técnico completo para agentes de IA: [`CLAUDE.md`](CLAUDE.md). Guia do produtor: [`docs/guia-do-produtor.md`](docs/guia-do-produtor.md).
 
 ---
 
-## Licença
+## 📄 Licença
 
-O `package.json` declara `"private": true` e **não define campo `license`** — o projeto é tratado como **UNLICENSED** (uso restrito ao haCARthon). O arquivo `LICENSE` presente é o template MIT padrão do scaffold Expo e não reflete, por si só, uma licença de distribuição do projeto.
+O `package.json` declara `"private": true` e **não define `license`** — o projeto é tratado como **UNLICENSED** (uso restrito ao haCARthon). O arquivo `LICENSE` é o template MIT do scaffold Expo e não reflete, por si só, uma licença de distribuição.
