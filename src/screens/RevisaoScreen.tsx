@@ -1,15 +1,12 @@
 // Offline-first: nunca bloqueia o produtor por falta de rede.
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Screen } from '../app/Screen';
 import { WizardSteps } from '../app/WizardSteps';
 import { useNav } from '../app/navigation';
 import { getImovel, registrarMedicao } from '../lib/store';
 import { areaHectares, perimeterM, validatePerimeter } from '../lib/geo';
-import { analisarAlteracaoImovel } from '../lib/alteracao';
-import { DEMO_CAMADAS } from '../lib/refLayers.demo';
 import { exportPDF, uploadPDFLink } from '../lib/export';
-import { solicitarVisitaTecnico } from '../lib/visita';
 import { DocumentoPreviewModal } from '../ui/DocumentoPreviewModal';
 import { mostrarLinkMedicao } from '../ui/linkMedicaoAlert';
 import {
@@ -21,7 +18,7 @@ import {
   StatBox,
 } from '../ui';
 import { colors } from '../theme/colors';
-import type { Imovel, MotivoVisita } from '../types';
+import type { Imovel } from '../types';
 
 /**
  * Mascara CPF/CNPJ para exibição na tela (LGPD — dado sensível).
@@ -44,7 +41,7 @@ function maskCpfCnpj(value: string): string {
 }
 
 // Qual botão de ação está carregando agora
-type ActiveAction = 'pdf-view' | 'pdf-share' | 'pdf-link' | 'visita' | null;
+type ActiveAction = 'pdf-view' | 'pdf-share' | 'pdf-link' | null;
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
@@ -119,47 +116,6 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
       mostrarLinkMedicao(link);
     });
   }, [imovel, withAction]);
-
-  // IMPORTANTE: este useMemo precisa vir ANTES dos early returns abaixo, senão a
-  // contagem de hooks muda entre renders (Rules of Hooks). `imovel` é nullable aqui.
-  const alteracaoResumo = useMemo(
-    () => (imovel ? analisarAlteracaoImovel(imovel, DEMO_CAMADAS, 'offline-demo') : null),
-    [imovel],
-  );
-
-  const handleSolicitarVisita = useCallback(() => {
-    if (!imovel) return;
-    const r = alteracaoResumo?.relatorio;
-    const pedir = (motivo: MotivoVisita, detalhe: string) =>
-      withAction('visita', async () => {
-        const updated = await solicitarVisitaTecnico(imovel, motivo, detalhe);
-        if (updated) setImovel(updated);
-
-        Alert.alert(
-          'Visita solicitada',
-          'Solicitação de visita enviada com a medição preliminar. ' +
-            'Você poderá discutir os números com o técnico na visita de campo.',
-          [{ text: 'Ok', onPress: () => switchTab({ name: 'home' }) }],
-        );
-      });
-    Alert.alert('Solicitar visita do técnico', 'Qual o motivo da conferência?', [
-      {
-        text: 'Conferir a nova medição',
-        onPress: () =>
-          pedir(
-            'medicao',
-            r
-              ? `Nova medição diverge do registro: ${r.delta_ha >= 0 ? '+' : ''}${r.delta_ha.toFixed(1)} ha (${r.delta_pct >= 0 ? '+' : ''}${r.delta_pct.toFixed(0)}%)${r.requerVisita ? ' — requer visita' : ''}.`
-              : 'Conferência da medição solicitada pelo produtor.',
-          ),
-      },
-      {
-        text: 'Conferir documentação',
-        onPress: () => pedir('documentacao', 'Conferência de documentação solicitada pelo produtor.'),
-      },
-      { text: 'Cancelar', style: 'cancel' },
-    ]);
-  }, [imovel, alteracaoResumo, withAction, switchTab]);
 
   if (loadingImovel) {
     return (
@@ -306,53 +262,6 @@ export function RevisaoScreen({ imovelId }: { imovelId: string }) {
             />
           </View>
         </Card>
-
-        {alteracaoResumo && (
-          <Card style={s.card}>
-            <SectionTitle>Comparação com registro anterior</SectionTitle>
-            {alteracaoResumo.relatorio.tipoAlteracao === 'microajuste' ? (
-              <Text style={s.cmpOk}>
-                ✓ Praticamente igual ao registro anterior — diferença dentro do ruído de GPS
-                {alteracaoResumo.baseline === 'demo' ? ' (baseline de demonstração)' : ''}.
-              </Text>
-            ) : (
-              <View style={s.statsRow}>
-                <StatBox label="Antes (ha)" value={alteracaoResumo.relatorio.areaAnterior_ha.toFixed(2)} />
-                <View style={s.statGap} />
-                <StatBox label="Agora (ha)" value={alteracaoResumo.relatorio.areaNova_ha.toFixed(2)} />
-                <View style={s.statGap} />
-                <StatBox
-                  label="Diferença"
-                  value={`${alteracaoResumo.relatorio.delta_ha >= 0 ? '+' : ''}${alteracaoResumo.relatorio.delta_ha.toFixed(2)}`}
-                />
-              </View>
-            )}
-
-            {imovel.solicitacaoVisita ? (
-              <View style={s.visitaFeita}>
-                <Text style={s.visitaFeitaText}>
-                  ✓ Solicitação enviada (
-                  {imovel.solicitacaoVisita.motivo === 'medicao' ? 'nova medição' : 'documentação'}).
-                </Text>
-              </View>
-            ) : (
-              <>
-                <Text style={s.analiseNota}>
-                  Esta é uma medição preliminar. A medição oficial precisa de um técnico
-                  habilitado em campo — solicite a visita para conferir os números juntos e
-                  regularizar o imóvel.
-                </Text>
-                <View style={[s.btnRow, { marginTop: 12 }]}>
-                  <PrimaryButton
-                    label={activeAction === 'visita' ? 'Solicitando…' : 'Solicitar visita do técnico'}
-                    onPress={handleSolicitarVisita}
-                    disabled={isBusy}
-                  />
-                </View>
-              </>
-            )}
-          </Card>
-        )}
 
         <View style={s.submitSection}>
           <View style={s.btnRow}>
