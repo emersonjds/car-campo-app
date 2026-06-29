@@ -125,6 +125,24 @@ export async function updateImovel(
   return updated;
 }
 
+/**
+ * Registra uma medição publicada na web (código + link) no imóvel, para a
+ * pessoa não perder o código e conseguir consultar pelo portal. Acrescenta ao
+ * histórico (mais recente no fim) e evita duplicar o mesmo código.
+ */
+export async function registrarMedicao(
+  imovelId: string,
+  codigo: string,
+  viewUrl: string,
+): Promise<Imovel | null> {
+  if (!codigo) return getImovel(imovelId);
+  const atual = await getImovel(imovelId);
+  if (!atual) return null;
+  const medicoes = (atual.medicoes ?? []).filter((m) => m.codigo !== codigo);
+  medicoes.push({ codigo, viewUrl, geradoEm: Date.now() });
+  return updateImovel(imovelId, { medicoes });
+}
+
 /** Cria se não houver id; atualiza se houver. Conveniência para o wizard. */
 export async function upsertImovel(
   id: string | null,

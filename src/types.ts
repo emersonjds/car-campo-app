@@ -127,6 +127,16 @@ export interface ImovelDados {
   carNumero?: string;
 }
 
+/** Link de uma medição gerada na web (código curto + URL de visualização). */
+export interface MedicaoLink {
+  /** Código curto (6 chars) para consultar a medição no portal web. */
+  codigo: string;
+  /** URL direta da página de visualização do documento. */
+  viewUrl: string;
+  /** Epoch ms da geração. */
+  geradoEm: number;
+}
+
 export interface Imovel {
   id: string;
   perfil: Perfil;
@@ -151,6 +161,8 @@ export interface Imovel {
    */
   deltaRelatorio?: DeltaRelatorio;
   documentos: Documento[];
+  /** Medições publicadas na web (código + link). A mais recente fica no fim. */
+  medicoes?: MedicaoLink[];
   /** Epoch ms da última sincronização de documentos com o gov.br (mock). */
   documentosSincronizadosEm?: number;
   status: ImovelStatus;
